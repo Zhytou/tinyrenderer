@@ -12,6 +12,10 @@ struct Camera {
     glm::vec3 eye;
     glm::vec3 target;
     glm::vec3 up;
+    float fov;
+    float aspect;
+    float near;
+    float far;
 };
 
 struct Light {
