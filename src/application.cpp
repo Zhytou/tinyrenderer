@@ -6,7 +6,7 @@
 
 namespace tinyrenderer
 {
-Application::Application()
+Application::Application(int width, int height, const std::string& title) : m_width(width), m_height(height)
 {
 	// glfw initialization
 	if(!glfwInit()) {
@@ -21,7 +21,7 @@ Application::Application()
 	glfwWindowHint(GLFW_SAMPLES, 0);
 
 	// glfw window creation
-	m_window = glfwCreateWindow(700, 500, "Physically Based Rendering (OpenGL 4.5)", nullptr, nullptr);
+	m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 	if(!m_window) {
 		throw std::runtime_error("Failed to create OpenGL context");
 	}
@@ -34,6 +34,9 @@ Application::Application()
 	// set window pointer for later use in callback function
 	glfwSetWindowUserPointer(m_window, this);
 	// set callback function
+	glfwSetWindowSizeCallback(m_window, [](GLFWwindow* window, int w, int h) {
+		glViewport(0, 0, w, h);
+	});
 	// glfwSetCursorPosCallback(m_window, Application::mousePositionCallback);
 	// glfwSetMouseButtonCallback(m_window, Application::mouseButtonCallback);
 	// glfwSetScrollCallback(m_window, Application::mouseScrollCallback);
@@ -43,7 +46,7 @@ Application::Application()
 		throw std::runtime_error("Failed to initialize OpenGL extensions loader");
 	}
 
-	std::printf("OpenGL 4.5 Renderer [%s]\n", glGetString(GL_RENDERER));
+	std::printf("OpenGL Renderer [%s]\n", glGetString(GL_RENDERER));
 }
 
 Application::~Application()
@@ -57,13 +60,20 @@ Application::~Application()
 void Application::load(const std::string& baseDir, const std::string& modelName, const std::string& configName)
 {
 	m_scene.models = {Model(baseDir, modelName)};
-	
+
 	m_scene.camera.eye = {278, 273, -800};
 	m_scene.camera.target = {278, 273, -799};
 	m_scene.camera.up = {0, 1, 0};
+	m_scene.camera.fov = 45.0f;
+	m_scene.camera.aspect = m_width / m_height;
+	m_scene.camera.near = 0.1f;
+	m_scene.camera.far = 4000.0f;
 
 	m_scene.lights = {
-		{{343.0, 548.7, 227.0 }, {1, 1, 1}},
+		{{343.0, 530.0, 227.0}, {34, 24, 8}},
+		{{343.0, 530.0, 332.0}, {34, 24, 8}},
+		{{278.0, 530.0, 227.0}, {34, 24, 8}},
+		{{278.0, 530.0, 332.0}, {34, 24, 8}},
 	};
 }
 

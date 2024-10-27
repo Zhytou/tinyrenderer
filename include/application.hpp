@@ -12,7 +12,7 @@ class Application
 {
 public:
 	// create application window and initialize OpenGL context
-	Application();
+	Application(int width, int height, const std::string& title);
 	
 	// destroy application window and release resources
 	~Application();
@@ -31,6 +31,7 @@ private:
 	GLFWwindow* m_window;
 	Renderer m_renderer;
 	Scene m_scene;
+	int m_width, m_height;
 };
 	
 } // namespace tinyrenderer
