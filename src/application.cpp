@@ -67,20 +67,17 @@ void Application::load(const std::string& baseDir, const std::string& modelName,
 	m_scene.camera.fov = 45.0f;
 	m_scene.camera.aspect = m_width / m_height;
 	m_scene.camera.near = 0.1f;
-	m_scene.camera.far = 4000.0f;
+	m_scene.camera.far = 2000.0f;
 
-	m_scene.lights = {
-		{{343.0, 530.0, 227.0}, {34, 24, 8}},
-		{{343.0, 530.0, 332.0}, {34, 24, 8}},
-		{{278.0, 530.0, 227.0}, {34, 24, 8}},
-		{{278.0, 530.0, 332.0}, {34, 24, 8}},
-	};
+	m_scene.lights[0] = {{343.0, 548.8, 227.0}, {34, 24, 8}};
+	m_scene.lights[1] = {{343.0, 548.8, 332.0}, {200, 200, 200}};
+	m_scene.lights[2] = {{213.0, 548.8, 332.0}, {200, 200, 200}};
+	m_scene.lights[3] = {{213.0, 548.8, 227.0}, {200, 200, 200}};
+
 }
 
 void Application::run()
 {
-	glfwWindowHint(GLFW_RESIZABLE, 0);
-
 	m_renderer.setup();
 	while(!glfwWindowShouldClose(m_window)) {
 		m_renderer.render(m_scene);

@@ -25,7 +25,7 @@ struct Light {
 
 struct Scene {
     Camera camera;
-    std::vector<Light> lights;
+    Light lights[4];
     std::vector<Model> models;
 };
 

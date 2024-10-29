@@ -16,6 +16,7 @@ struct Vertex {
 
 struct Face {
     Face() = default;
+    Face(int i1, int i2, int i3) : p1(i1), p2(i2), p3(i3) {}
     // vertex index
     int p1, p2, p3;
 };
@@ -28,19 +29,20 @@ struct Mesh {
     std::vector<Face> faces;
     int materialId;
 
-    static GLuint vao;
+    GLuint vao;
     GLuint vbo;
     GLuint ebo;
 };
 
 using Material = tinyobj::material_t;
 
-struct Model {
+class Model {
     Model() = default;
     Model(const std::string& path, const std::string& name);
 
     std::vector<Mesh> meshes;
     std::vector<Material> materials;
+    std::vector<GLuint> ubos;
 };
 
 } // namespace tinyrenderer

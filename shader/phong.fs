@@ -18,12 +18,21 @@ void main() {
     vec3 L = normalize(uLightPos - vFragPos);
     vec3 H = normalize(V + L);
 
-    float NdotL = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
     float NdotH = max(dot(N, H), 0.0);
 
-    vec3 ambient = uKa * uLightRadiance;
-    vec3 diffuse = uKd * uLightRadiance * NdotL;
-    vec3 specular = uKs * uLightRadiance * pow(NdotH, uShininess);
+    float distance = length(uLightPos - vFragPos);
+    float attenuation = 1.0; // (distance * distance);
+    vec3 radiance = uLightRadiance * attenuation ;
+
+    vec3 ambient = uKa * radiance;
+    vec3 diffuse = uKd * radiance * NdotL;
+    vec3 specular = uKs * radiance * pow(NdotH, uShininess);
     vec3 color = ambient + diffuse + specular;
-    gl_FragColor = vec4(color, 0.0);
+
+    // HDR color -> LDR color
+    color = color / (color + vec3(1.0));
+    // gamma correction
+    color = pow(color, vec3(1.0/2.2)); 
+    gl_FragColor = vec4(uKd, 0.0);
 }

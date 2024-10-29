@@ -11,9 +11,6 @@
 namespace tinyrenderer
 {
 
-// since all vertex data use the structure(Class Vertex), so make vao a static member of Mesh
-GLuint Mesh::vao = 0;
-
 Mesh::Mesh(std::vector<Vertex>&& vs, std::vector<Face>&& fs, int mid) : vertices(vs), faces(fs), materialId(mid)
 {
     // generate and bind vertex array object
@@ -51,13 +48,21 @@ Model::Model(const std::string& path, const std::string& name)
         throw std::runtime_error(err);
     }
 
+    for (const auto& material : materials) {
+        GLuint ubo;
+        glGenBuffers(1, &ubo);
+        glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::vec3) * 3 + sizeof(float), NULL, GL_STATIC_DRAW); 
+    }
+
     for (auto& shape : shapes) {        
         // since tinyobj::LoadObj() has already triangulated the mesh, so we can assert that the number of indices is a multiple of 3
         assert(shape.mesh.indices.size() % 3 == 0);
-        // both of the following sizes represent the number of triangle faces
-        assert(shape.mesh.num_face_vertices.size() == shape.mesh.material_ids.size());
-
         int numFaces = shape.mesh.indices.size() / 3;
+
+        // both of the following sizes represent the number of triangle faces
+        assert(numFaces == shape.mesh.num_face_vertices.size() && numFaces == shape.mesh.material_ids.size());
+
         std::vector<int> faceIndices(numFaces);
         std::iota(faceIndices.begin(), faceIndices.end(), 0);
 
@@ -78,12 +83,16 @@ Model::Model(const std::string& path, const std::string& name)
                 pointIndexMap.clear();
             }
             materialId = shape.mesh.material_ids[faceIndex];
-            Face face;
+
+            int pointIndex[3];
             for (int j = 0; j < 3; ++j) {
                 int vertexIndex = shape.mesh.indices[3 * faceIndex + j].vertex_index;
                 int normalIndex = shape.mesh.indices[3 * faceIndex + j].normal_index;
                 int texcoordIndex = shape.mesh.indices[3 * faceIndex + j].texcoord_index;
                 
+                if (normalIndex == -1) {
+                    throw std::runtime_error("vn data in .obj is missing");
+                }
                 std::tuple<int, int, int> pointIndexTuple = {vertexIndex, normalIndex, texcoordIndex};
                 if (pointIndexMap.count(pointIndexTuple) == 0) {
                     pointIndexMap[pointIndexTuple] = vertices.size();
@@ -98,22 +107,18 @@ Model::Model(const std::string& path, const std::string& name)
                         attributes.normals[3 * normalIndex + 1],
                         attributes.normals[3 * normalIndex + 2]
                     };
-                    vertex.texcoord = {
-                        attributes.texcoords[2 * texcoordIndex + 0],
-                        attributes.texcoords[2 * texcoordIndex + 1]
-                    };
+                    if (texcoordIndex != -1) {
+                        vertex.texcoord = {
+                            attributes.texcoords[2 * texcoordIndex + 0],
+                            attributes.texcoords[2 * texcoordIndex + 1]
+                        };
+                    }
                     vertices.push_back(vertex);
                 }
 
-                if (j == 0) {
-                    face.p1 = pointIndexMap[pointIndexTuple];
-                } else if (j == 1) {
-                    face.p2 = pointIndexMap[pointIndexTuple];
-                } else {
-                    face.p3 = pointIndexMap[pointIndexTuple];
-                }
+                pointIndex[j] = pointIndexMap[pointIndexTuple];
             }
-            faces.push_back(face);
+            faces.emplace_back(pointIndex[0], pointIndex[1], pointIndex[2]);
         }
         meshes.emplace_back(std::move(vertices), std::move(faces), materialId);
     }

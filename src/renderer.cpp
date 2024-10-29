@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <iostream>
 #include <memory>
 
 #include <glm/glm.hpp>
@@ -14,7 +15,6 @@ void Renderer::setup()
 {
 	// set global OpenGL state
 	glEnable(GL_CULL_FACE);
-	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	glFrontFace(GL_CCW);
 
 	// compile and link shaders
@@ -30,44 +30,36 @@ void Renderer::render(const Scene& scene)
 {
 	// calculate view and projection matrices
 	const glm::mat4 viewMatrix = glm::lookAt(scene.camera.eye, scene.camera.target, scene.camera.up);
-	const glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 1000.0f);
+	const glm::mat4 projectionMatrix = glm::perspective(glm::radians(scene.camera.fov), scene.camera.aspect, scene.camera.near, scene.camera.far);
+	const glm::mat4 mvpMatrix = projectionMatrix * viewMatrix;
 
-	glEnable(GL_DEPTH_TEST);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);        
+	glClearDepth(1.0);
+
 	glUseProgram(m_programs["phong"]);
 	// set MVP matrix uniforms
-	glUniformMatrix4fv(glGetUniformLocation(m_programs["phong"], "uViewMatrix"), 1, GL_FALSE, &viewMatrix[0][0]);
-	glUniformMatrix4fv(glGetUniformLocation(m_programs["phong"], "uProjectMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
+	glUniformMatrix4fv(glGetUniformLocation(m_programs["phong"], "uMVPMatrix"), 1, GL_FALSE, &mvpMatrix[0][0]);
 	// set camera and light uniforms
 	glUniform3fv(glGetUniformLocation(m_programs["phong"], "uCameraPos"), 1, &scene.camera.eye[0]);
-
-	// iterate over lights
-	for (const auto& light : scene.lights) {
-		// set light uniforms
-		glUniform3fv(glGetUniformLocation(m_programs["phong"], "uLightPos"), 1, &light.position[0]);
-		glUniform3fv(glGetUniformLocation(m_programs["phong"], "uLightRadiance"), 1, &light.radiance[0]);
-	
-		// iterate over models
-		for (const auto& model : scene.models) {
-			
-			for (const auto& mesh : model.meshes) {
-				// set matrial uniforms
-				if (mesh.materialId == -1) {
-					glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKa"), 1, &glm::vec3(0.0f)[0]);
-					glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKd"), 1, &glm::vec3(0.0f)[0]);
-					glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKs"), 1, &glm::vec3(0.0f)[0]);
-					glUniform1f(glGetUniformLocation(m_programs["phong"], "uShininess"), 0.0f);
-				} else {
-					const Material& material = model.materials[mesh.materialId];
-					glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKa"), 1, &material.ambient[0]);
-					glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKd"), 1, &material.diffuse[0]);
-					glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKs"), 1, &material.specular[0]);
-					glUniform1f(glGetUniformLocation(m_programs["phong"], "uShininess"), material.shininess);
-				}
-
-				// bind vertex array and draw
-				glBindVertexArray(mesh.vao);
-				glDrawElements(GL_TRIANGLES, sizeof(Face) * mesh.faces.size(), GL_UNSIGNED_INT, 0);
+	glUniform3fv(glGetUniformLocation(m_programs["phong"], "uLightPos"), 1, &scene.lights[0].position[0]);
+	glUniform3fv(glGetUniformLocation(m_programs["phong"], "uLightRadiance"), 1, &scene.lights[0].radiance[0]);
+		
+	// iterate over models
+	for (const auto& model : scene.models) {
+		for (const auto& mesh : model.meshes) {
+			// set matrial uniforms
+			if (mesh.materialId != -1) {
+				const Material& material = model.materials[mesh.materialId];
+				glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKa"), 1, material.ambient);
+				glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKd"), 1, material.diffuse);
+				glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKs"), 1, material.specular);
+				glUniform1f(glGetUniformLocation(m_programs["phong"], "uShininess"), material.shininess);
 			}
+
+			// bind vertex array and draw
+			glBindVertexArray(mesh.vao);
+			glDrawElements(GL_TRIANGLES, sizeof(Face) * mesh.faces.size(), GL_UNSIGNED_INT, 0);
 		}
 	}
 }
