@@ -8,6 +8,8 @@
 
 namespace tinyrenderer
 {
+const unsigned maxLightNum = 4;
+
 struct Camera {
     glm::vec3 eye;
     glm::vec3 target;
@@ -25,7 +27,7 @@ struct Light {
 
 struct Scene {
     Camera camera;
-    Light lights[4];
+    Light lights[maxLightNum];
     std::vector<Model> models;
 };
 
