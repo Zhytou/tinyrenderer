@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
 #include "renderer.hpp"
@@ -18,9 +19,9 @@ void Renderer::setup()
 	glFrontFace(GL_CCW);
 
 	// compile and link shaders
-	m_programs["phong"] = linkProgram({
-		compileShader("../shader/phong.vs", GL_VERTEX_SHADER),
-		compileShader("../shader/phong.fs", GL_FRAGMENT_SHADER)
+	m_programs["pbr"] = linkProgram({
+		compileShader("../shader/pbr.vs", GL_VERTEX_SHADER),
+		compileShader("../shader/pbr.fs", GL_FRAGMENT_SHADER)
 	});
 	
 	glFinish();
@@ -30,37 +31,44 @@ void Renderer::render(const Scene& scene)
 {
 	// calculate view and projection matrices
 	const glm::mat4 viewMatrix = glm::lookAt(scene.camera.eye, scene.camera.target, scene.camera.up);
-	const glm::mat4 projectionMatrix = glm::perspective(glm::radians(scene.camera.fov), scene.camera.aspect, scene.camera.near, scene.camera.far);
-	const glm::mat4 mvpMatrix = projectionMatrix * viewMatrix;
+	const glm::mat4 projectMatrix = glm::perspective(glm::radians(scene.camera.fov), scene.camera.aspect, scene.camera.near, scene.camera.far);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);        
 	glClearDepth(1.0);
 
-	glUseProgram(m_programs["phong"]);
+	glUseProgram(m_programs["pbr"]);
 	// set MVP matrix uniforms
-	glUniformMatrix4fv(glGetUniformLocation(m_programs["phong"], "uMVPMatrix"), 1, GL_FALSE, &mvpMatrix[0][0]);
+	glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uViewMatrix"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+	glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uProjectMatrix"), 1, GL_FALSE, glm::value_ptr(projectMatrix));
+
 	// set camera and light uniforms
-	glUniform3fv(glGetUniformLocation(m_programs["phong"], "uCameraPos"), 1, &scene.camera.eye[0]);
-	glUniform3fv(glGetUniformLocation(m_programs["phong"], "uLightPos"), 1, &scene.lights[0].position[0]);
-	glUniform3fv(glGetUniformLocation(m_programs["phong"], "uLightRadiance"), 1, &scene.lights[0].radiance[0]);
+	glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uCameraPos"), 1, glm::value_ptr(scene.camera.eye));
+
+	for (int i = 0; i < maxLightNum; i++) {
+		char s1[20], s2[20];
+
+		std::sprintf(s1, "uLights[%d].position", i);
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], s1), 1, glm::value_ptr(scene.lights[i].position));
+		std::sprintf(s2, "uLights[%d].radiance", i);
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], s2), 1, glm::value_ptr(scene.lights[i].radiance));
+	}
 		
 	// iterate over models
 	for (const auto& model : scene.models) {
-		for (const auto& mesh : model.meshes) {
-			// set matrial uniforms
-			if (mesh.materialId != -1) {
-				const Material& material = model.materials[mesh.materialId];
-				glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKa"), 1, material.ambient);
-				glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKd"), 1, material.diffuse);
-				glUniform3fv(glGetUniformLocation(m_programs["phong"], "uKs"), 1, material.specular);
-				glUniform1f(glGetUniformLocation(m_programs["phong"], "uShininess"), material.shininess);
-			}
-
-			// bind vertex array and draw
-			glBindVertexArray(mesh.vao);
-			glDrawElements(GL_TRIANGLES, sizeof(Face) * mesh.faces.size(), GL_UNSIGNED_INT, 0);
-		}
+		// set pbr textures
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, model.albedo.id);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, model.normal.id);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, model.metallic.id);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, model.roughness.id);
+		
+		// bind vertex array and draw
+		glBindVertexArray(model.mesh.vao);
+		glDrawElements(GL_TRIANGLES, model.mesh.indices.size(), GL_UNSIGNED_INT, 0);
 	}
 }
 
