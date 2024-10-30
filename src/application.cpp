@@ -1,6 +1,9 @@
 #include <stdexcept>
 #include <filesystem>
 #include <iostream>
+#include <map>
+
+#include <rapidjson/document.h>
 
 #include "application.hpp"
 
@@ -46,6 +49,9 @@ Application::Application(int width, int height, const std::string& title) : m_wi
 		throw std::runtime_error("Failed to initialize OpenGL extensions loader");
 	}
 
+	// compile and link shader program
+	m_renderer.setup();
+
 	std::printf("OpenGL Renderer [%s]\n", glGetString(GL_RENDERER));
 }
 
@@ -57,34 +63,69 @@ Application::~Application()
 	glfwTerminate();
 }
 
-void Application::load(const std::string& baseDir, const std::string& modelName, const std::string& configName)
+void Application::load(const std::string& configName)
 {
-	m_scene.models = {Model(baseDir, modelName)};
+	std::string configJson = readText(configName);
+	
+	rapidjson::Document doc;
+	if (doc.Parse(configJson.c_str()).HasParseError()) {
+		throw std::runtime_error("Error parsing JSON");
+	}
+	
+	auto camera = doc["camera"].GetObject();
+	m_scene.camera.eye = {
+		camera["eye"][0].GetFloat(), 
+		camera["eye"][1].GetFloat(), 
+		camera["eye"][2].GetFloat()
+	};
+    m_scene.camera.target = {
+		camera["target"][0].GetFloat(), 
+		camera["target"][1].GetFloat(), 
+		camera["target"][2].GetFloat()
+	};
+    m_scene.camera.up = {
+		camera["up"][0].GetFloat(),
+		camera["up"][1].GetFloat(),
+		camera["up"][2].GetFloat()
+	};
+    m_scene.camera.fov = camera["fov"].GetFloat();
+    m_scene.camera.aspect = m_width / m_height;
+    m_scene.camera.near = camera["near"].GetFloat();
+    m_scene.camera.far = camera["far"].GetFloat();
 
-	m_scene.camera.eye = {278, 273, -800};
-	m_scene.camera.target = {278, 273, -799};
-	m_scene.camera.up = {0, 1, 0};
-	m_scene.camera.fov = 45.0f;
-	m_scene.camera.aspect = m_width / m_height;
-	m_scene.camera.near = 0.1f;
-	m_scene.camera.far = 2000.0f;
+	auto lights = doc["lights"].GetArray();
+	for (int i = 0; i < std::min(maxLightNum, lights.Capacity()); i++) {
+		m_scene.lights[i].position = {
+			lights[i]["position"][0].GetFloat(),
+			lights[i]["position"][1].GetFloat(),
+			lights[i]["position"][2].GetFloat()
+		};
+		m_scene.lights[i].radiance = {
+			lights[i]["radiance"][0].GetFloat(),
+			lights[i]["radiance"][1].GetFloat(),
+			lights[i]["radiance"][2].GetFloat()
+		};
+	}
 
-	m_scene.lights[0] = {{343.0, 548.8, 227.0}, {34, 24, 8}};
-	m_scene.lights[1] = {{343.0, 548.8, 332.0}, {200, 200, 200}};
-	m_scene.lights[2] = {{213.0, 548.8, 332.0}, {200, 200, 200}};
-	m_scene.lights[3] = {{213.0, 548.8, 227.0}, {200, 200, 200}};
-
+	auto models = doc["models"].GetArray();
+	for (int i = 0; i < models.Capacity(); i++) {
+		auto model = models[i].GetObject();
+		std::map<std::string, std::string> modelConfig;
+		for (auto itr = model.begin(); itr != model.end(); itr++) {
+			modelConfig[itr->name.GetString()] = itr->value.GetString();
+		}
+		m_scene.models.emplace_back(modelConfig);
+	}
+	
 }
 
 void Application::run()
 {
-	m_renderer.setup();
 	while(!glfwWindowShouldClose(m_window)) {
 		m_renderer.render(m_scene);
 		glfwSwapBuffers(m_window);
 		glfwPollEvents();
 	}
-
 }
 
 // void Application::mousePositionCallback(GLFWwindow* window, double xpos, double ypos)

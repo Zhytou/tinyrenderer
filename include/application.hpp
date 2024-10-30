@@ -17,8 +17,8 @@ public:
 	// destroy application window and release resources
 	~Application();
 	
-	// load model and configuration
-	void load(const std::string& baseDir, const std::string& modelName, const std::string& configName);
+	// load model, light and camera
+	void load(const std::string& configName);
 
 	// run application main loop
 	void run();
