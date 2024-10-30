@@ -1,48 +1,50 @@
 #pragma once
 
 #include <vector>
+#include <map>
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
-#include <tiny_obj_loader.h>
 
 namespace tinyrenderer {
 
 struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
+    glm::vec3 tangent;
     glm::vec2 texcoord;
-};
-
-struct Face {
-    Face() = default;
-    Face(int i1, int i2, int i3) : p1(i1), p2(i2), p3(i3) {}
-    // vertex index
-    int p1, p2, p3;
 };
 
 struct Mesh {
     Mesh() = default;
-    Mesh(std::vector<Vertex>&& vs, std::vector<Face>&& fs, int mid);
+    Mesh(std::vector<Vertex>&& vs, std::vector<int>&& is);
 
     std::vector<Vertex> vertices;
-    std::vector<Face> faces;
-    int materialId;
+    std::vector<int> indices;
 
     GLuint vao;
     GLuint vbo;
     GLuint ebo;
 };
 
-using Material = tinyobj::material_t;
+struct Texture {
+    Texture() = default;
+    Texture(const std::string& name);
 
-class Model {
+    GLuint id;
+    unsigned char* data;
+    int width, height, channels;
+};
+
+struct Model {
     Model() = default;
-    Model(const std::string& path, const std::string& name);
+    Model(const std::map<std::string, std::string>& config);
 
-    std::vector<Mesh> meshes;
-    std::vector<Material> materials;
-    std::vector<GLuint> ubos;
+    Mesh mesh;
+    Texture albedo;
+    Texture normal;
+    Texture metallic;
+    Texture roughness;
 };
 
 } // namespace tinyrenderer
