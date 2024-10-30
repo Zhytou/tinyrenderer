@@ -1,0 +1,27 @@
+{
+    "camera": {
+        "eye": [0, 2, 2],
+        "target": [0, 0, 0],
+        "up": [0, 1, 0],
+        "fov": 45.0,
+        "near": 0.1,
+        "far": 2000
+    },
+    "lights": [
+        {
+            "radiance": [1, 1, 1],
+            "position": [0, 0, 0]
+        }
+    ],
+    "models": [
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/scenes/gun/",
+            "modelName": "gun.obj",
+            "albedo": "gun_albedo.png",
+            "ao": "gun_ao.png",
+            "metallic": "gun_metallic.png",
+            "roughness": "gun_roughness.png",
+            "normal": "gun_normal.png"
+        }
+    ]
+}
