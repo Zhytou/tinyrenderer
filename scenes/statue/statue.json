@@ -1,0 +1,30 @@
+{
+    "camera": {
+        "eye": [0, 10, 30],
+        "target": [0, 0, 0],
+        "up": [0, 1, 0],
+        "fov": 45.0,
+        "near": 0.1,
+        "far": 2000
+    },
+    "lights": {
+        "directionallight": {
+            "radiance": [1, 1, 1],
+            "direction": [1, 1, 1]
+        },
+        "pointlight": [
+
+        ]            
+    },
+    "models": [
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/scenes/statue/",
+            "modelName": "statue.obj",
+            "albedo": "marble_albedo.png",
+            "ao": "marble_ao.png",
+            "metallic": "marble_metallic.png",
+            "roughness": "marble_roughness.png",
+            "normal": "marble_normal.png"
+        }
+    ]
+}

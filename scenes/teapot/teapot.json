@@ -1,0 +1,30 @@
+{
+    "camera": {
+        "eye": [10, 10, 10],
+        "target": [0, 0, 0],
+        "up": [0, 1, 0],
+        "fov": 45.0,
+        "near": 0.1,
+        "far": 5000
+    },
+    "lights": {
+        "directionallight": {
+            "radiance": [1, 1, 1],
+            "direction": [1, 0, 1]
+        },
+        "pointlight": [
+
+        ]            
+    },
+    "models": [
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/scenes/teapot/",
+            "modelName": "teapot.obj",
+            "albedo": "lapis_albedo.png",
+            "ao": "lapis_ao.png",
+            "metallic": "lapis_metallic.png",
+            "roughness": "lapis_roughness.png",
+            "normal": "lapis_normal.png"
+        }
+    ]
+}
