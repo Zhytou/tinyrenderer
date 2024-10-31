@@ -93,17 +93,29 @@ void Application::load(const std::string& configName)
     m_scene.camera.near = camera["near"].GetFloat();
     m_scene.camera.far = camera["far"].GetFloat();
 
-	auto lights = doc["lights"].GetArray();
-	for (int i = 0; i < std::min(maxLightNum, lights.Capacity()); i++) {
-		m_scene.lights[i].position = {
-			lights[i]["position"][0].GetFloat(),
-			lights[i]["position"][1].GetFloat(),
-			lights[i]["position"][2].GetFloat()
+	auto lights = doc["lights"].GetObject();
+	for (int i = 0; i < std::min(maxPointLightNum, lights["pointlight"].Capacity()); i++) {
+		m_scene.plights[i].position = {
+			lights["pointlight"][i]["position"][0].GetFloat(),
+			lights["pointlight"][i]["position"][1].GetFloat(),
+			lights["pointlight"][i]["position"][2].GetFloat()
 		};
-		m_scene.lights[i].radiance = {
-			lights[i]["radiance"][0].GetFloat(),
-			lights[i]["radiance"][1].GetFloat(),
-			lights[i]["radiance"][2].GetFloat()
+		m_scene.plights[i].intensity = {
+			lights["pointlight"][i]["intensity"][0].GetFloat(),
+			lights["pointlight"][i]["intensity"][1].GetFloat(),
+			lights["pointlight"][i]["intensity"][2].GetFloat()
+		};
+	}
+	{
+		m_scene.dlight.direction = {
+			lights["directionallight"]["direction"][0].GetFloat(),
+			lights["directionallight"]["direction"][1].GetFloat(),
+			lights["directionallight"]["direction"][2].GetFloat(),
+		};
+		m_scene.dlight.radiance = {
+			lights["directionallight"]["radiance"][0].GetFloat(),
+			lights["directionallight"]["radiance"][1].GetFloat(),
+			lights["directionallight"]["radiance"][2].GetFloat(),
 		};
 	}
 
@@ -148,36 +160,6 @@ void Application::run()
 
 // 		self->m_prevCursorX = xpos;
 // 		self->m_prevCursorY = ypos;
-// 	}
-// }
-	
-// void Application::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
-// {
-// 	Application* self = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-
-// 	const InputMode oldMode = self->m_mode;
-// 	if(action == GLFW_PRESS && self->m_mode == InputMode::None) {
-// 		switch(button) {
-// 		case GLFW_MOUSE_BUTTON_1:
-// 			self->m_mode = InputMode::RotatingView;
-// 			break;
-// 		case GLFW_MOUSE_BUTTON_2:
-// 			self->m_mode = InputMode::RotatingScene;
-// 			break;
-// 		}
-// 	}
-// 	if(action == GLFW_RELEASE && (button == GLFW_MOUSE_BUTTON_1 || button == GLFW_MOUSE_BUTTON_2)) {
-// 		self->m_mode = InputMode::None;
-// 	}
-
-// 	if(oldMode != self->m_mode) {
-// 		if(self->m_mode == InputMode::None) {
-// 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-// 		}
-// 		else {
-// 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-// 			glfwGetCursorPos(window, &self->m_prevCursorX, &self->m_prevCursorY);
-// 		}
 // 	}
 // }
 	

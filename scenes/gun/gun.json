@@ -1,18 +1,21 @@
 {
     "camera": {
-        "eye": [0, 2, 2],
+        "eye": [1, 0, 1],
         "target": [0, 0, 0],
         "up": [0, 1, 0],
         "fov": 45.0,
         "near": 0.1,
         "far": 2000
     },
-    "lights": [
-        {
+    "lights": {
+        "directionallight": {
             "radiance": [1, 1, 1],
-            "position": [0, 0, 0]
-        }
-    ],
+            "direction": [-2, 0, 2]
+        },
+        "pointlight": [
+
+        ]            
+    },
     "models": [
         {
             "baseDir": "/home/zhytou/tinyrenderer/scenes/gun/",
