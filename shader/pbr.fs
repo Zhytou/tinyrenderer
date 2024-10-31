@@ -67,7 +67,7 @@ float G_SchlicksmithGGX(float NdotL, float NdotV, float roughness)
     return GL * GV;
 }
 
-vec3 BRDF(vec3  L, vec3  V, vec3  N, vec3  F0, vec3  baseColor, float metallic, float roughness)
+vec3 BRDF(vec3  L, vec3  V, vec3  N, vec3  F0, vec3  baseColor, float metallic, float roughness, bool isPointLight)
 {
     // Precalculate vectors and dot products
     vec3  H     = normalize(V + L);
@@ -86,7 +86,10 @@ vec3 BRDF(vec3  L, vec3  V, vec3  N, vec3  F0, vec3  baseColor, float metallic, 
     vec3 kS = F;
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
 
-    vec3 diffuse = kD * baseColor / PI;
+    vec3 diffuse = kD * baseColor;
+    if (isPointLight) {
+        diffuse /= PI;
+    }
     vec3 specular = D * F * G / (4.0 * NdotL * NdotV + 0.001);
 
     return diffuse + specular;
@@ -98,6 +101,8 @@ void main()
     vec3 V = normalize(uCameraPos - vFragPos);
     
     vec3 baseColor = texture(albedoTexture, vFragUV).rgb;
+    baseColor = pow(baseColor, vec3(2.2));
+
     float roughness = texture(roughnessTexture, vFragUV).r;
     float metallic = texture(metallicTexture, vFragUV).r;
 
@@ -107,28 +112,28 @@ void main()
     vec3 color = vec3(0.0);
 
     // point light
-    for (int i = 0; i < MAX_POINT_LIGHT_NUM; i++) {
-        if (uPointLights[i].intensity == vec3(0.0)) {
-            continue;
-        }
+    // for (int i = 0; i < MAX_POINT_LIGHT_NUM; i++) {
+    //     if (uPointLights[i].intensity == vec3(0.0)) {
+    //         continue;
+    //     }
 
-        float distance = length(uPointLights[i].position - vFragPos);
-        float attenuation = 1 / (distance * distance);
-        vec3 radiance = uPointLights[i].intensity * attenuation;
+    //     float distance = length(uPointLights[i].position - vFragPos);
+    //     float attenuation = 1 / (distance * distance);
+    //     vec3 radiance = uPointLights[i].intensity * attenuation;
 
-        vec3 L = normalize(uPointLights[i].position - vFragPos);
-        vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness);
+    //     vec3 L = normalize(uPointLights[i].position - vFragPos);
+    //     vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness, true);
 
-        float NdotL = clamp(dot(N, L), 0.0, 1.0);
+    //     float NdotL = clamp(dot(N, L), 0.0, 1.0);
 
-        color += radiance * brdf * NdotL;
-    }
+    //     color += radiance * brdf * NdotL;
+    // }
 
     if (uDirectionalLight.radiance != vec3(0.0)) {
         vec3 radiance = uDirectionalLight.radiance;
 
-        vec3 L = normalize(uDirectionalLight.direction);
-        vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness);
+        vec3 L = normalize(-uDirectionalLight.direction);
+        vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness, false);
 
         float NdotL = clamp(dot(N, L), 0.0, 1.0);
 
@@ -140,5 +145,5 @@ void main()
     // gamma correction
     color = pow(color, vec3(1.0 / 2.2));
 
-    gl_FragColor = vec4(color, 0.0);
+    gl_FragColor = vec4(color, 1.0);
 }

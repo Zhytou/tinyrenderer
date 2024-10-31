@@ -15,8 +15,8 @@ namespace tinyrenderer
 void Renderer::setup()
 {
 	// set global OpenGL state
-	glEnable(GL_CULL_FACE);
-	glFrontFace(GL_CCW);
+	// glEnable(GL_CULL_FACE);
+	// glFrontFace(GL_CCW);
 
 	// compile and link shaders
 	m_programs["pbr"] = linkProgram({
@@ -42,18 +42,24 @@ void Renderer::render(const Scene& scene)
 	glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uViewMatrix"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
 	glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uProjectMatrix"), 1, GL_FALSE, glm::value_ptr(projectMatrix));
 
-	// set camera and light uniforms
+	// set camera uniforms
 	glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uCameraPos"), 1, glm::value_ptr(scene.camera.eye));
-
-	for (int i = 0; i < maxLightNum; i++) {
-		char s1[20], s2[20];
-
-		std::sprintf(s1, "uLights[%d].position", i);
-		glUniform3fv(glGetUniformLocation(m_programs["pbr"], s1), 1, glm::value_ptr(scene.lights[i].position));
-		std::sprintf(s2, "uLights[%d].radiance", i);
-		glUniform3fv(glGetUniformLocation(m_programs["pbr"], s2), 1, glm::value_ptr(scene.lights[i].radiance));
+	// set pointlight uniforms
+	for (int i = 0; i < maxPointLightNum; i++) {
+		if (scene.plights[i].intensity == glm::vec3(0.0)) {
+			continue;
+		}
+		char s1[40], s2[40];
+		std::sprintf(s1, "uPointLights[%d].position", i);
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], s1), 1, glm::value_ptr(scene.plights[i].position));
+		std::sprintf(s2, "uPointLights[%d].intensity", i);
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], s2), 1, glm::value_ptr(scene.plights[i].intensity));
 	}
-		
+	// set directional light
+	{
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.direction"), 1, glm::value_ptr(scene.dlight.direction));
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.radiance"), 1, glm::value_ptr(scene.dlight.radiance));
+	}
 	// iterate over models
 	for (const auto& model : scene.models) {
 		// set pbr textures

@@ -3,8 +3,8 @@
 ## Build
 
 ```bash
-# 安装glfw和glm
-sudo apt install libglfw3-dev libglm-dev
+# 安装glfw、glm和rapidjson
+sudo apt install libglfw3-dev libglm-dev rapidjson-dev
 
 # 编译
 mkdir build

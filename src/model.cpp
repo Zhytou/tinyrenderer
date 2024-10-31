@@ -1,5 +1,4 @@
 #include <vector>
-#include <iostream>
 #include <stdexcept>
 
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -43,10 +42,13 @@ Mesh::Mesh(std::vector<Vertex>&& vs, std::vector<int>&& is) : vertices(vs), indi
 
 Texture::Texture(const std::string& name)
 {
+    stbi_set_flip_vertically_on_load(true);  
     data = stbi_load(name.c_str(), &width, &height, &channels, 0);
     if (!data) {
         throw std::runtime_error("Failed to load texture: " + name);
     }
+
+    std::printf("Loading texture: %s %d %d %d\n", name.c_str(), width, height, channels);
 
     GLenum format;
     if (channels == 1)
@@ -60,16 +62,14 @@ Texture::Texture(const std::string& name)
 
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
-    // set the texture wrapping/filtering options
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // set texture wrapping to GL_REPEAT (default wrapping method)
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // set texture filtering to GL_LINEAR
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // generate texture
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    // generate mipmap
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 }
 
 Model::Model(const std::map<std::string, std::string>& config)
@@ -85,7 +85,6 @@ Model::Model(const std::map<std::string, std::string>& config)
         throw std::runtime_error(err);
     }
 
-    std::cout << "load obj success!" << std::endl;
     std::vector<int> indices;
     std::vector<Vertex> vertices;
     for (auto& shape : shapes) {        
@@ -97,6 +96,9 @@ Model::Model(const std::map<std::string, std::string>& config)
         assert(numFaces == shape.mesh.num_face_vertices.size() && numFaces == shape.mesh.material_ids.size());
 
         for (int i = 0; i < numFaces; ++i) {
+            // mesh is triangulated
+            assert(shape.mesh.num_face_vertices[i] == 3);
+            
             bool hasNormal = true;
             bool hasUV = true;
 
@@ -105,9 +107,10 @@ Model::Model(const std::map<std::string, std::string>& config)
             glm::vec2 uv[3];
 
             for (int j = 0; j < 3; ++j) {
-                int v = shape.mesh.indices[3 * i + j].vertex_index;
-                int n = shape.mesh.indices[3 * i + j].normal_index;
-                int t = shape.mesh.indices[3 * i + j].texcoord_index;
+                tinyobj::index_t index = shape.mesh.indices[3 * i + j];
+                int v = index.vertex_index;
+                int n = index.normal_index;
+                int t = index.texcoord_index;
                 
                 vertex[j] = glm::vec3(attributes.vertices[3 * v], attributes.vertices[3 * v + 1], attributes.vertices[3 * v + 2]);
                 if (n >= 0) {
@@ -162,7 +165,7 @@ Model::Model(const std::map<std::string, std::string>& config)
         }
     }
 
-    std::cout << "load vertices and indices success!" << std::endl;
+    std::printf("Loading model: %s\n", modelName.c_str());
     mesh = Mesh(std::move(vertices), std::move(indices));
     albedo = Texture(baseDir + config.at("albedo"));
     normal = Texture(baseDir + config.at("normal"));
