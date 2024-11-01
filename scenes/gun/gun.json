@@ -9,11 +9,18 @@
     },
     "lights": {
         "directionallight": {
-            "radiance": [1, 1, 1],
+            "color": [1, 1, 1],
             "direction": [1, 0, 1]
         },
         "pointlight": [
-
+            {
+                "color": [0.34, 0.24, 0.8],
+                "position": [0, 0, -1]
+            },
+            {
+                "color": [1, 1, 1],
+                "position": [1, -1, -1]
+            }
         ]            
     },
     "models": [

@@ -1,15 +1,15 @@
 {
     "camera": {
-        "eye": [0, 10, 30],
-        "target": [0, 0, 0],
-        "up": [0, 1, 0],
+        "eye": [-30, -10, 8],
+        "target": [0, 0, 8],
+        "up": [0, 0, 1],
         "fov": 45.0,
         "near": 0.1,
         "far": 2000
     },
     "lights": {
         "directionallight": {
-            "radiance": [1, 1, 1],
+            "color": [1, 1, 1],
             "direction": [1, 1, 1]
         },
         "pointlight": [
