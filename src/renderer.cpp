@@ -16,6 +16,7 @@ void Renderer::setup()
 {
 	// set global OpenGL state
 	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
 
 	// compile and link shaders
@@ -46,19 +47,19 @@ void Renderer::render(const Scene& scene)
 	glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uCameraPos"), 1, glm::value_ptr(scene.camera.eye));
 	// set pointlight uniforms
 	for (int i = 0; i < maxPointLightNum; i++) {
-		if (scene.plights[i].intensity == glm::vec3(0.0)) {
+		if (scene.plights[i].color == glm::vec3(0.0)) {
 			continue;
 		}
 		char s1[40], s2[40];
 		std::sprintf(s1, "uPointLights[%d].position", i);
 		glUniform3fv(glGetUniformLocation(m_programs["pbr"], s1), 1, glm::value_ptr(scene.plights[i].position));
-		std::sprintf(s2, "uPointLights[%d].intensity", i);
-		glUniform3fv(glGetUniformLocation(m_programs["pbr"], s2), 1, glm::value_ptr(scene.plights[i].intensity));
+		std::sprintf(s2, "uPointLights[%d].color", i);
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], s2), 1, glm::value_ptr(scene.plights[i].color));
 	}
 	// set directional light
 	{
 		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.direction"), 1, glm::value_ptr(scene.dlight.direction));
-		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.radiance"), 1, glm::value_ptr(scene.dlight.radiance));
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.color"), 1, glm::value_ptr(scene.dlight.color));
 	}
 	// iterate over models
 	for (const auto& model : scene.models) {

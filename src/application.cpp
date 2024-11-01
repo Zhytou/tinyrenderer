@@ -79,10 +79,10 @@ void Application::load(const std::string& configName, bool useDefaultCamera)
 			lightsDoc["pointlight"][i]["position"][1].GetFloat(),
 			lightsDoc["pointlight"][i]["position"][2].GetFloat()
 		};
-		m_scene.plights[i].intensity = {
-			lightsDoc["pointlight"][i]["intensity"][0].GetFloat(),
-			lightsDoc["pointlight"][i]["intensity"][1].GetFloat(),
-			lightsDoc["pointlight"][i]["intensity"][2].GetFloat()
+		m_scene.plights[i].color = {
+			lightsDoc["pointlight"][i]["color"][0].GetFloat(),
+			lightsDoc["pointlight"][i]["color"][1].GetFloat(),
+			lightsDoc["pointlight"][i]["color"][2].GetFloat()
 		};
 	}
 	{
@@ -91,10 +91,10 @@ void Application::load(const std::string& configName, bool useDefaultCamera)
 			lightsDoc["directionallight"]["direction"][1].GetFloat(),
 			lightsDoc["directionallight"]["direction"][2].GetFloat(),
 		};
-		m_scene.dlight.radiance = {
-			lightsDoc["directionallight"]["radiance"][0].GetFloat(),
-			lightsDoc["directionallight"]["radiance"][1].GetFloat(),
-			lightsDoc["directionallight"]["radiance"][2].GetFloat(),
+		m_scene.dlight.color = {
+			lightsDoc["directionallight"]["color"][0].GetFloat(),
+			lightsDoc["directionallight"]["color"][1].GetFloat(),
+			lightsDoc["directionallight"]["color"][2].GetFloat(),
 		};
 	}
 

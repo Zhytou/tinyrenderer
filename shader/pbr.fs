@@ -16,12 +16,12 @@ uniform vec3 uCameraPos;
 
 struct PointLight {
     vec3 position;
-    vec3 intensity;
+    vec3 color;
 };
 
 struct DirectionalLight {
     vec3 direction;
-    vec3 radiance;
+    vec3 color;
 };
 
 #define MAX_POINT_LIGHT_NUM 10
@@ -101,7 +101,7 @@ void main()
     vec3 V = normalize(uCameraPos - vFragPos);
     
     vec3 baseColor = texture(albedoTexture, vFragUV).rgb;
-    baseColor = pow(baseColor, vec3(2.2));
+    // baseColor = pow(baseColor, vec3(2.2));
 
     float roughness = texture(roughnessTexture, vFragUV).r;
     float metallic = texture(metallicTexture, vFragUV).r;
@@ -112,38 +112,35 @@ void main()
     vec3 color = vec3(0.0);
 
     // point light
-    // for (int i = 0; i < MAX_POINT_LIGHT_NUM; i++) {
-    //     if (uPointLights[i].intensity == vec3(0.0)) {
-    //         continue;
-    //     }
+    for (int i = 0; i < MAX_POINT_LIGHT_NUM; i++) {
+        if (uPointLights[i].color == vec3(0.0)) {
+            continue;
+        }
 
-    //     float distance = length(uPointLights[i].position - vFragPos);
-    //     float attenuation = 1 / (distance * distance);
-    //     vec3 radiance = uPointLights[i].intensity * attenuation;
+        float distance = length(uPointLights[i].position - vFragPos);
+        float attenuation = 1 / (distance * distance);
 
-    //     vec3 L = normalize(uPointLights[i].position - vFragPos);
-    //     vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness, true);
+        vec3 L = normalize(uPointLights[i].position - vFragPos);
+        vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness, true);
 
-    //     float NdotL = clamp(dot(N, L), 0.0, 1.0);
+        float NdotL = clamp(dot(N, L), 0.0, 1.0);
 
-    //     color += radiance * brdf * NdotL;
-    // }
+        color += uPointLights[i].color * attenuation * brdf * NdotL;
+    }
 
-    if (uDirectionalLight.radiance != vec3(0.0)) {
-        vec3 radiance = uDirectionalLight.radiance;
-
+    if (uDirectionalLight.color != vec3(0.0)) {
         vec3 L = normalize(-uDirectionalLight.direction);
         vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness, false);
 
         float NdotL = clamp(dot(N, L), 0.0, 1.0);
 
-        color += radiance * brdf * NdotL;
+        color += uDirectionalLight.color * brdf * NdotL;
     }
 
     // hdr -> ldr
-    // color = color / (color + vec3(1.0));
+    color = color / (color + vec3(0.004));
     // gamma correction
     color = pow(color, vec3(1.0 / 2.2));
 
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(baseColor, 1.0);
 }
