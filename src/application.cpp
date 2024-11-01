@@ -63,7 +63,7 @@ Application::~Application()
 	glfwTerminate();
 }
 
-void Application::load(const std::string& configName)
+void Application::load(const std::string& configName, bool useDefaultCamera)
 {
 	std::string configJson = readText(configName);
 	
@@ -72,63 +72,85 @@ void Application::load(const std::string& configName)
 		throw std::runtime_error("Error parsing JSON");
 	}
 	
-	auto camera = doc["camera"].GetObject();
-	m_scene.camera.eye = {
-		camera["eye"][0].GetFloat(), 
-		camera["eye"][1].GetFloat(), 
-		camera["eye"][2].GetFloat()
-	};
-    m_scene.camera.target = {
-		camera["target"][0].GetFloat(), 
-		camera["target"][1].GetFloat(), 
-		camera["target"][2].GetFloat()
-	};
-    m_scene.camera.up = {
-		camera["up"][0].GetFloat(),
-		camera["up"][1].GetFloat(),
-		camera["up"][2].GetFloat()
-	};
-    m_scene.camera.fov = camera["fov"].GetFloat();
-    m_scene.camera.aspect = m_width / m_height;
-    m_scene.camera.near = camera["near"].GetFloat();
-    m_scene.camera.far = camera["far"].GetFloat();
-
-	auto lights = doc["lights"].GetObject();
-	for (int i = 0; i < std::min(maxPointLightNum, lights["pointlight"].Capacity()); i++) {
+	auto lightsDoc = doc["lights"].GetObject();
+	for (int i = 0; i < std::min(maxPointLightNum, lightsDoc["pointlight"].Capacity()); i++) {
 		m_scene.plights[i].position = {
-			lights["pointlight"][i]["position"][0].GetFloat(),
-			lights["pointlight"][i]["position"][1].GetFloat(),
-			lights["pointlight"][i]["position"][2].GetFloat()
+			lightsDoc["pointlight"][i]["position"][0].GetFloat(),
+			lightsDoc["pointlight"][i]["position"][1].GetFloat(),
+			lightsDoc["pointlight"][i]["position"][2].GetFloat()
 		};
 		m_scene.plights[i].intensity = {
-			lights["pointlight"][i]["intensity"][0].GetFloat(),
-			lights["pointlight"][i]["intensity"][1].GetFloat(),
-			lights["pointlight"][i]["intensity"][2].GetFloat()
+			lightsDoc["pointlight"][i]["intensity"][0].GetFloat(),
+			lightsDoc["pointlight"][i]["intensity"][1].GetFloat(),
+			lightsDoc["pointlight"][i]["intensity"][2].GetFloat()
 		};
 	}
 	{
 		m_scene.dlight.direction = {
-			lights["directionallight"]["direction"][0].GetFloat(),
-			lights["directionallight"]["direction"][1].GetFloat(),
-			lights["directionallight"]["direction"][2].GetFloat(),
+			lightsDoc["directionallight"]["direction"][0].GetFloat(),
+			lightsDoc["directionallight"]["direction"][1].GetFloat(),
+			lightsDoc["directionallight"]["direction"][2].GetFloat(),
 		};
 		m_scene.dlight.radiance = {
-			lights["directionallight"]["radiance"][0].GetFloat(),
-			lights["directionallight"]["radiance"][1].GetFloat(),
-			lights["directionallight"]["radiance"][2].GetFloat(),
+			lightsDoc["directionallight"]["radiance"][0].GetFloat(),
+			lightsDoc["directionallight"]["radiance"][1].GetFloat(),
+			lightsDoc["directionallight"]["radiance"][2].GetFloat(),
 		};
 	}
 
-	auto models = doc["models"].GetArray();
-	for (int i = 0; i < models.Capacity(); i++) {
-		auto model = models[i].GetObject();
+	AABB sceneAABB;
+	auto modelsDoc = doc["models"].GetArray();
+	for (int i = 0; i < modelsDoc.Capacity(); i++) {
+		auto modelDoc = modelsDoc[i].GetObject();
 		std::map<std::string, std::string> modelConfig;
-		for (auto itr = model.begin(); itr != model.end(); itr++) {
+		for (auto itr = modelDoc.begin(); itr != modelDoc.end(); itr++) {
 			modelConfig[itr->name.GetString()] = itr->value.GetString();
 		}
-		m_scene.models.emplace_back(modelConfig);
+		Model model(modelConfig);
+		sceneAABB.maxPos.x = std::max(sceneAABB.maxPos.x, model.aabb.maxPos.x);
+		sceneAABB.maxPos.y = std::max(sceneAABB.maxPos.y, model.aabb.maxPos.y);
+		sceneAABB.maxPos.z = std::max(sceneAABB.maxPos.z, model.aabb.maxPos.z);
+		sceneAABB.minPos.x = std::min(sceneAABB.minPos.x, model.aabb.minPos.x);
+		sceneAABB.minPos.y = std::min(sceneAABB.minPos.y, model.aabb.minPos.y);
+		sceneAABB.minPos.z = std::min(sceneAABB.minPos.z, model.aabb.minPos.z);
+		m_scene.models.emplace_back(model);
 	}
-	
+
+	auto cameraDoc = doc["camera"].GetObject();
+	m_scene.camera.eye = {
+		cameraDoc["eye"][0].GetFloat(), 
+		cameraDoc["eye"][1].GetFloat(), 
+		cameraDoc["eye"][2].GetFloat()
+	};
+    m_scene.camera.target = {
+		cameraDoc["target"][0].GetFloat(), 
+		cameraDoc["target"][1].GetFloat(), 
+		cameraDoc["target"][2].GetFloat()
+	};
+    m_scene.camera.up = {
+		cameraDoc["up"][0].GetFloat(),
+		cameraDoc["up"][1].GetFloat(),
+		cameraDoc["up"][2].GetFloat()
+	};
+    m_scene.camera.fov = cameraDoc["fov"].GetFloat();
+    m_scene.camera.aspect = m_width / m_height;
+    m_scene.camera.near = cameraDoc["near"].GetFloat();
+    m_scene.camera.far = cameraDoc["far"].GetFloat();
+
+	if (useDefaultCamera) {
+		glm::vec3 target = 0.5f * (sceneAABB.minPos + sceneAABB.maxPos);
+		glm::vec3 eye = target + 2.0f * (sceneAABB.maxPos - sceneAABB.minPos);
+		glm::vec3 direction = glm::normalize(sceneAABB.maxPos - sceneAABB.minPos);
+		glm::vec3 up = {1.0f, 0.0f, 0.0f};
+		if (std::abs(glm::dot(direction, up)) > 0.01f) {
+			up = glm::cross(direction, up);
+		}
+		m_scene.camera.target = target;
+		m_scene.camera.eye = eye;
+		m_scene.camera.up = up;
+	}
+
+	std::printf("Camera eye(%f, %f, %f) target(%f, %f, %f)\n", m_scene.camera.eye.x, m_scene.camera.eye.y, m_scene.camera.eye.z, m_scene.camera.target.x, m_scene.camera.target.y, m_scene.camera.target.z);
 }
 
 void Application::run()

@@ -18,7 +18,7 @@ public:
 	~Application();
 	
 	// load model, light and camera
-	void load(const std::string& configName);
+	void load(const std::string& configName,  bool useDefaultCamera = true);
 
 	// run application main loop
 	void run();

@@ -17,14 +17,20 @@ struct Vertex {
 
 struct Mesh {
     Mesh() = default;
-    Mesh(std::vector<Vertex>&& vs, std::vector<int>&& is);
+    Mesh(std::vector<Vertex>&& vs, std::vector<unsigned int>&& is);
 
     std::vector<Vertex> vertices;
-    std::vector<int> indices;
+    std::vector<unsigned int> indices;
 
     GLuint vao;
     GLuint vbo;
     GLuint ebo;
+};
+
+struct AABB {
+    AABB() : minPos(std::numeric_limits<float>::max()), maxPos(std::numeric_limits<float>::min()) {}
+    glm::vec3 minPos;
+    glm::vec3 maxPos;
 };
 
 struct Texture {
@@ -40,6 +46,7 @@ struct Model {
     Model() = default;
     Model(const std::map<std::string, std::string>& config);
 
+    AABB aabb;
     Mesh mesh;
     Texture albedo;
     Texture normal;
