@@ -22,12 +22,12 @@ struct Camera {
 
 struct PointLight {
 	glm::vec3 position;
-	glm::vec3 intensity;
+	glm::vec3 color;
 };
 
 struct DirectionalLight {
     glm::vec3 direction;
-	glm::vec3 radiance;
+	glm::vec3 color;
 };
 
 struct Scene {
