@@ -15,8 +15,8 @@ namespace tinyrenderer
 void Renderer::setup()
 {
 	// set global OpenGL state
-	// glEnable(GL_CULL_FACE);
-	// glFrontFace(GL_CCW);
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CCW);
 
 	// compile and link shaders
 	m_programs["pbr"] = linkProgram({

@@ -11,7 +11,7 @@
 namespace tinyrenderer
 {
 
-Mesh::Mesh(std::vector<Vertex>&& vs, std::vector<int>&& is) : vertices(vs), indices(is)
+Mesh::Mesh(std::vector<Vertex>&& vs, std::vector<unsigned int>&& is) : vertices(vs), indices(is)
 {
     // generate and bind vertex array object
     glGenVertexArrays(1, &vao);
@@ -27,7 +27,7 @@ Mesh::Mesh(std::vector<Vertex>&& vs, std::vector<int>&& is) : vertices(vs), indi
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     // fill ebo with index data
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size(), indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
     // set vertex attribute pointers which describe how to interpret vertex data(use in vertex shader by location = 0, 1, 2)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
@@ -85,12 +85,14 @@ Model::Model(const std::map<std::string, std::string>& config)
         throw std::runtime_error(err);
     }
 
-    std::vector<int> indices;
+    int totNumFaces = 0;
+    std::vector<unsigned int> indices;
     std::vector<Vertex> vertices;
     for (auto& shape : shapes) {        
         // since tinyobj::LoadObj() has already triangulated the mesh, so we can assert that the number of indices is a multiple of 3
         assert(shape.mesh.indices.size() % 3 == 0);
         int numFaces = shape.mesh.indices.size() / 3;
+        totNumFaces += numFaces;
 
         // both of the following sizes represent the number of triangle faces
         assert(numFaces == shape.mesh.num_face_vertices.size() && numFaces == shape.mesh.material_ids.size());
@@ -104,6 +106,7 @@ Model::Model(const std::map<std::string, std::string>& config)
 
             glm::vec3 vertex[3];
             glm::vec3 normal[3];
+            glm::vec3 tangent;
             glm::vec2 uv[3];
 
             for (int j = 0; j < 3; ++j) {
@@ -123,6 +126,16 @@ Model::Model(const std::map<std::string, std::string>& config)
                 } else {
                     hasUV = false;
                 }
+
+                // update AABB
+                {
+                    aabb.maxPos.x = std::max(aabb.maxPos.x, vertex[j].x);
+                    aabb.maxPos.y = std::max(aabb.maxPos.y, vertex[j].y);
+                    aabb.maxPos.z = std::max(aabb.maxPos.z, vertex[j].z);
+                    aabb.minPos.x = std::min(aabb.minPos.x, vertex[j].x);
+                    aabb.minPos.y = std::min(aabb.minPos.y, vertex[j].y);
+                    aabb.minPos.z = std::min(aabb.minPos.z, vertex[j].z);
+                }
             }
 
             if (!hasNormal) {
@@ -138,7 +151,6 @@ Model::Model(const std::map<std::string, std::string>& config)
                 }
             }
 
-            glm::vec3 tangent;
             {
                 glm::vec3 edge1    = vertex[1] - vertex[0];
                 glm::vec3 edge2    = vertex[2] - vertex[1];
@@ -165,7 +177,7 @@ Model::Model(const std::map<std::string, std::string>& config)
         }
     }
 
-    std::printf("Loading model: %s\n", modelName.c_str());
+    std::printf("Loading model: %s %d\n", modelName.c_str(), totNumFaces);
     mesh = Mesh(std::move(vertices), std::move(indices));
     albedo = Texture(baseDir + config.at("albedo"));
     normal = Texture(baseDir + config.at("normal"));
