@@ -1,0 +1,29 @@
+{
+    "camera": {
+        "eye": [1, 0, 1],
+        "target": [0, 0, 0],
+        "up": [0, 1, 0],
+        "fov": 45.0,
+        "near": 0.1,
+        "far": 2000
+    },
+    "lights": {
+        "directionallight": {
+            "color": [1, 1, 1],
+            "direction": [1, 0, 1]
+        },
+        "pointlight": [
+        ]            
+    },
+    "models": [
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/scenes/firehydrant/",
+            "modelName": "firehydrant.obj",
+            "albedo": "firehydrant_albedo.png",
+            "ao": "firehydrant_ao.png",
+            "metallic": "firehydrant_metallic.png",
+            "roughness": "firehydrant_roughness.png",
+            "normal": "firehydrant_normal.png"
+        }
+    ]
+}
