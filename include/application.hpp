@@ -8,6 +8,12 @@
 namespace tinyrenderer
 {
 
+enum AppMode {
+	None = 0,
+	RotatingCamera,
+	RotatingLight,
+};
+
 class Application
 {
 public:
@@ -21,7 +27,7 @@ public:
 	void load(const std::string& configName,  bool useDefaultCamera = true);
 
 	// run application main loop
-	void run();
+	void run(AppMode mode = AppMode::None);
 
 private:
 	// static void mousePositionCallback(GLFWwindow* window, double xpos, double ypos);
@@ -32,6 +38,7 @@ private:
 	Renderer m_renderer;
 	Scene m_scene;
 	int m_width, m_height;
+	AppMode m_mode;
 };
 	
 } // namespace tinyrenderer

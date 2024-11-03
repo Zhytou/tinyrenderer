@@ -4,6 +4,7 @@
 #include <map>
 
 #include <rapidjson/document.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "application.hpp"
 
@@ -73,7 +74,8 @@ void Application::load(const std::string& configName, bool useDefaultCamera)
 	}
 	
 	auto lightsDoc = doc["lights"].GetObject();
-	for (int i = 0; i < std::min(maxPointLightNum, lightsDoc["pointlight"].Capacity()); i++) {
+	m_scene.plights.resize(lightsDoc["pointlight"].Size());
+	for (int i = 0; i < m_scene.plights.size(); i++) {
 		m_scene.plights[i].position = {
 			lightsDoc["pointlight"][i]["position"][0].GetFloat(),
 			lightsDoc["pointlight"][i]["position"][1].GetFloat(),
@@ -136,6 +138,7 @@ void Application::load(const std::string& configName, bool useDefaultCamera)
     m_scene.camera.aspect = m_width / m_height;
     m_scene.camera.near = cameraDoc["near"].GetFloat();
     m_scene.camera.far = cameraDoc["far"].GetFloat();
+	m_scene.camera.speed = cameraDoc["speed"].GetFloat();
 
 	if (useDefaultCamera) {
 		glm::vec3 target = 0.5f * (sceneAABB.minPos + sceneAABB.maxPos);
@@ -153,9 +156,27 @@ void Application::load(const std::string& configName, bool useDefaultCamera)
 	std::printf("Camera eye(%f, %f, %f) target(%f, %f, %f)\n", m_scene.camera.eye.x, m_scene.camera.eye.y, m_scene.camera.eye.z, m_scene.camera.target.x, m_scene.camera.target.y, m_scene.camera.target.z);
 }
 
-void Application::run()
+void Application::run(AppMode mode)
 {
 	while(!glfwWindowShouldClose(m_window)) {
+		// update scene
+		switch (mode)
+		{
+		case AppMode::RotatingCamera:
+		{
+			glm::mat4 m(1.0f);
+			m = glm::translate(m, -m_scene.camera.target);
+			m = glm::rotate(m, glm::radians(m_scene.camera.speed), glm::vec3(0.0f, 1.0f, 0.0f));
+			m = glm::translate(m, m_scene.camera.target);
+			m_scene.camera.eye = glm::vec3(m * glm::vec4(m_scene.camera.eye, 1.0f));
+			break;
+		}
+		
+		default:
+			break;
+		}
+		
+		// render scene
 		m_renderer.render(m_scene);
 		glfwSwapBuffers(m_window);
 		glfwPollEvents();
