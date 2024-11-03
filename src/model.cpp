@@ -38,12 +38,17 @@ Mesh::Mesh(std::vector<Vertex>&& vs, std::vector<unsigned int>&& is) : vertices(
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
     glEnableVertexAttribArray(3);
+
+    // unbind vao
+    glBindVertexArray(0);
 }
 
 Texture::Texture(const std::string& name)
 {
     stbi_set_flip_vertically_on_load(true);  
-    data = stbi_load(name.c_str(), &width, &height, &channels, 0);
+
+    int width, height, channels;
+    unsigned char* data = stbi_load(name.c_str(), &width, &height, &channels, 0);
     if (!data) {
         throw std::runtime_error("Failed to load texture: " + name);
     }
@@ -62,14 +67,17 @@ Texture::Texture(const std::string& name)
 
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
-    // set the texture wrapping parameters
+    // set the texture wrapping parameters for both x and y axes
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
+    // set texture filtering parameters when scaling
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // generate texture
+    // set texture data
     glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
 }
 
 Model::Model(const std::map<std::string, std::string>& config)
@@ -179,10 +187,12 @@ Model::Model(const std::map<std::string, std::string>& config)
 
     std::printf("Loading model: %s %d\n", modelName.c_str(), totNumFaces);
     mesh = Mesh(std::move(vertices), std::move(indices));
-    albedo = Texture(baseDir + config.at("albedo"));
-    normal = Texture(baseDir + config.at("normal"));
-    metallic = Texture(baseDir + config.at("metallic"));
-    roughness = Texture(baseDir + config.at("roughness"));
+    for (auto name: config) {
+        if (name.first == "baseDir" || name.first == "modelName") {
+            continue;
+        }
+        textures[name.first] = Texture(baseDir + name.second);
+    }
 }
 
 } // namespace tinyrenderer

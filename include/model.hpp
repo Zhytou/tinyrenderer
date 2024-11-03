@@ -38,8 +38,6 @@ struct Texture {
     Texture(const std::string& name);
 
     GLuint id;
-    unsigned char* data;
-    int width, height, channels;
 };
 
 struct Model {
@@ -48,10 +46,7 @@ struct Model {
 
     AABB aabb;
     Mesh mesh;
-    Texture albedo;
-    Texture normal;
-    Texture metallic;
-    Texture roughness;
+    std::map<std::string, Texture> textures; 
 };
 
 } // namespace tinyrenderer

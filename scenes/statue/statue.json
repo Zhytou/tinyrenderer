@@ -5,7 +5,8 @@
         "up": [0, 0, 1],
         "fov": 45.0,
         "near": 0.1,
-        "far": 2000
+        "far": 2000,
+        "speed": 0.05
     },
     "lights": {
         "directionallight": {

@@ -8,8 +8,6 @@
 
 namespace tinyrenderer
 {
-const unsigned maxPointLightNum = 8;
-
 struct Camera {
     glm::vec3 eye;
     glm::vec3 target;
@@ -18,6 +16,7 @@ struct Camera {
     float aspect;
     float near;
     float far;
+    float speed;
 };
 
 struct PointLight {
@@ -32,7 +31,7 @@ struct DirectionalLight {
 
 struct Scene {
     Camera camera;
-    PointLight plights[maxPointLightNum];
+    std::vector<PointLight> plights;
     DirectionalLight dlight;
     std::vector<Model> models;
 };

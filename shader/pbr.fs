@@ -7,10 +7,16 @@ in vec3 vFragNormal;
 in vec3 vFragTangent;
 in vec2 vFragUV;
 
-uniform sampler2D albedoTexture;
-uniform sampler2D normalTexture;
-uniform sampler2D metallicTexture;
-uniform sampler2D roughnessTexture;
+uniform sampler2D uAlbedoMap;
+uniform sampler2D uNormalMap;
+uniform sampler2D uMetallicMap;
+uniform sampler2D uRoughnessMap;
+uniform sampler2D uAOMap;
+
+uniform bool uNormalMapped;
+uniform bool uMetallicMapped;
+uniform bool uRoughnessMapped;
+uniform bool uAOMapped;
 
 uniform vec3 uCameraPos;
 
@@ -25,12 +31,18 @@ struct DirectionalLight {
 };
 
 #define MAX_POINT_LIGHT_NUM 10
+
+uniform int uPointLightNum;
 uniform PointLight uPointLights[MAX_POINT_LIGHT_NUM];
 uniform DirectionalLight uDirectionalLight;
 
 vec3 calculateNormal()
 {
-    vec3 tangentNormal = texture(normalTexture, vFragUV).xyz * 2.0 - 1.0;
+    if (!uNormalMapped) {
+        return normalize(vFragNormal);
+    }
+    
+    vec3 tangentNormal = texture(uNormalMap, vFragUV).xyz * 2.0 - 1.0;
 
     vec3 N = normalize(vFragNormal);
     vec3 T = normalize(vFragTangent);
@@ -92,6 +104,10 @@ vec3 BRDF(vec3  L, vec3  V, vec3  N, vec3  F0, vec3  baseColor, float metallic, 
     }
     vec3 specular = D * F * G / (4.0 * NdotL * NdotV + 0.001);
 
+    if (!uMetallicMapped && !uRoughnessMapped) {
+        return diffuse;
+    }
+
     return diffuse + specular;
 }
 
@@ -100,11 +116,11 @@ void main()
     vec3 N = calculateNormal();
     vec3 V = normalize(uCameraPos - vFragPos);
     
-    vec3 baseColor = texture(albedoTexture, vFragUV).rgb;
-    // baseColor = pow(baseColor, vec3(2.2));
-
-    float roughness = texture(roughnessTexture, vFragUV).r;
-    float metallic = texture(metallicTexture, vFragUV).r;
+    vec3 baseColor = texture(uAlbedoMap, vFragUV).rgb;
+    baseColor = pow(baseColor, vec3(2.2));
+    float roughness = texture(uRoughnessMap, vFragUV).r;
+    float metallic = texture(uMetallicMap, vFragUV).r;
+    float ao = texture(uAOMap, vFragUV).r;
 
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, baseColor, metallic);
@@ -112,11 +128,7 @@ void main()
     vec3 color = vec3(0.0);
 
     // point light
-    for (int i = 0; i < MAX_POINT_LIGHT_NUM; i++) {
-        if (uPointLights[i].color == vec3(0.0)) {
-            continue;
-        }
-
+    for (int i = 0; i < uPointLightNum; i++) {
         float distance = length(uPointLights[i].position - vFragPos);
         float attenuation = 1 / (distance * distance);
 
@@ -137,8 +149,10 @@ void main()
         color += uDirectionalLight.color * brdf * NdotL;
     }
 
-    // hdr -> ldr
-    color = color / (color + vec3(0.004));
+    if (uAOMapped) {
+        color += vec3(0.03) * baseColor * ao;
+    }
+
     // gamma correction
     color = pow(color, vec3(1.0 / 2.2));
 

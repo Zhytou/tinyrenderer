@@ -16,8 +16,11 @@ void Renderer::setup()
 {
 	// set global OpenGL state
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glClearDepth(1.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 	// compile and link shaders
 	m_programs["pbr"] = linkProgram({
@@ -35,9 +38,7 @@ void Renderer::render(const Scene& scene)
 	const glm::mat4 projectMatrix = glm::perspective(glm::radians(scene.camera.fov), scene.camera.aspect, scene.camera.near, scene.camera.far);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);        
-	glClearDepth(1.0);
-
+	
 	glUseProgram(m_programs["pbr"]);
 	// set MVP matrix uniforms
 	glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uViewMatrix"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
@@ -46,7 +47,8 @@ void Renderer::render(const Scene& scene)
 	// set camera uniforms
 	glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uCameraPos"), 1, glm::value_ptr(scene.camera.eye));
 	// set pointlight uniforms
-	for (int i = 0; i < maxPointLightNum; i++) {
+	glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNumPointLights"), scene.plights.size());
+	for (int i = 0; i < scene.plights.size(); i++) {
 		if (scene.plights[i].color == glm::vec3(0.0)) {
 			continue;
 		}
@@ -65,13 +67,35 @@ void Renderer::render(const Scene& scene)
 	for (const auto& model : scene.models) {
 		// set pbr textures
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, model.albedo.id);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, model.normal.id);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, model.metallic.id);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, model.roughness.id);
+		glBindTexture(GL_TEXTURE_2D, model.textures.at("albedo").id);
+		if (model.textures.count("normal")) {
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, model.textures.at("normal").id);
+		} else {
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 0);
+		}
+		if (model.textures.count("metallic")) {
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, model.textures.at("metallic").id);
+		} else {
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uMetllicMapped"), 0);
+		}
+		if (model.textures.count("roughness")) {
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, model.textures.at("roughness").id);
+		} else {
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uRoughnessMapped"), 0);
+		}
+		if (model.textures.count("ao")) {
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMapped"), 1);
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_2D, model.textures.at("ao").id);
+		} else {
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMapped"), 0);
+		}
 		
 		// bind vertex array and draw
 		glBindVertexArray(model.mesh.vao);
