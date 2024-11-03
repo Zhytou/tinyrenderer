@@ -2,6 +2,8 @@
 
 **Render Example**:
 
+![firehydrant](./example/firehydrant.gif)
+
 **Build & Run**:
 
 ```bash
