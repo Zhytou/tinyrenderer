@@ -2,6 +2,8 @@
 
 **Render Example**:
 
+![gun](./example/gun.gif)
+
 ![firehydrant](./example/firehydrant.gif)
 
 **Build & Run**:

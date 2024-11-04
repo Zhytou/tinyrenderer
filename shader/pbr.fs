@@ -117,7 +117,7 @@ void main()
     vec3 V = normalize(uCameraPos - vFragPos);
     
     vec3 baseColor = texture(uAlbedoMap, vFragUV).rgb;
-    baseColor = pow(baseColor, vec3(2.2));
+    // baseColor = pow(baseColor, vec3(2.2));
     float roughness = texture(uRoughnessMap, vFragUV).r;
     float metallic = texture(uMetallicMap, vFragUV).r;
     float ao = texture(uAOMap, vFragUV).r;
@@ -154,7 +154,7 @@ void main()
     }
 
     // gamma correction
-    color = pow(color, vec3(1.0 / 2.2));
+    // color = pow(color, vec3(1.0 / 2.2));
 
-    gl_FragColor = vec4(baseColor, 1.0);
+    gl_FragColor = vec4(color, 1.0);
 }
