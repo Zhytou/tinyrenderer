@@ -27,8 +27,6 @@ void Renderer::setup()
 		compileShader("../shader/pbr.vs", GL_VERTEX_SHADER),
 		compileShader("../shader/pbr.fs", GL_FRAGMENT_SHADER)
 	});
-	
-	glFinish();
 }
 
 void Renderer::render(const Scene& scene)
@@ -38,7 +36,7 @@ void Renderer::render(const Scene& scene)
 	const glm::mat4 projectMatrix = glm::perspective(glm::radians(scene.camera.fov), scene.camera.aspect, scene.camera.near, scene.camera.far);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
+
 	glUseProgram(m_programs["pbr"]);
 	// set MVP matrix uniforms
 	glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uViewMatrix"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
@@ -102,7 +100,6 @@ void Renderer::render(const Scene& scene)
 		glDrawElements(GL_TRIANGLES, model.mesh.indices.size(), GL_UNSIGNED_INT, 0);
 	}
 }
-
 
 GLuint Renderer::compileShader(const std::string& filename, GLenum type)
 {

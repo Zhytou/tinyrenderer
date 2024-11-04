@@ -16,13 +16,13 @@ Application::Application(int width, int height, const std::string& title) : m_wi
 	if(!glfwInit()) {
 		throw std::runtime_error("Failed to initialize GLFW library");
 	}
+	// set opengl version
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 
-	glfwWindowHint(GLFW_DEPTH_BITS, 0);
-	glfwWindowHint(GLFW_STENCIL_BITS, 0);
-	glfwWindowHint(GLFW_SAMPLES, 0);
+	// set z-buffer bits, otherwise glenbale(GL_DEPTH_TEST) will not work
+	glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
 	// glfw window creation
 	m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
