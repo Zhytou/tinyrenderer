@@ -2,7 +2,7 @@
 
 **Render Example**:
 
-![gun](./example/gun.gif)
+![gun](https://github.com/Zhytou/tinyrenderer/blob/main/example/gun.gif)
 
 ![firehydrant](./example/firehydrant.gif)
 
