@@ -19,7 +19,7 @@
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/scenes/teapot/",
+            "baseDir": "/home/zhytou/tinyrenderer/scene/teapot/",
             "modelName": "teapot.obj",
             "albedo": "lapis_albedo.png",
             "ao": "lapis_ao.png",

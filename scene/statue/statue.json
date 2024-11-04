@@ -19,7 +19,7 @@
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/scenes/statue/",
+            "baseDir": "/home/zhytou/tinyrenderer/scene/statue/",
             "modelName": "statue.obj",
             "albedo": "marble_albedo.png",
             "ao": "marble_ao.png",

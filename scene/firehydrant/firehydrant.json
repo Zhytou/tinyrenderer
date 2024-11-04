@@ -18,7 +18,7 @@
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/scenes/firehydrant/",
+            "baseDir": "/home/zhytou/tinyrenderer/scene/firehydrant/",
             "modelName": "firehydrant.obj",
             "albedo": "firehydrant_albedo.png",
             "ao": "firehydrant_ao.png",
