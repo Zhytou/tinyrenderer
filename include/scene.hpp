@@ -16,7 +16,6 @@ struct Camera {
     float aspect;
     float near;
     float far;
-    float speed;
 };
 
 struct PointLight {
@@ -34,6 +33,7 @@ struct Scene {
     std::vector<PointLight> plights;
     DirectionalLight dlight;
     std::vector<Model> models;
+    float speed;
 };
 
 } // namespace tinyrenderer

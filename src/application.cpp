@@ -73,6 +73,12 @@ void Application::load(const std::string& configName, bool useDefaultCamera)
 		throw std::runtime_error("Error parsing JSON");
 	}
 	
+	if (doc.HasMember("speed")) {
+		m_scene.speed = doc["speed"].GetFloat();
+	} else {
+		m_scene.speed = 0.1f;
+	}
+
 	auto lightsDoc = doc["lights"].GetObject();
 	m_scene.plights.resize(lightsDoc["pointlight"].Size());
 	for (int i = 0; i < m_scene.plights.size(); i++) {
@@ -138,7 +144,6 @@ void Application::load(const std::string& configName, bool useDefaultCamera)
     m_scene.camera.aspect = m_width / m_height;
     m_scene.camera.near = cameraDoc["near"].GetFloat();
     m_scene.camera.far = cameraDoc["far"].GetFloat();
-	m_scene.camera.speed = cameraDoc["speed"].GetFloat();
 
 	if (useDefaultCamera) {
 		glm::vec3 target = 0.5f * (sceneAABB.minPos + sceneAABB.maxPos);
@@ -166,12 +171,19 @@ void Application::run(AppMode mode)
 		{
 			glm::mat4 m(1.0f);
 			m = glm::translate(m, -m_scene.camera.target);
-			m = glm::rotate(m, glm::radians(m_scene.camera.speed), glm::vec3(0.0f, 1.0f, 0.0f));
+			m = glm::rotate(m, glm::radians(m_scene.speed), glm::vec3(0.0f, 1.0f, 0.0f));
 			m = glm::translate(m, m_scene.camera.target);
 			m_scene.camera.eye = glm::vec3(m * glm::vec4(m_scene.camera.eye, 1.0f));
 			break;
 		}
-		
+		case AppMode::RotatingLight:
+		{
+			glm::mat4 m(1.0f);
+			m = glm::rotate(m, glm::radians(m_scene.speed), glm::vec3(0.0f, 1.0f, 0.0f));
+			m_scene.dlight.direction = glm::vec3(m * glm::vec4(m_scene.dlight.direction, 1.0f));
+			printf("%f, %f, %f\n", m_scene.dlight.direction.x, m_scene.dlight.direction.y, m_scene.dlight.direction.z);
+			break;
+		}
 		default:
 			break;
 		}
