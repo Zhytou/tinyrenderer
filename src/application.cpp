@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "application.hpp"
+#include "utils.hpp"
 
 namespace tinyrenderer
 {
@@ -181,7 +182,6 @@ void Application::run(AppMode mode)
 			glm::mat4 m(1.0f);
 			m = glm::rotate(m, glm::radians(m_scene.speed), glm::vec3(0.0f, 1.0f, 0.0f));
 			m_scene.dlight.direction = glm::vec3(m * glm::vec4(m_scene.dlight.direction, 1.0f));
-			printf("%f, %f, %f\n", m_scene.dlight.direction.x, m_scene.dlight.direction.y, m_scene.dlight.direction.z);
 			break;
 		}
 		default:
