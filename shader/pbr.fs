@@ -3,6 +3,7 @@
 #define PI 3.14159265359
 
 in vec3 vFragPos;
+in vec3 vLightSpaceFragPos;
 in vec3 vFragNormal;
 in vec3 vFragTangent;
 in vec2 vFragUV;
@@ -12,6 +13,8 @@ uniform sampler2D uNormalMap;
 uniform sampler2D uMetallicMap;
 uniform sampler2D uRoughnessMap;
 uniform sampler2D uAOMap;
+
+uniform sampler2D uShadowMap;
 
 uniform bool uNormalMapped;
 uniform bool uMetallicMapped;
@@ -50,6 +53,21 @@ vec3 calculateNormal()
 
     mat3 TBN = mat3(T, B, N);
     return normalize(TBN * tangentNormal);
+}
+
+int calculateShadow()
+{
+    vec3 fragPos = vLightSpaceFragPos;
+    vec3 projCoords = fragPos / fragPos.z;
+    projCoords = projCoords * 0.5 + 0.5;
+
+    float closestDepth = texture(uShadowMap, projCoords.xy).r;
+    float currentDepth = projCoords.z;
+
+    float bias = 0.005;
+    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
 }
 
 float D_GGX(float NdotH, float roughness)
@@ -140,13 +158,14 @@ void main()
         color += uPointLights[i].color * attenuation * brdf * NdotL;
     }
 
-    if (uDirectionalLight.color != vec3(0.0)) {
+    float visibility = calculateShadow();
+    if (visibility > 0) {
         vec3 L = normalize(-uDirectionalLight.direction);
         vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness, false);
 
         float NdotL = clamp(dot(N, L), 0.0, 1.0);
 
-        color += uDirectionalLight.color * brdf * NdotL;
+        color += uDirectionalLight.color * brdf * NdotL * visibility;
     }
 
     if (uAOMapped) {
