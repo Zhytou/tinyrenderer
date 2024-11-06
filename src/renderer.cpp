@@ -18,6 +18,7 @@ void Renderer::setup()
 	// set global OpenGL state
 	glEnable(GL_CULL_FACE);
 	glFrontFace(GL_CCW);
+	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glClearDepth(1.0f);
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -32,10 +33,6 @@ void Renderer::setup()
 		compileShader("../shader/pbr.fs", GL_FRAGMENT_SHADER)
 	});
 
-	// create framebuffer object for shadow mapping
-	glGenFramebuffers(1, &m_fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-
 	// create shadow map texture
 	glGenTextures(1, &m_shadowMap);
 	glBindTexture(GL_TEXTURE_2D, m_shadowMap);
@@ -49,24 +46,33 @@ void Renderer::setup()
 	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
+	// create framebuffer object for shadow mapping
+	glGenFramebuffers(1, &m_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 	// attach shadow map texture to framebuffer
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_shadowMap, 0);
 	
 	// set framebuffer to draw only depth
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
+
+	// unbind framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::render(const Scene& scene)
+void Renderer::render(const Scene& scene, int width, int height)
 {
 	// calculate view and projection matrices
 	const glm::mat4 viewMatrix = glm::lookAt(scene.camera.eye, scene.camera.target, scene.camera.up);
 	const glm::mat4 projectMatrix = glm::perspective(glm::radians(scene.camera.fov), scene.camera.aspect, scene.camera.near, scene.camera.far);
 
 	// calculate light space matrix
-	const glm::mat4 lightViewMatrix = glm::lookAt(scene.dlight.direction, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	const glm::mat4 lightProjectMatrix = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 20.0f);
+	glm::vec3 dLightUp = glm::vec3(0.0f, 1.0f, 0.0f);
+	if (std::abs(glm::dot(scene.dlight.direction, dLightUp)) > 0.001f) {
+		dLightUp = glm::cross(scene.dlight.direction, dLightUp);
+	}
+	const glm::mat4 lightViewMatrix = glm::lookAt(scene.camera.target-scene.dlight.direction*50.f, scene.camera.target, dLightUp);
+	const glm::mat4 lightProjectMatrix = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 200.0f);
 	const glm::mat4 lightSpaceMatrix = lightProjectMatrix * lightViewMatrix;
 	
 	// render shadow map of directional light
@@ -74,6 +80,10 @@ void Renderer::render(const Scene& scene)
 		glUseProgram(m_programs["shadow"]);
 		// bind framebuffer
 		glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER)!= GL_FRAMEBUFFER_COMPLETE) {
+    		throw std::runtime_error("Framebuffer is not complete!");
+		}
+
 		// reset viewport
 		glViewport(0, 0, m_shadowMapWidth, m_shadowMapHeight);
 		// clear depth buffer
@@ -87,11 +97,16 @@ void Renderer::render(const Scene& scene)
 			glBindVertexArray(model.mesh.vao);
 			glDrawElements(GL_TRIANGLES, model.mesh.indices.size(), GL_UNSIGNED_INT, 0);
 		}
+
+		// unbind framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 	
 	// render scene with PBR shading
 	{
 		glUseProgram(m_programs["pbr"]);
+		// reset viewport
+		glViewport(0, 0, width, height);
 		// reset framebuffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -99,9 +114,13 @@ void Renderer::render(const Scene& scene)
 		glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uViewMatrix"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
 		glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uProjectMatrix"), 1, GL_FALSE, glm::value_ptr(projectMatrix));
 		glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uLightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
-		
+
 		// set camera uniforms
 		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uCameraPos"), 1, glm::value_ptr(scene.camera.eye));
+		
+		// set directional light
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.direction"), 1, glm::value_ptr(scene.dlight.direction));
+		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.color"), 1, glm::value_ptr(scene.dlight.color));
 		// set pointlight uniforms
 		glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNumPointLights"), scene.plights.size());
 		for (int i = 0; i < scene.plights.size(); i++) {
@@ -114,45 +133,47 @@ void Renderer::render(const Scene& scene)
 			std::sprintf(s2, "uPointLights[%d].color", i);
 			glUniform3fv(glGetUniformLocation(m_programs["pbr"], s2), 1, glm::value_ptr(scene.plights[i].color));
 		}
-		// set directional light
-		{
-			glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.direction"), 1, glm::value_ptr(scene.dlight.direction));
-			glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.color"), 1, glm::value_ptr(scene.dlight.color));
-		}
+		
+		// set shadow map texture
+		glActiveTexture(GL_TEXTURE0);
+		glUniform1i(glGetUniformLocation(m_programs["pbr"], "uShadowMap"), 0);
+		glBindTexture(GL_TEXTURE_2D, m_shadowMap);
+	
 		// iterate over models
 		for (const auto& model : scene.models) {
 			// set pbr textures
-			glActiveTexture(GL_TEXTURE0);
+			glActiveTexture(GL_TEXTURE1);
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAlbedoMap"), 1);
 			glBindTexture(GL_TEXTURE_2D, model.textures.at("albedo").id);
 			if (model.textures.count("normal")) {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
-				glActiveTexture(GL_TEXTURE1);
+				glActiveTexture(GL_TEXTURE2);
 				glBindTexture(GL_TEXTURE_2D, model.textures.at("normal").id);
 			} else {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 0);
 			}
 			if (model.textures.count("metallic")) {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
-				glActiveTexture(GL_TEXTURE2);
+				glActiveTexture(GL_TEXTURE3);
 				glBindTexture(GL_TEXTURE_2D, model.textures.at("metallic").id);
 			} else {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uMetllicMapped"), 0);
 			}
 			if (model.textures.count("roughness")) {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
-				glActiveTexture(GL_TEXTURE3);
+				glActiveTexture(GL_TEXTURE4);
 				glBindTexture(GL_TEXTURE_2D, model.textures.at("roughness").id);
 			} else {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uRoughnessMapped"), 0);
 			}
 			if (model.textures.count("ao")) {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMapped"), 1);
-				glActiveTexture(GL_TEXTURE4);
+				glActiveTexture(GL_TEXTURE5);
 				glBindTexture(GL_TEXTURE_2D, model.textures.at("ao").id);
 			} else {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMapped"), 0);
 			}
-			
+
 			// bind vertex array and draw
 			glBindVertexArray(model.mesh.vao);
 			glDrawElements(GL_TRIANGLES, model.mesh.indices.size(), GL_UNSIGNED_INT, 0);

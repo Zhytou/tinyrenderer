@@ -10,17 +10,17 @@ uniform mat4 uProjectMatrix;
 uniform mat4 uLightSpaceMatrix;
 
 out vec3 vFragPos;
-out vec3 vLightSpaceFragPos;
 out vec3 vFragNormal;
 out vec3 vFragTangent;
 out vec2 vFragUV;
+out vec4 vLightSpaceFragPos;
 
 void main() {
     vFragPos = aVertexPos;
-    vLightSpaceFragPos = (uLightSpaceMatrix * vec4(aVertexPos, 1.0)).xyz;
     vFragNormal = aVertexNormal;
     vFragTangent = aVertexTangent;
     vFragUV = aVertexUV;
+    vLightSpaceFragPos = uLightSpaceMatrix * vec4(aVertexPos, 1.0);
 
     gl_Position = uProjectMatrix * uViewMatrix * vec4(aVertexPos, 1.0);
 }

@@ -3,18 +3,18 @@
 #define PI 3.14159265359
 
 in vec3 vFragPos;
-in vec3 vLightSpaceFragPos;
 in vec3 vFragNormal;
 in vec3 vFragTangent;
 in vec2 vFragUV;
+in vec4 vLightSpaceFragPos;
+
+uniform sampler2D uShadowMap;
 
 uniform sampler2D uAlbedoMap;
 uniform sampler2D uNormalMap;
 uniform sampler2D uMetallicMap;
 uniform sampler2D uRoughnessMap;
 uniform sampler2D uAOMap;
-
-uniform sampler2D uShadowMap;
 
 uniform bool uNormalMapped;
 uniform bool uMetallicMapped;
@@ -55,19 +55,18 @@ vec3 calculateNormal()
     return normalize(TBN * tangentNormal);
 }
 
-int calculateShadow()
+float calculateShadow()
 {
-    vec3 fragPos = vLightSpaceFragPos;
-    vec3 projCoords = fragPos / fragPos.z;
-    projCoords = projCoords * 0.5 + 0.5;
+    vec3 fragPos = vLightSpaceFragPos.xyz / vLightSpaceFragPos.w;
+    vec2 projCoords = fragPos.xy * 0.5 + 0.5;
 
-    float closestDepth = texture(uShadowMap, projCoords.xy).r;
-    float currentDepth = projCoords.z;
+    float d = texture(uShadowMap, projCoords.xy).r;
+    float visibility = 0.0;
+    if (fragPos.z - 0.01 < d) {
+        visibility = 1.0;
+    }
 
-    float bias = 0.005;
-    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
-
-    return shadow;
+    return visibility;
 }
 
 float D_GGX(float NdotH, float roughness)
@@ -97,8 +96,12 @@ float G_SchlicksmithGGX(float NdotL, float NdotV, float roughness)
     return GL * GV;
 }
 
-vec3 BRDF(vec3  L, vec3  V, vec3  N, vec3  F0, vec3  baseColor, float metallic, float roughness, bool isPointLight)
+vec3 BRDF(vec3 L, vec3 V, vec3 N, vec3 F0, vec3 baseColor, float metallic, float roughness, bool isPointLight)
 {
+    if (!uMetallicMapped || !uRoughnessMapped) {
+        return baseColor;
+    }
+
     // Precalculate vectors and dot products
     vec3  H     = normalize(V + L);
     float NdotH = clamp(dot(N, H), 0.0, 1.0);
@@ -121,10 +124,6 @@ vec3 BRDF(vec3  L, vec3  V, vec3  N, vec3  F0, vec3  baseColor, float metallic, 
         diffuse /= PI;
     }
     vec3 specular = D * F * G / (4.0 * NdotL * NdotV + 0.001);
-
-    if (!uMetallicMapped && !uRoughnessMapped) {
-        return diffuse;
-    }
 
     return diffuse + specular;
 }
@@ -165,12 +164,12 @@ void main()
 
         float NdotL = clamp(dot(N, L), 0.0, 1.0);
 
-        color += uDirectionalLight.color * brdf * NdotL * visibility;
+        color += uDirectionalLight.color * brdf * NdotL;
     }
 
-    if (uAOMapped) {
-        color += vec3(0.03) * baseColor * ao;
-    }
+    // if (uAOMapped) {
+    //     color += vec3(0.03) * baseColor * ao;
+    // }
 
     // gamma correction
     // color = pow(color, vec3(1.0 / 2.2));

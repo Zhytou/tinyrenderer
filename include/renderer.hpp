@@ -15,7 +15,7 @@ class Renderer
 public:
 	Renderer() : m_shadowMapWidth(1024), m_shadowMapHeight(1024) {}
 	void setup();
-	void render(const Scene& scene);
+	void render(const Scene& scene, int width, int height);
 
 private:
 	static GLuint compileShader(const std::string& filename, GLenum type);
