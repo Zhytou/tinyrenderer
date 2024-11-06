@@ -41,12 +41,13 @@ struct Texture {
 };
 
 struct Model {
-    Model() = default;
-    Model(const std::map<std::string, std::string>& config);
+    Model() : modelMatrix(1.0f) {}
+    Model(const std::string baseDir, const std::string modelName, const std::map<std::string, std::string>& texNames, const std::map<std::string, glm::vec3>& transform);
 
     AABB aabb;
     Mesh mesh;
     std::map<std::string, Texture> textures; 
+    glm::mat4 modelMatrix;
 };
 
 } // namespace tinyrenderer

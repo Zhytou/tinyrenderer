@@ -93,6 +93,8 @@ void Renderer::render(const Scene& scene, int width, int height)
 		glUniformMatrix4fv(glGetUniformLocation(m_programs["shadow"], "uLightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
 
 		for (const auto& model : scene.models) {
+			glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uModelMatrix"), 1, GL_FALSE, glm::value_ptr(model.modelMatrix));
+
 			// bind vertex array and draw
 			glBindVertexArray(model.mesh.vao);
 			glDrawElements(GL_TRIANGLES, model.mesh.indices.size(), GL_UNSIGNED_INT, 0);
@@ -110,7 +112,7 @@ void Renderer::render(const Scene& scene, int width, int height)
 		// reset framebuffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// set MVP matrix uniforms
+		// set VP matrix uniforms
 		glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uViewMatrix"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
 		glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uProjectMatrix"), 1, GL_FALSE, glm::value_ptr(projectMatrix));
 		glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uLightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
@@ -136,40 +138,47 @@ void Renderer::render(const Scene& scene, int width, int height)
 		
 		// set shadow map texture
 		glActiveTexture(GL_TEXTURE0);
-		glUniform1i(glGetUniformLocation(m_programs["pbr"], "uShadowMap"), 0);
 		glBindTexture(GL_TEXTURE_2D, m_shadowMap);
-	
+		glUniform1i(glGetUniformLocation(m_programs["pbr"], "uShadowMap"), 0);
+
 		// iterate over models
 		for (const auto& model : scene.models) {
+			// set model matrix
+			glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uModelMatrix"), 1, GL_FALSE, glm::value_ptr(model.modelMatrix));
+
 			// set pbr textures
 			glActiveTexture(GL_TEXTURE1);
-			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAlbedoMap"), 1);
 			glBindTexture(GL_TEXTURE_2D, model.textures.at("albedo").id);
+			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAlbedoMap"), 1);
 			if (model.textures.count("normal")) {
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
 				glActiveTexture(GL_TEXTURE2);
 				glBindTexture(GL_TEXTURE_2D, model.textures.at("normal").id);
+				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMap"), 2);
+				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
 			} else {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 0);
 			}
 			if (model.textures.count("metallic")) {
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
 				glActiveTexture(GL_TEXTURE3);
 				glBindTexture(GL_TEXTURE_2D, model.textures.at("metallic").id);
+				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uMetllicMap"), 3);
+				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uMetllicMapped"), 1);
 			} else {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uMetllicMapped"), 0);
 			}
 			if (model.textures.count("roughness")) {
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
 				glActiveTexture(GL_TEXTURE4);
 				glBindTexture(GL_TEXTURE_2D, model.textures.at("roughness").id);
+				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uRoughnessMap"), 4);
+				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uRoughnessMapped"), 1);
 			} else {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uRoughnessMapped"), 0);
 			}
 			if (model.textures.count("ao")) {
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMapped"), 1);
 				glActiveTexture(GL_TEXTURE5);
 				glBindTexture(GL_TEXTURE_2D, model.textures.at("ao").id);
+				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMap"), 5);
+				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMapped"), 1);
 			} else {
 				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMapped"), 0);
 			}

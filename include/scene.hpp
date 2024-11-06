@@ -30,9 +30,13 @@ struct DirectionalLight {
 
 struct Scene {
     Camera camera;
+    // point lights
     std::vector<PointLight> plights;
+    // directional light
     DirectionalLight dlight;
+    // models in the scene
     std::vector<Model> models;
+    // light/camera rotation/scaling speed
     float speed;
 };
 

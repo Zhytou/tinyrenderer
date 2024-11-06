@@ -111,11 +111,27 @@ void Application::load(const std::string& configName, bool useDefaultCamera)
 	auto modelsDoc = doc["models"].GetArray();
 	for (int i = 0; i < modelsDoc.Capacity(); i++) {
 		auto modelDoc = modelsDoc[i].GetObject();
-		std::map<std::string, std::string> modelConfig;
-		for (auto itr = modelDoc.begin(); itr != modelDoc.end(); itr++) {
-			modelConfig[itr->name.GetString()] = itr->value.GetString();
+		std::string baseDir = modelDoc["baseDir"].GetString();
+		std::string modelName = modelDoc["name"].GetString();
+		std::map<std::string, std::string> texNames;
+		if (modelDoc.HasMember("textures")) {
+			auto texDoc = modelDoc["textures"].GetObject();
+			for (auto it = texDoc.MemberBegin(); it != texDoc.MemberEnd(); it++) {
+				texNames[it->name.GetString()] = it->value.GetString();
+			}
 		}
-		Model model(modelConfig);
+		std::map<std::string, glm::vec3> transform;
+		if (modelDoc.HasMember("transform")) {
+			auto transformDoc = modelDoc["transform"].GetObject();
+			for (auto it = transformDoc.MemberBegin(); it != transformDoc.MemberEnd(); it++) {
+				transform[it->name.GetString()] = {
+					it->value[0].GetFloat(),
+					it->value[1].GetFloat(),
+					it->value[2].GetFloat()
+				};
+			}
+		}
+		Model model(baseDir, modelName, texNames, transform);
 		sceneAABB.maxPos.x = std::max(sceneAABB.maxPos.x, model.aabb.maxPos.x);
 		sceneAABB.maxPos.y = std::max(sceneAABB.maxPos.y, model.aabb.maxPos.y);
 		sceneAABB.maxPos.z = std::max(sceneAABB.maxPos.z, model.aabb.maxPos.z);
@@ -147,10 +163,11 @@ void Application::load(const std::string& configName, bool useDefaultCamera)
     m_scene.camera.far = cameraDoc["far"].GetFloat();
 
 	if (useDefaultCamera) {
+		std::printf("%f, %f, %f\n", sceneAABB.minPos.x, sceneAABB.minPos.y, sceneAABB.minPos.z);
 		glm::vec3 target = 0.5f * (sceneAABB.minPos + sceneAABB.maxPos);
-		glm::vec3 eye = target + 2.0f * (sceneAABB.maxPos - sceneAABB.minPos);
+		glm::vec3 eye = target + 1.0f * (sceneAABB.maxPos - sceneAABB.minPos);
 		glm::vec3 direction = glm::normalize(sceneAABB.maxPos - sceneAABB.minPos);
-		glm::vec3 up = {1.0f, 0.0f, 0.0f};
+		glm::vec3 up = {0.0f, 1.0f, 0.0f};
 		if (std::abs(glm::dot(direction, up)) > 0.01f) {
 			up = glm::cross(direction, up);
 		}
@@ -189,7 +206,7 @@ void Application::run(AppMode mode)
 		}
 		
 		// render scene
-		m_renderer.render(m_scene);
+		m_renderer.render(m_scene, m_width, m_height);
 		glfwSwapBuffers(m_window);
 		glfwPollEvents();
 	}

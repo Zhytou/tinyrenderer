@@ -5,6 +5,7 @@
 #include <tiny_obj_loader.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "model.hpp"
 
@@ -80,16 +81,15 @@ Texture::Texture(const std::string& name)
     stbi_image_free(data);
 }
 
-Model::Model(const std::map<std::string, std::string>& config)
+Model::Model(const std::string baseDir, const std::string modelName, const std::map<std::string, std::string>& texNames, const std::map<std::string, glm::vec3>& transform)
 {
-    std::string baseDir = config.at("baseDir");
-    std::string modelName = baseDir + config.at("modelName");
+    std::string modelPath = baseDir + modelName;
 
     tinyobj::attrib_t attributes;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string err;
-    if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &err, modelName.c_str())) {
+    if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &err, modelPath.c_str(), baseDir.c_str(), true)) {
         throw std::runtime_error(err);
     }
 
@@ -186,12 +186,27 @@ Model::Model(const std::map<std::string, std::string>& config)
     }
 
     std::printf("Loading model: %s %d\n", modelName.c_str(), totNumFaces);
+
+    // initialize mesh
     mesh = Mesh(std::move(vertices), std::move(indices));
-    for (auto name: config) {
-        if (name.first == "baseDir" || name.first == "modelName") {
-            continue;
+    // initialize textures
+    for (auto [name, path]: texNames) {
+        textures[name] = Texture(baseDir + path);
+    }
+    // initialize model matrix
+    modelMatrix = glm::mat4(1.0f);
+    for (auto [name, value]: transform) {
+        if (name == "translate") {
+            modelMatrix = glm::translate(modelMatrix, value);
+        } else if (name == "rotate") {
+            modelMatrix = glm::rotate(modelMatrix, glm::radians(value.x), glm::vec3(1.0f, 0.0f, 0.0f));
+            modelMatrix = glm::rotate(modelMatrix, glm::radians(value.y), glm::vec3(0.0f, 1.0f, 0.0f));
+            modelMatrix = glm::rotate(modelMatrix, glm::radians(value.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        } else if (name == "scale") {
+            modelMatrix = glm::scale(modelMatrix, value);
+        } else {
+            throw std::runtime_error("Unknown transformation: " + name);
         }
-        textures[name.first] = Texture(baseDir + name.second);
     }
 }
 
