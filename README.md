@@ -2,9 +2,9 @@
 
 **Render Example**:
 
-![gun](https://github.com/Zhytou/tinyrenderer/blob/main/example/gun.gif)
+![gun](./asset/result/gun.gif)
 
-![firehydrant](./example/firehydrant.gif)
+![firehydrant](./asset/result/firehydrant.gif)
 
 **Build & Run**:
 
