@@ -1,8 +1,8 @@
 {
     "camera": {
-        "eye": [1, 0, 1],
+        "eye": [4, 4, 4],
         "target": [0, 0, 0],
-        "up": [0, 1, 0],
+        "up": [-1, 1, 0],
         "fov": 45.0,
         "near": 0.1,
         "far": 20
@@ -10,21 +10,37 @@
     "lights": {
         "directionallight": {
             "color": [1, 1, 1],
-            "direction": [1, 0, 1]
+            "direction": [1, -1, -1]
         },
         "pointlight": [
         ]            
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/scene/gun/",
-            "modelName": "gun.obj",
-            "albedo": "gun_albedo.png",
-            "ao": "gun_ao.png",
-            "metallic": "gun_metallic.png",
-            "roughness": "gun_roughness.png",
-            "normal": "gun_normal.png"
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/gun/",
+            "name": "gun.obj",
+            "textures": {
+                "albedo": "gun_albedo.png",
+                "ao": "gun_ao.png",
+                "metallic": "gun_metallic.png",
+                "roughness": "gun_roughness.png",
+                "normal": "gun_normal.png"
+            },
+            "transform": {
+                "scale": [1.5, 1.5, 1.5],
+                "translate": [0, 0.3, 0]
+            }
+        },
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/floor/",
+            "name": "floor.obj",
+            "textures": {
+                "albedo": "floor_albedo.png"
+            },
+            "transform": {
+                "scale": [2, 2, 2],
+                "translate": [0, -1, 0]
+            }
         }
-        
     ]
 }

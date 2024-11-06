@@ -14,18 +14,19 @@
             "direction": [1, 0, 1]
         },
         "pointlight": [
-
         ]            
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/scene/teapot/",
-            "modelName": "teapot.obj",
-            "albedo": "lapis_albedo.png",
-            "ao": "lapis_ao.png",
-            "metallic": "lapis_metallic.png",
-            "roughness": "lapis_roughness.png",
-            "normal": "lapis_normal.png"
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/teapot/",
+            "name": "teapot.obj",
+            "textures": {
+                "albedo": "lapis_albedo.png",
+                "ao": "lapis_ao.png",
+                "metallic": "lapis_metallic.png",
+                "roughness": "lapis_roughness.png",
+                "normal": "lapis_normal.png"
+            }
         }
     ]
 }

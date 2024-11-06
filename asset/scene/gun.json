@@ -17,13 +17,17 @@
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/scene/gun/",
-            "modelName": "gun.obj",
-            "albedo": "gun_albedo.png",
-            "ao": "gun_ao.png",
-            "metallic": "gun_metallic.png",
-            "roughness": "gun_roughness.png",
-            "normal": "gun_normal.png"
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/gun/",
+            "name": "gun.obj",
+            "textures": {
+                "albedo": "gun_albedo.png",
+                "ao": "gun_ao.png",
+                "metallic": "gun_metallic.png",
+                "roughness": "gun_roughness.png",
+                "normal": "gun_normal.png"
+            },
+            "transform": {
+            }
         }
     ]
 }

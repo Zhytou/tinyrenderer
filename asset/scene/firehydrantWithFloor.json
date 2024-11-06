@@ -11,7 +11,7 @@
     "lights": {
         "directionallight": {
             "color": [1, 1, 1],
-            "direction": [-1, 0, -1]
+            "direction": [-1, -1, -1]
         },
         "pointlight": [
         ]            
@@ -28,6 +28,16 @@
                 "normal": "firehydrant_normal.png"
             },
             "transform": {
+            }
+        },
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/floor/",
+            "name": "floor.obj",
+            "textures": {
+                "albedo": "floor_albedo.png"
+            },
+            "transform": {
+                "translate": [0, 0.5, 0]
             }
         }
     ]

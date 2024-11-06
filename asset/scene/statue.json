@@ -19,13 +19,15 @@
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/scene/statue/",
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/statue/",
             "modelName": "statue.obj",
-            "albedo": "marble_albedo.png",
-            "ao": "marble_ao.png",
-            "metallic": "marble_metallic.png",
-            "roughness": "marble_roughness.png",
-            "normal": "marble_normal.png"
+            "textures": {
+                "albedo": "marble_albedo.png",
+                "ao": "marble_ao.png",
+                "metallic": "marble_metallic.png",
+                "roughness": "marble_roughness.png",
+                "normal": "marble_normal.png"
+            }
         }
     ]
 }
