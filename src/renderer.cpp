@@ -21,7 +21,7 @@ void Renderer::setup()
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	glClearDepth(1.0f);
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	// glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 	// compile and link shaders
 	m_programs["shadow"] = linkProgram({
@@ -71,8 +71,8 @@ void Renderer::render(const Scene& scene, int width, int height)
 	if (std::abs(glm::dot(scene.dlight.direction, dLightUp)) > 0.001f) {
 		dLightUp = glm::cross(scene.dlight.direction, dLightUp);
 	}
-	const glm::mat4 lightViewMatrix = glm::lookAt(scene.camera.target-scene.dlight.direction*50.f, scene.camera.target, dLightUp);
-	const glm::mat4 lightProjectMatrix = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 200.0f);
+	const glm::mat4 lightViewMatrix = glm::lookAt(scene.camera.target-scene.dlight.direction*5.f, scene.camera.target, dLightUp);
+	const glm::mat4 lightProjectMatrix = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 50.0f);
 	const glm::mat4 lightSpaceMatrix = lightProjectMatrix * lightViewMatrix;
 	
 	// render shadow map of directional light
@@ -93,7 +93,7 @@ void Renderer::render(const Scene& scene, int width, int height)
 		glUniformMatrix4fv(glGetUniformLocation(m_programs["shadow"], "uLightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
 
 		for (const auto& model : scene.models) {
-			glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uModelMatrix"), 1, GL_FALSE, glm::value_ptr(model.modelMatrix));
+			glUniformMatrix4fv(glGetUniformLocation(m_programs["shadow"], "uModelMatrix"), 1, GL_FALSE, glm::value_ptr(model.modelMatrix));
 
 			// bind vertex array and draw
 			glBindVertexArray(model.mesh.vao);
