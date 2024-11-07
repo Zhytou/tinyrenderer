@@ -57,12 +57,12 @@ vec3 calculateNormal()
 
 float calculateShadow()
 {
-    vec3 fragPos = vLightSpaceFragPos.xyz / vLightSpaceFragPos.w;
-    vec2 projCoords = fragPos.xy * 0.5 + 0.5;
+    vec3 projCoords = vLightSpaceFragPos.xyz / vLightSpaceFragPos.w;
+    projCoords = projCoords * 0.5 + 0.5;
 
     float d = texture(uShadowMap, projCoords.xy).r;
     float visibility = 0.0;
-    if (fragPos.z - 0.01 < d) {
+    if (projCoords.z - 0.001 < d) {
         visibility = 1.0;
     }
 
@@ -164,7 +164,7 @@ void main()
 
         float NdotL = clamp(dot(N, L), 0.0, 1.0);
 
-        color += uDirectionalLight.color * brdf * NdotL;
+        color += uDirectionalLight.color * brdf * NdotL * visibility;
     }
 
     // if (uAOMapped) {

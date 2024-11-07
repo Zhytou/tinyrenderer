@@ -21,7 +21,7 @@ void main() {
     vFragNormal = (uModelMatrix * vec4(aVertexNormal, 0.0)).xyz;
     vFragTangent = (uModelMatrix * vec4(aVertexTangent, 0.0)).xyz;
     vFragUV = aVertexUV;
-    vLightSpaceFragPos = uLightSpaceMatrix * vec4(aVertexPos, 1.0);
+    vLightSpaceFragPos = uLightSpaceMatrix * uModelMatrix * vec4(aVertexPos, 1.0);
 
     gl_Position = uProjectMatrix * uViewMatrix * uModelMatrix * vec4(aVertexPos, 1.0);
 }
