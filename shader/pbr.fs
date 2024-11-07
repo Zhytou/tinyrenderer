@@ -40,8 +40,11 @@ uniform PointLight uPointLights[MAX_POINT_LIGHT_NUM];
 uniform DirectionalLight uDirectionalLight;
 
 #define EPSILON 0.001
+
+// macros for shadow mapping
 #define NUM_SAMPLES 20
 #define NUM_RINGS 10
+#define LIGHT_SIZE 0.01
 
 vec3 calculateNormal()
 {
@@ -79,6 +82,7 @@ void generateRandom(const in vec2 seed)
   }
 }
 
+// Basic shadow mapping
 float SM(vec2 uv, float z)
 {
     float d = texture(uShadowMap, uv).r;
@@ -90,11 +94,12 @@ float SM(vec2 uv, float z)
     return visibility;
 }
 
+// Percentage closer filtering
 float PCF(vec2 uv, float z, float range)
 {
-    float visibility = 0.0;
-
     generateRandom(uv);
+
+    float visibility = 0.0;
     for (int i = 0; i < NUM_SAMPLES; i++) {
         vec2 offset = poissonDisk[i] * range;
         visibility += SM(uv + offset, z);
@@ -103,9 +108,27 @@ float PCF(vec2 uv, float z, float range)
     return visibility / NUM_SAMPLES;
 }
 
+// Percentage closer soft shadow
 float PCCS(vec2 uv, float z, float range)
 {
+    generateRandom(uv);
 
+    // average depth of blockers
+    float d = 0.0;
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+        vec2 offset = poissonDisk[i] * range;
+        d += texture(uShadowMap, uv + offset).r;
+    }
+    d /= NUM_SAMPLES;
+
+    // no shadow, just return 1.0
+    if (z - EPSILON < d) {
+        return 1.0;
+    }
+
+    // penumbra size
+    float penumbraSize = LIGHT_SIZE * (z - d) / d;
+    return PCF(uv, z, penumbraSize);
 }
 
 float D_GGX(float NdotH, float roughness)
@@ -206,7 +229,7 @@ void main()
         // [-1, 1] -> [0, 1]
         projCoords = projCoords * 0.5 + 0.5;
 
-        float visibility = PCF(projCoords.xy, projCoords.z, 0.02);
+        float visibility = PCCS(projCoords.xy, projCoords.z, 0.02);
         if (visibility > 0) {
             vec3 L = normalize(-uDirectionalLight.direction);
             vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness, false);
