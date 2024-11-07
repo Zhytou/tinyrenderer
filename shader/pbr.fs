@@ -39,6 +39,10 @@ uniform int uPointLightNum;
 uniform PointLight uPointLights[MAX_POINT_LIGHT_NUM];
 uniform DirectionalLight uDirectionalLight;
 
+#define EPSILON 0.001
+#define NUM_SAMPLES 20
+#define NUM_RINGS 10
+
 vec3 calculateNormal()
 {
     if (!uNormalMapped) {
@@ -55,18 +59,53 @@ vec3 calculateNormal()
     return normalize(TBN * tangentNormal);
 }
 
-float calculateShadow()
-{
-    vec3 projCoords = vLightSpaceFragPos.xyz / vLightSpaceFragPos.w;
-    projCoords = projCoords * 0.5 + 0.5;
+vec2 poissonDisk[NUM_SAMPLES];
 
-    float d = texture(uShadowMap, projCoords.xy).r;
+// Generate a random vec2 sequence with poisson disk sampling
+void generateRandom(const in vec2 seed)
+{
+
+  float ANGLE_STEP = 2.0 * PI * float(NUM_RINGS) / float(NUM_SAMPLES);
+  float INV_NUM_SAMPLES = 1.0 / float(NUM_SAMPLES);
+
+  float angle = sin(seed.x + seed.y) * 2.0 * PI;
+  float radius = INV_NUM_SAMPLES;
+  float radiusStep = radius;
+
+  for(int i = 0; i < NUM_SAMPLES; i++) {
+    poissonDisk[i] = vec2(cos(angle), sin(angle)) * pow(radius, 0.75);
+    radius += radiusStep;
+    angle += ANGLE_STEP;
+  }
+}
+
+float SM(vec2 uv, float z)
+{
+    float d = texture(uShadowMap, uv).r;
     float visibility = 0.0;
-    if (projCoords.z - 0.001 < d) {
+    if (z - EPSILON < d) {
         visibility = 1.0;
     }
 
     return visibility;
+}
+
+float PCF(vec2 uv, float z, float range)
+{
+    float visibility = 0.0;
+
+    generateRandom(uv);
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+        vec2 offset = poissonDisk[i] * range;
+        visibility += SM(uv + offset, z);
+    }
+
+    return visibility / NUM_SAMPLES;
+}
+
+float PCCS(vec2 uv, float z, float range)
+{
+
 }
 
 float D_GGX(float NdotH, float roughness)
@@ -123,7 +162,7 @@ vec3 BRDF(vec3 L, vec3 V, vec3 N, vec3 F0, vec3 baseColor, float metallic, float
     if (isPointLight) {
         diffuse /= PI;
     }
-    vec3 specular = D * F * G / (4.0 * NdotL * NdotV + 0.001);
+    vec3 specular = D * F * G / (4.0 * NdotL * NdotV + EPSILON);
 
     return diffuse + specular;
 }
@@ -144,7 +183,7 @@ void main()
 
     vec3 color = vec3(0.0);
 
-    // point light
+    // point light shading
     for (int i = 0; i < uPointLightNum; i++) {
         float distance = length(uPointLights[i].position - vFragPos);
         float attenuation = 1 / (distance * distance);
@@ -157,14 +196,25 @@ void main()
         color += uPointLights[i].color * attenuation * brdf * NdotL;
     }
 
-    float visibility = calculateShadow();
-    if (visibility > 0) {
-        vec3 L = normalize(-uDirectionalLight.direction);
-        vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness, false);
+    // directional light shading
+    {
+        // camera(here light is camera) space -> clip space
+        vec3 projCoords = vLightSpaceFragPos.xyz / vLightSpaceFragPos.w;
+        // pointlight(perspective projection) need depth linearization
+        // since we only calculate the visibility of directional light here
+        // we don't need to linearize the depth
+        // [-1, 1] -> [0, 1]
+        projCoords = projCoords * 0.5 + 0.5;
 
-        float NdotL = clamp(dot(N, L), 0.0, 1.0);
+        float visibility = PCF(projCoords.xy, projCoords.z, 0.02);
+        if (visibility > 0) {
+            vec3 L = normalize(-uDirectionalLight.direction);
+            vec3 brdf = BRDF(L, V, N, F0, baseColor, metallic, roughness, false);
 
-        color += uDirectionalLight.color * brdf * NdotL * visibility;
+            float NdotL = clamp(dot(N, L), 0.0, 1.0);
+
+            color += uDirectionalLight.color * brdf * NdotL * visibility;
+        }
     }
 
     // if (uAOMapped) {
