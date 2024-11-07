@@ -37,7 +37,7 @@
                 "albedo": "floor_albedo.png"
             },
             "transform": {
-                "translate": [0, 0.5, 0]
+                "translate": [0, 0.05, 0]
             }
         }
     ]

@@ -4,7 +4,11 @@
 
 ![gun](./asset/result/gun.gif)
 
-![firehydrant](./asset/result/firehydrant.gif)
+gun in rotating camera mode
+
+![firehydrantWithFloor](./asset/result/firehydrantWithFloor.gif)
+
+firehydrant with floor in rotation light mode
 
 **Build & Run**:
 
@@ -26,10 +30,13 @@ make all
 
 - Load one or multiple .obj models with configuration data in one .json file.
 - Render the loaded data physically using the OpenGL api.
-- Display the render result under different camera perspectives.
+- Display the scene with different mode(camera/light rotation).
 
 **TODO List**:
 
+- [x] Different Display Mode(camera/light rotation)
+- [x] Model/Mesh/Texture/Scene
 - [x] PBR
-- [ ] Shadow(VSSM+SSAO)
+- [x] Basic Shadow Mapping
+- [ ] Soft Shadow
 - [ ] FXAA
