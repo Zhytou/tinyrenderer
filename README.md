@@ -38,5 +38,5 @@ make all
 - [x] Model/Mesh/Texture/Scene
 - [x] PBR
 - [x] Basic Shadow Mapping
-- [ ] Soft Shadow
+- [x] Soft Shadow(PCF/PCSS)
 - [ ] FXAA
