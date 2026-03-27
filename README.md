@@ -39,4 +39,7 @@ make all
 - [x] PBR
 - [x] Basic Shadow Mapping
 - [x] Soft Shadow(PCF/PCSS)
-- [ ] FXAA
+- [ ] Anti Aliasing
+- [ ] Transparent Object Rendering
+- [ ] Screen Space Reflection
+- [ ] Complicated Scene Rendering
