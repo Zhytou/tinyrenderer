@@ -2,11 +2,11 @@
 
 **Render Example**:
 
-![gun](./asset/result/gun.gif)
+![gun](./result/gun.gif)
 
 gun in rotating camera mode
 
-![firehydrantWithFloor](./asset/result/firehydrantWithFloor.gif)
+![firehydrantWithFloor](./result/firehydrantWithFloor.gif)
 
 firehydrant with floor in rotation light mode
 
