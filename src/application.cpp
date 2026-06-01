@@ -1,244 +1,162 @@
-#include <stdexcept>
-#include <filesystem>
-#include <iostream>
-#include <map>
-
-#include <rapidjson/document.h>
-#include <glm/gtc/matrix_transform.hpp>
 
 #include "application.hpp"
+
+#include <rapidjson/document.h>
+
+#include <filesystem>
+#include <glm/gtc/matrix_transform.hpp>
+#include <stdexcept>
+
 #include "utils.hpp"
 
-namespace tinyrenderer
-{
-Application::Application(int width, int height, const std::string& title) : m_width(width), m_height(height)
-{
-	// glfw initialization
-	if(!glfwInit()) {
-		throw std::runtime_error("Failed to initialize GLFW library");
-	}
-	// set opengl version
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+namespace tinyrenderer {
+Application::Application(uint32_t width, uint32_t height, const std::string& title) : m_width(width), m_height(height), m_renderer(width, height) {
+    // initialize glfw and glad
+    setup(title);
+    // initialize renderer
+    m_renderer.setup();
 
-	// set z-buffer bits, otherwise glenbale(GL_DEPTH_TEST) will not work
-	glfwWindowHint(GLFW_DEPTH_BITS, 24);
-
-	// glfw window creation
-	m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
-	if(!m_window) {
-		throw std::runtime_error("Failed to create OpenGL context");
-	}
-
-	// glfw context settings(make sure it is all set before glad initialization)
-	glfwMakeContextCurrent(m_window);
-	glfwSwapInterval(-1);
-	
-	// glfw callbacks
-	// set window pointer for later use in callback function
-	glfwSetWindowUserPointer(m_window, this);
-	// set callback function
-	glfwSetWindowSizeCallback(m_window, [](GLFWwindow* window, int w, int h) {
-		glViewport(0, 0, w, h);
-	});
-	// glfwSetCursorPosCallback(m_window, Application::mousePositionCallback);
-	// glfwSetMouseButtonCallback(m_window, Application::mouseButtonCallback);
-	// glfwSetScrollCallback(m_window, Application::mouseScrollCallback);
-
-	// glad initialization(load all OpenGL function pointers)
-	if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		throw std::runtime_error("Failed to initialize OpenGL extensions loader");
-	}
-
-	// compile and link shader program
-	m_renderer.setup();
-
-	std::printf("OpenGL Renderer [%s]\n", glGetString(GL_RENDERER));
+    std::cout << "Running OpenGL Renderer [" << glGetString(GL_RENDERER) << "]\n";
 }
 
-Application::~Application()
-{
-	if(m_window) {
-		glfwDestroyWindow(m_window);
-	}
-	glfwTerminate();
+Application::~Application() {
+    // clear renderer resources
+    m_renderer.shutdown();
+
+    // clear scene resources
+    m_scene.lights.clear();
+    m_scene.models.clear();
+
+    // clear glfw resources
+    shutdown();
 }
 
-void Application::load(const std::string& configName, bool useDefaultCamera)
-{
-	std::string configJson = readText(configName);
-	
-	rapidjson::Document doc;
-	if (doc.Parse(configJson.c_str()).HasParseError()) {
-		throw std::runtime_error("Error parsing JSON");
-	}
-	
-	if (doc.HasMember("speed")) {
-		m_scene.speed = doc["speed"].GetFloat();
-	} else {
-		m_scene.speed = 0.1f;
-	}
-
-	auto lightsDoc = doc["lights"].GetObject();
-	m_scene.plights.resize(lightsDoc["pointlight"].Size());
-	for (int i = 0; i < m_scene.plights.size(); i++) {
-		m_scene.plights[i].position = {
-			lightsDoc["pointlight"][i]["position"][0].GetFloat(),
-			lightsDoc["pointlight"][i]["position"][1].GetFloat(),
-			lightsDoc["pointlight"][i]["position"][2].GetFloat()
-		};
-		m_scene.plights[i].color = {
-			lightsDoc["pointlight"][i]["color"][0].GetFloat(),
-			lightsDoc["pointlight"][i]["color"][1].GetFloat(),
-			lightsDoc["pointlight"][i]["color"][2].GetFloat()
-		};
-	}
-	{
-		m_scene.dlight.direction = {
-			lightsDoc["directionallight"]["direction"][0].GetFloat(),
-			lightsDoc["directionallight"]["direction"][1].GetFloat(),
-			lightsDoc["directionallight"]["direction"][2].GetFloat(),
-		};
-		m_scene.dlight.color = {
-			lightsDoc["directionallight"]["color"][0].GetFloat(),
-			lightsDoc["directionallight"]["color"][1].GetFloat(),
-			lightsDoc["directionallight"]["color"][2].GetFloat(),
-		};
-	}
-
-	AABB sceneAABB;
-	auto modelsDoc = doc["models"].GetArray();
-	for (int i = 0; i < modelsDoc.Capacity(); i++) {
-		auto modelDoc = modelsDoc[i].GetObject();
-		std::string baseDir = modelDoc["baseDir"].GetString();
-		std::string modelName = modelDoc["name"].GetString();
-		std::map<std::string, std::string> texNames;
-		if (modelDoc.HasMember("textures")) {
-			auto texDoc = modelDoc["textures"].GetObject();
-			for (auto it = texDoc.MemberBegin(); it != texDoc.MemberEnd(); it++) {
-				texNames[it->name.GetString()] = it->value.GetString();
-			}
-		}
-		std::map<std::string, glm::vec3> transform;
-		if (modelDoc.HasMember("transform")) {
-			auto transformDoc = modelDoc["transform"].GetObject();
-			for (auto it = transformDoc.MemberBegin(); it != transformDoc.MemberEnd(); it++) {
-				transform[it->name.GetString()] = {
-					it->value[0].GetFloat(),
-					it->value[1].GetFloat(),
-					it->value[2].GetFloat()
-				};
-			}
-		}
-		Model model(baseDir, modelName, texNames, transform);
-		sceneAABB.maxPos.x = std::max(sceneAABB.maxPos.x, model.aabb.maxPos.x);
-		sceneAABB.maxPos.y = std::max(sceneAABB.maxPos.y, model.aabb.maxPos.y);
-		sceneAABB.maxPos.z = std::max(sceneAABB.maxPos.z, model.aabb.maxPos.z);
-		sceneAABB.minPos.x = std::min(sceneAABB.minPos.x, model.aabb.minPos.x);
-		sceneAABB.minPos.y = std::min(sceneAABB.minPos.y, model.aabb.minPos.y);
-		sceneAABB.minPos.z = std::min(sceneAABB.minPos.z, model.aabb.minPos.z);
-		m_scene.models.emplace_back(model);
-	}
-
-	auto cameraDoc = doc["camera"].GetObject();
-	m_scene.camera.eye = {
-		cameraDoc["eye"][0].GetFloat(), 
-		cameraDoc["eye"][1].GetFloat(), 
-		cameraDoc["eye"][2].GetFloat()
-	};
-    m_scene.camera.target = {
-		cameraDoc["target"][0].GetFloat(), 
-		cameraDoc["target"][1].GetFloat(), 
-		cameraDoc["target"][2].GetFloat()
-	};
-    m_scene.camera.up = {
-		cameraDoc["up"][0].GetFloat(),
-		cameraDoc["up"][1].GetFloat(),
-		cameraDoc["up"][2].GetFloat()
-	};
-    m_scene.camera.fov = cameraDoc["fov"].GetFloat();
-    m_scene.camera.aspect = m_width / m_height;
-    m_scene.camera.near = cameraDoc["near"].GetFloat();
-    m_scene.camera.far = cameraDoc["far"].GetFloat();
-
-	if (useDefaultCamera) {
-		std::printf("%f, %f, %f\n", sceneAABB.minPos.x, sceneAABB.minPos.y, sceneAABB.minPos.z);
-		glm::vec3 target = 0.5f * (sceneAABB.minPos + sceneAABB.maxPos);
-		glm::vec3 eye = target + 1.0f * (sceneAABB.maxPos - sceneAABB.minPos);
-		glm::vec3 direction = glm::normalize(sceneAABB.maxPos - sceneAABB.minPos);
-		glm::vec3 up = {0.0f, 1.0f, 0.0f};
-		if (std::abs(glm::dot(direction, up)) > 0.01f) {
-			up = glm::cross(direction, up);
-		}
-		m_scene.camera.target = target;
-		m_scene.camera.eye = eye;
-		m_scene.camera.up = up;
-	}
-
-	std::printf("Camera eye(%f, %f, %f) target(%f, %f, %f)\n", m_scene.camera.eye.x, m_scene.camera.eye.y, m_scene.camera.eye.z, m_scene.camera.target.x, m_scene.camera.target.y, m_scene.camera.target.z);
+void Application::shutdown() {
+    if (m_window) {
+        glfwDestroyWindow(m_window);
+    }
+    glfwTerminate();
 }
 
-void Application::run(AppMode mode)
-{
-	while(!glfwWindowShouldClose(m_window)) {
-		// update scene
-		switch (mode)
-		{
-		case AppMode::RotatingCamera:
-		{
-			glm::mat4 m(1.0f);
-			m = glm::translate(m, -m_scene.camera.target);
-			m = glm::rotate(m, glm::radians(m_scene.speed), glm::vec3(0.0f, 1.0f, 0.0f));
-			m = glm::translate(m, m_scene.camera.target);
-			m_scene.camera.eye = glm::vec3(m * glm::vec4(m_scene.camera.eye, 1.0f));
-			break;
-		}
-		case AppMode::RotatingLight:
-		{
-			glm::mat4 m(1.0f);
-			m = glm::rotate(m, glm::radians(m_scene.speed), glm::vec3(0.0f, 1.0f, 0.0f));
-			m_scene.dlight.direction = glm::vec3(m * glm::vec4(m_scene.dlight.direction, 1.0f));
-			break;
-		}
-		default:
-			break;
-		}
-		
-		// render scene
-		m_renderer.render(m_scene, m_width, m_height);
-		glfwSwapBuffers(m_window);
-		glfwPollEvents();
-	}
+void Application::setup(const std::string& title) {
+    // glfw initialization
+    if (!glfwInit()) {
+        throw std::runtime_error("Failed to initialize GLFW library");
+    }
+    // set opengl version
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+
+    // set z-buffer bits, otherwise glenbale(GL_DEPTH_TEST) will not work
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);
+
+    // glfw window creation
+    m_window = glfwCreateWindow(m_width, m_height, title.c_str(), nullptr, nullptr);
+    if (!m_window) {
+        throw std::runtime_error("Failed to create OpenGL context");
+    }
+
+    // glfw context settings(make sure it is all set before glad initialization)
+    glfwMakeContextCurrent(m_window);
+    glfwSwapInterval(-1);
+
+    // glfw callbacks
+    // set window pointer for later use in callback function
+    glfwSetWindowUserPointer(m_window, this);
+    // set callback function
+    glfwSetWindowSizeCallback(m_window, [](GLFWwindow* window, int w, int h) {
+        glViewport(0, 0, w, h);
+    });
+
+    // glad initialization(load all OpenGL function pointers)
+    if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) {
+        throw std::runtime_error("Failed to initialize OpenGL extensions loader");
+    }
 }
 
-// void Application::mousePositionCallback(GLFWwindow* window, double xpos, double ypos)
-// {
-// 	Application* self = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-// 	if(self->m_mode != InputMode::None) {
-// 		const double dx = xpos - self->m_prevCursorX;
-// 		const double dy = ypos - self->m_prevCursorY;
+void Application::load(const std::string& config) {
+    std::string json = readText(config);
+    rapidjson::Document doc;
+    if (doc.Parse(json.c_str()).HasParseError()) {
+        throw std::runtime_error("Error parsing JSON");
+    }
+    auto getVec3 = [](rapidjson::Value& arr) -> glm::vec3 {
+        if (!arr.IsArray() || arr.Size() != 3 || !arr[0].IsNumber() || !arr[1].IsNumber() || !arr[2].IsNumber()) {
+            throw std::runtime_error("Invalid array size or element type");
+        }
 
-// 		switch(self->m_mode) {
-// 		case InputMode::RotatingScene:
-// 			self->m_sceneSettings.yaw   += OrbitSpeed * float(dx);
-// 			self->m_sceneSettings.pitch += OrbitSpeed * float(dy);
-// 			break;
-// 		case InputMode::RotatingView:
-// 			self->m_viewSettings.yaw   += OrbitSpeed * float(dx);
-// 			self->m_viewSettings.pitch += OrbitSpeed * float(dy);
-// 			break;
-// 		}
+        return glm::vec3{arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat()};
+    };
 
-// 		self->m_prevCursorX = xpos;
-// 		self->m_prevCursorY = ypos;
-// 	}
-// }
-	
-// void Application::mouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
-// {
-// 	Application* self = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-// 	// self->m_camera += ZoomSpeed * float(-yoffset);
-// }
-	
-} // namespace tinyrender
+    // TODO: add point light support
+    // lights
+    if (doc.HasMember("lights")) {
+        for (int i = 0; i < doc["lights"]["directionallight"].Size(); i++) {
+            m_scene.lights.emplace_back(std::make_shared<DirectionalLight>(getVec3(doc["lights"]["directionallight"][i]["direction"]), getVec3(doc["lights"]["directionallight"][i]["color"])));
+        }
+    }
+
+    // models
+    if (doc.HasMember("models")) {
+        for (int i = 0; i < doc["models"].Size(); i++) {
+            std::string baseDir   = doc["models"][i]["baseDir"].GetString();
+            std::string modelName = doc["models"][i]["name"].GetString();
+            glm::vec3 translate   = doc["models"][i]["transform"].HasMember("translate") ? getVec3(doc["models"][i]["transform"]["translate"]) : glm::vec3(0.0f);
+            glm::vec3 rotate      = doc["models"][i]["transform"].HasMember("rotate") ? getVec3(doc["models"][i]["transform"]["rotate"]) : glm::vec3(0.0f);
+            glm::vec3 scale       = doc["models"][i]["transform"].HasMember("scale") ? getVec3(doc["models"][i]["transform"]["scale"]) : glm::vec3(1.0f);
+
+            glm::mat4 transform = glm::mat4(1.0f);
+            transform           = glm::translate(transform, translate);
+            transform           = glm::rotate(transform, glm::radians(rotate.x), glm::vec3(1.0f, 0.0f, 0.0f));
+            transform           = glm::rotate(transform, glm::radians(rotate.y), glm::vec3(0.0f, 1.0f, 0.0f));
+            transform           = glm::rotate(transform, glm::radians(rotate.z), glm::vec3(0.0f, 0.0f, 1.0f));
+            transform           = glm::scale(transform, scale);
+            m_scene.models.emplace_back(std::make_shared<Model>(baseDir, modelName, transform));
+            auto [xyzi1, xyzi2] = m_scene.models.back()->getBoundingBox();
+            std::cout << "No" << i << ": " << xyzi1 << ' ' << xyzi2 << '\n';
+            m_scene.xyz1 = glm::min(m_scene.xyz1, xyzi1);
+            m_scene.xyz2 = glm::max(m_scene.xyz2, xyzi2);
+        }
+    }
+
+    // camera
+    if (doc.HasMember("camera")) {
+        m_scene.camera.setEye(getVec3(doc["camera"]["eye"]));
+        m_scene.camera.setTarget(getVec3(doc["camera"]["target"]));
+        m_scene.camera.setUp(getVec3(doc["camera"]["up"]));
+        m_scene.camera.setFov(doc["camera"]["fov"].GetFloat());
+        m_scene.camera.setNear(doc["camera"]["near"].GetFloat());
+        m_scene.camera.setFar(doc["camera"]["far"].GetFloat());
+        m_scene.camera.setViewport(m_width, m_height);
+    } else {
+        const glm::vec3 xyz1 = m_scene.xyz1, xyz2 = m_scene.xyz2;
+        glm::vec3 target    = 0.5f * (xyz2 + xyz1);
+        glm::vec3 eye       = target + 1.0f * (xyz2 - xyz1);
+        glm::vec3 direction = glm::normalize(xyz2 - xyz1);
+        glm::vec3 up        = {0.0f, 1.0f, 0.0f};
+        if (std::abs(glm::dot(direction, up)) > 0.99f) {
+            up = {0.0f, 0.0f, 1.0f};
+        }
+        m_scene.camera.setEye(eye);
+        m_scene.camera.setTarget(target);
+        m_scene.camera.setUp(up);
+    }
+
+    std::cout << m_scene.camera.getEye() << '\n';
+    std::cout << m_scene.camera.getTarget() << '\n';
+    std::cout << m_scene.xyz1 << ' ' << m_scene.xyz2 << '\n';
+
+    // TODO: add environment map (IBL) support
+}
+
+void Application::run() {
+    m_renderer.prepare(m_scene);
+    while (!glfwWindowShouldClose(m_window)) {
+        m_renderer.render(m_scene);
+        glfwSwapBuffers(m_window);
+        glfwPollEvents();
+    }
+}
+
+}  // namespace tinyrenderer

@@ -1,44 +1,40 @@
 #pragma once
 
+#include <glad/glad.h>
+
+#include <GLFW/glfw3.h>
+
 #include <memory>
 
 #include "renderer.hpp"
 #include "scene.hpp"
 
-namespace tinyrenderer
-{
+namespace tinyrenderer {
 
-enum AppMode {
-	None = 0,
-	RotatingCamera,
-	RotatingLight,
+class Application {
+   public:
+    // create application window and initialize OpenGL context
+    Application(uint32_t width, uint32_t height, const std::string& title);
+
+    // destroy application window and release resources
+    ~Application();
+
+    // initialize application window and OpenGL context
+    void setup(const std::string& title);
+    // release OpenGL resources
+    void shutdown();
+
+    // load model, light and camera
+    void load(const std::string& config);
+
+    // run application main loop
+    void run();
+
+   private:
+    GLFWwindow* m_window;
+    Renderer m_renderer;
+    Scene m_scene;
+    uint32_t m_width, m_height;
 };
 
-class Application
-{
-public:
-	// create application window and initialize OpenGL context
-	Application(int width, int height, const std::string& title);
-	
-	// destroy application window and release resources
-	~Application();
-	
-	// load model, light and camera
-	void load(const std::string& configName,  bool useDefaultCamera = true);
-
-	// run application main loop
-	void run(AppMode mode = AppMode::None);
-
-private:
-	// static void mousePositionCallback(GLFWwindow* window, double xpos, double ypos);
-	// static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
-	// static void mouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
-
-	GLFWwindow* m_window;
-	Renderer m_renderer;
-	Scene m_scene;
-	int m_width, m_height;
-	AppMode m_mode;
-};
-	
-} // namespace tinyrenderer
+}  // namespace tinyrenderer
