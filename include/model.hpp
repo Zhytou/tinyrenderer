@@ -3,24 +3,19 @@
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "material.hpp"
+#include "mesh.hpp"
 #include "renderitem.hpp"
 
 namespace tinyrenderer {
 
-struct Vertex {
-    glm::vec3 position;  // position
-    glm::vec3 normal;    // normal
-    glm::vec3 tangent;   // tangent
-    glm::vec2 texcoord;  // texture coordinate
-};
-
-struct SubMesh {
-    std::string mname;    // material name
-    uint32_t offset = 0;  // start index in indices vector
-    uint32_t length = 0;  // length of indices in submesh
+struct alignas(16) ModelBlock {
+    glm::mat4 transformMatrix;  // translate, rotate, scale
+    glm::mat4 normalMatrix;     // transpose of inverse (roate * scale) matrix
 };
 
 class Model {
@@ -33,30 +28,19 @@ class Model {
     Model(const std::filesystem::path& baseDir, const std::filesystem::path& modelName, const glm::mat4& transform);
     ~Model();
 
-    const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_xyz; }
-    const glm::mat4& getTransformMatrix() const { return m_matrix; }
-    void genRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
-        for (auto& sm : m_submeshes) {
-            if (m_materials.at(sm.mname).isOpaque() != opaque) {
-                continue;
-            }
-            queue.emplace_back(m_vao, sm.length, sm.offset, 0.f, m_matrix, m_materials.at(sm.mname));
-        }
+    const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_mesh->getBoundingBox(); }
+    const ModelBlock& getModelBlock() const { return m_modelBlock; }
+    void getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const;
+    void setTransformMatrix(const glm::mat4& transform) {
+        m_modelBlock.transformMatrix = transform;
+        m_modelBlock.normalMatrix    = glm::mat4(glm::transpose(glm::inverse(glm::mat3(transform))));
     }
-    void setTransformMatrix(const glm::mat4& transform) { m_matrix = transform; }
 
    private:
-    std::vector<Vertex> m_vertices;
-    std::vector<uint32_t> m_indices;
-    std::vector<SubMesh> m_submeshes;
-    std::map<std::string, Material> m_materials;
+    std::vector<std::shared_ptr<Material>> m_materials;
+    std::unique_ptr<Mesh> m_mesh;
 
-    glm::mat4 m_matrix                    = glm::mat4(1.f);
-    std::pair<glm::vec3, glm::vec3> m_xyz = {glm::vec3(0.f), glm::vec3(0.f)};
-
-    GLuint m_vao = 0;
-    GLuint m_vbo = 0;
-    GLuint m_ebo = 0;
+    ModelBlock m_modelBlock = {glm::mat4(1.f), glm::mat4(1.f)};
 };
 
 }  // namespace tinyrenderer
