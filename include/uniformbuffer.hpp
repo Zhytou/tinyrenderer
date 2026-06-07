@@ -6,24 +6,23 @@ namespace tinyrenderer {
 
 /**
  * @brief Shared GPU data interface block mapped to std140 layout structures.
- * @note Standardizes global context streaming (e.g., ViewMatrices, LightConfigs)
+ * @note Standardizes global context streaming (e.g., CameraBlock, LightBlock)
  * across distinct shaders without individual layout tracking overhead.
  */
-class UniformBuffer {
+class UniformBuffer : public GraphicBuffer {
    public:
-    UniformBuffer(size_t size);
-    ~UniformBuffer();
-    UniformBuffer(const UniformBuffer&)            = delete;
-    UniformBuffer& operator=(const UniformBuffer&) = delete;
+    UniformBuffer(GLsizeiptr size, const void* data = nullptr) : GraphicBuffer(GL_UNIFORM_BUFFER, size, data) {}
+    ~UniformBuffer() = default;
 
-    // Bind uniform buffer to shader binding point.
-    void bind(uint32_t unit) const;
-    // Upload uniform buffer data.
-    void upload(const void* data);
+    // Bind the whole uniform buffer to shader binding point.
+    void bind(GLuint slot) const {
+        glBindBufferBase(m_type, slot, m_id);
+    }
 
-   private:
-    GLuint m_id   = 0;
-    size_t m_size = 0;
+    // Bind the subrange of uniform buffer to shader binding point.
+    void bind(GLuint slot, GLintptr offset, GLsizeiptr size) {
+        glBindBufferRange(m_type, slot, m_id, offset, size);
+    }
 };
 
 }  // namespace tinyrenderer

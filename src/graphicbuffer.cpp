@@ -1,9 +1,10 @@
-#include "uniformbuffer.hpp"
+#include "graphicbuffer.hpp"
+
+#include <stdexcept>
 
 namespace tinyrenderer {
-
-UniformBuffer::UniformBuffer(size_t size) : m_size(size) {
-    // Create uniform buffer handle
+GraphicBuffer::GraphicBuffer(GLenum type, GLsizeiptr size, const void* data) : m_type(type), m_size(size) {
+    // Create graphic buffer handle
     //
     // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
     // │                          glGenBuffers vs glCreateBuffers                                     │
@@ -24,46 +25,48 @@ UniformBuffer::UniformBuffer(size_t size) : m_size(size) {
     //               glCreateBuffers = "allocate + initialize + target" (ready to use immediately)
     //
     // Example:
-    //   Legacy: glGenBuffers(1, &vbo); glBindBuffer(GL_ARRAY_BUFFER, vbo); glBufferData(...);
-    //   Modern: glCreateBuffers(1, &vbo); glNamedBufferData(vbo, size, data, GL_STATIC_DRAW);
+    //   Legacy: glGenBuffers(1, &id); glBindBuffer(GL_ARRAY_BUFFER, id); glBufferData(...);
+    //   Modern: glCreateBuffers(1, &id); glNamedBufferData(id, size, data, GL_STATIC_DRAW);
     glCreateBuffers(1, &m_id);
 
-    // Upload data to the uniform buffer object
+    // Upload data to the graphic buffer object
+    // ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+    // │                              glBufferData vs glNamedBufferData vs glNamedBufferStorage                       │
+    // ├─────────────────────────────────────┬─────────────────────────────────┬──────────────────────────────────────┤
+    // │           glBufferData              │         glNamedBufferData       │        glNamedBufferStorage           │
+    // ├─────────────────────────────────────┼─────────────────────────────────┼──────────────────────────────────────┤
+    // │ • Requires BINDING buffer           │ • Directly specifies buffer ID  │ • Directly specifies buffer ID        │
+    // │ • Changes global state              │ • No binding (DSA style)        │ • No binding (DSA style)              │
+    // │ • Can RE-ALLOCATE anytime           │ • Can RE-ALLOCATE anytime       │ • IMMUTABLE size (once allocated)     │
+    // │ • Mutable storage                   │ • Mutable storage               │ • IMMUTABLE storage                   │
+    // │ • Traditional API (OpenGL 1.5+)     │ • Modern API (OpenGL 4.5+)      │ • Modern API (OpenGL 4.5+)            │
+    // │ • Slower (realloc possible)         │ • Slower (realloc possible)     │ • FASTER (driver can optimize)        │
+    // │ • Usage: GL_STATIC_DRAW, etc.       │ • Usage: GL_STATIC_DRAW, etc.   │ • Usage: GL_MAP_*_BIT flags           │
+    // └─────────────────────────────────────┴─────────────────────────────────┴──────────────────────────────────────┘
     //
-    // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
-    // │                          glBufferData vs glNamedBufferData                                   │
-    // ├───────────────────────────────────────────────┬──────────────────────────────────────────────┤
-    // │              glBufferData                     │              glNamedBufferData               │
-    // ├───────────────────────────────────────────────┼──────────────────────────────────────────────┤
-    // │ • Requires currently BOUND buffer             │ • Directly specifies buffer ID               │
-    // │ • Changes global binding state                │ • No binding required (DSA style)            │
-    // │ • Must call glBindBuffer before upload        │ • Upload directly without bind               │
-    // │ • Target parameter needed (GL_ARRAY_BUFFER)   │ • No target needed (inferred from object)    │
-    // │ • Traditional API (OpenGL 1.5+)               │ • Modern API (OpenGL 4.5+ / ARB_dsa)         │
-    // │ • Error prone (wrong buffer bound)            │ • Safer (explicit buffer ID)                 │
-    // │ • Affects other operations using same target  │ • No side effects on global state            │
-    // └───────────────────────────────────────────────┴──────────────────────────────────────────────┘
-    //
-    // Key insight:  glBufferData     = "bind then upload" (state-dependent)
-    //               glNamedBufferData = "upload directly" (stateless, explicit)
+    // Key insight:  glBufferData        = "bind then allocate + upload" (mutable, stateful)
+    //               glNamedBufferData   = "allocate + upload directly" (mutable, stateless)
+    //               glNamedBufferStorage = "allocate IMMUTABLE storage" (immutable, faster, preferred)
     //
     // Example:
-    //   Legacy: glBindBuffer(GL_ARRAY_BUFFER, vbo); glBufferData(GL_ARRAY_BUFFER, size, data, usage);
-    //   Modern: glNamedBufferData(vbo, size, data, usage);  // No bind needed!
-    glNamedBufferData(m_id, size, nullptr, GL_DYNAMIC_DRAW);
+    //   Legacy:   glBindBuffer(GL_ARRAY_BUFFER, id); glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+    //   Modern:   glNamedBufferData(id, size, data, GL_STATIC_DRAW);
+    //   Immutable:glNamedBufferStorage(id, size, data, GL_DYNAMIC_STORAGE_BIT);  // Size cannot change!
+    glNamedBufferStorage(m_id, size, data, GL_DYNAMIC_STORAGE_BIT);
 }
-UniformBuffer::~UniformBuffer() {
+
+GraphicBuffer::~GraphicBuffer() {
     if (m_id != 0) {
         glDeleteBuffers(1, &m_id);
     }
 }
 
-void UniformBuffer::bind(uint32_t unit) const {
-    glBindBufferBase(GL_UNIFORM_BUFFER, unit, m_id);
-}
+void GraphicBuffer::upload(GLintptr offset, GLsizeiptr length, const void* data) {
+    if (offset < 0 || offset + length > m_size) {
+        throw std::runtime_error("GraphicBuffer::upload:offset or length out of range!");
+    }
 
-void UniformBuffer::upload(const void* data) {
-    // Upload a subset of buffer data
+    // Upload data to the graphic buffer object at the specified offset and length
     //
     // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
     // │                     glBufferSubData vs glNamedBufferSubData                                  │
@@ -83,12 +86,11 @@ void UniformBuffer::upload(const void* data) {
     //               glNamedBufferSubData = "update directly" (stateless, explicit)
     //
     // Example:
-    //   Legacy: glBindBuffer(GL_ARRAY_BUFFER, vbo); glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
-    //   Modern: glNamedBufferSubData(vbo, offset, size, data);  // No bind needed!
+    //   Legacy: glBindBuffer(GL_ARRAY_BUFFER, id); glBufferSubData(GL_ARRAY_BUFFER, offset, length, data);
+    //   Modern: glNamedBufferSubData(id, offset, length, data);  // No bind needed!
     //
     // Note: Buffer must already have storage allocated (via glBufferData or glNamedBufferData)
-    //
-    glNamedBufferSubData(m_id, 0, m_size, data);
+    glNamedBufferSubData(m_id, offset, length, data);
 }
 
 }  // namespace tinyrenderer
