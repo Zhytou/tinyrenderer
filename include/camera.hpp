@@ -6,8 +6,8 @@
 namespace tinyrenderer {
 
 struct alignas(16) CameraBlock {
-    glm::mat4 viewMatrix;
-    glm::mat4 projectionMatrix;
+    glm::mat4 viewProjMatrix;
+    glm::mat4 invViewProjMatrix;
     glm::vec3 cameraPosition;
 };
 
@@ -18,11 +18,11 @@ class Camera {
 
     int getWidth() const { return m_width; }
     int getHeight() const { return m_height; }
+    float getDistance(const glm::vec3& position) const { return glm::distance(m_eye, position); }
     const glm::vec3& getEye() const { return m_eye; }
     const glm::vec3& getTarget() const { return m_target; }
 
-    const glm::mat4& getViewMatrix() const { return m_viewMatrix; }
-    const glm::mat4& getProjectionMatrix() const { return m_projectionMatrix; }
+    const glm::mat4& getViewProjMatrix() const { return m_viewProjMatrix; }
     const CameraBlock& getCameraBlock() const { return m_cameraBlock; }
 
     void setEye(glm::vec3 eye) {
@@ -60,8 +60,8 @@ class Camera {
     virtual void update() = 0;
 
     CameraBlock m_cameraBlock;
-    glm::mat4 m_viewMatrix;
-    glm::mat4 m_projectionMatrix;
+    glm::mat4 m_viewProjMatrix;
+    glm::mat4 m_invViewProjMatrix;
     uint32_t m_dirty = 0;
     glm::vec3 m_eye;
     glm::vec3 m_target;
@@ -82,11 +82,13 @@ class PerspectiveCamera : public Camera {
 
    protected:
     void update() override {
-        m_projectionMatrix             = glm::perspective(glm::radians(m_fov), m_aspect, m_near, m_far);
-        m_viewMatrix                   = glm::lookAt(m_eye, m_target, m_up);
-        m_cameraBlock.viewMatrix       = m_viewMatrix;
-        m_cameraBlock.projectionMatrix = m_projectionMatrix;
-        m_cameraBlock.cameraPosition   = m_eye;
+        auto projMatrix = glm::perspective(glm::radians(m_fov), m_aspect, m_near, m_far);
+        auto viewMatrix = glm::lookAt(m_eye, m_target, m_up);
+
+        m_viewProjMatrix                = projMatrix * viewMatrix;
+        m_cameraBlock.viewProjMatrix    = m_viewProjMatrix;
+        m_cameraBlock.invViewProjMatrix = glm::inverse(m_viewProjMatrix);
+        m_cameraBlock.cameraPosition    = m_eye;
     }
 };
 
@@ -97,11 +99,13 @@ class OrthographicCamera : public Camera {
 
    protected:
     void update() override {
-        m_projectionMatrix             = glm::ortho(-m_width / 2.0f, m_width / 2.0f, -m_height / 2.0f, m_height / 2.0f, m_near, m_far);
-        m_viewMatrix                   = glm::lookAt(m_eye, m_target, m_up);
-        m_cameraBlock.viewMatrix       = m_viewMatrix;
-        m_cameraBlock.projectionMatrix = m_projectionMatrix;
-        m_cameraBlock.cameraPosition   = m_eye;
+        auto projMatrix = glm::ortho(-m_width / 2.0f, m_width / 2.0f, -m_height / 2.0f, m_height / 2.0f, m_near, m_far);
+        auto viewMatrix = glm::lookAt(m_eye, m_target, m_up);
+
+        m_viewProjMatrix                = projMatrix * viewMatrix;
+        m_cameraBlock.viewProjMatrix    = m_viewProjMatrix;
+        m_cameraBlock.invViewProjMatrix = glm::inverse(m_viewProjMatrix);
+        m_cameraBlock.cameraPosition    = m_eye;
     }
 };
 
