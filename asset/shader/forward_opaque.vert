@@ -1,20 +1,25 @@
 #version 450
 
-layout(location = 0) in vec3 iVertexPos;
-layout(location = 1) in vec3 iVertexNormal;
-layout(location = 2) in vec3 iVertexTangent;
-layout(location = 3) in vec2 iVertexUV;
+#include "common_normal.glsl"
 
-uniform mat4 uModelMatrix;
+layout(location = 0) in vec3 iVertPos;
+layout(location = 1) in vec3 iVertNormal;
+layout(location = 2) in vec3 iVertTangent;
+layout(location = 3) in vec2 iVertUV;
+
 layout(std140, binding = 0) uniform LightBlock {
     mat4 uLightSpaceMatrix; 
     vec4 uLightColorIntensity;
     vec4 uLightVectorType; // use .w to distinguish between directional and point light
 };
 layout(std140, binding = 1) uniform CameraBlock {
-    mat4 uViewMatrix;
-    mat4 uProjectMatrix;
+    mat4 uViewProjMatrix;
+    mat4 uInvViewProjMatrix;
     vec3 uCameraPos;
+};
+layout(std140, binding = 2) uniform ModelBlock {
+    mat4 uModelMatrix;
+    mat4 uNormalMatrix;
 };
 
 layout(location = 0) out vec3 oFragPos;
@@ -24,11 +29,11 @@ layout(location = 3) out vec2 oFragUV;
 layout(location = 4) out vec4 oLightSpaceFragPos;
 
 void main() {
-    vFragPos = (uModelMatrix * vec4(aVertexPos, 1.0)).xyz;
-    vFragNormal = (uModelMatrix * vec4(aVertexNormal, 0.0)).xyz;
-    vFragTangent = (uModelMatrix * vec4(aVertexTangent, 0.0)).xyz;
-    vFragUV = aVertexUV;
-    vLightSpaceFragPos = uLightSpaceMatrix * uModelMatrix * vec4(aVertexPos, 1.0);
+    oFragPos = (uModelMatrix * vec4(iVertPos, 1.0)).xyz;
+    oFragTangent = (uModelMatrix * vec4(iVertTangent, 0.0)).xyz;
+    oFragNormal = (uNormalMatrix * vec4(iVertNormal, 0.0)).xyz;
+    oFragUV = iVertUV;
+    oLightSpaceFragPos = uLightSpaceMatrix * uModelMatrix * vec4(iVertPos, 1.0);
 
-    gl_Position = uProjectMatrix * uViewMatrix * uModelMatrix * vec4(aVertexPos, 1.0);
+    gl_Position = uViewProjMatrix * uModelMatrix * vec4(iVertPos, 1.0);
 }

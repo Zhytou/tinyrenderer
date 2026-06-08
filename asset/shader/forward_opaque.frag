@@ -1,6 +1,7 @@
 #version 450
 
 #include "common_brdf.glsl"
+#include "common_normal.glsl"
 
 layout(location = 0) in vec3 iFragPos;
 layout(location = 1) in vec3 iFragNormal;
@@ -14,18 +15,33 @@ layout(std140, binding = 0) uniform LightBlock {
     vec4 uLightVectorType; // use .w to distinguish between directional and point light
 };
 layout(std140, binding = 1) uniform CameraBlock {
-    mat4 uViewMatrix;
-    mat4 uProjectMatrix;
+    mat4 uViewProjMatrix;
+    mat4 uInvViewProjMatrix;
     vec3 uCameraPos;
 };
+
+layout(binding = 0) uniform sampler2D tAlbedoMap;
+layout(binding = 1) uniform sampler2D tNormalMap;
+layout(binding = 2) uniform sampler2D tMRAOMap;
 
 out vec4 oFragColor;
 
 void main() {
+    vec3 albedo = texture(tAlbedoMap, iFragUV).rgb;
+    vec3 mrao   = texture(tMRAOMap, iFragUV).rgb;
+    float metallic = mrao.r;
+    float roughness = mrao.g;
+    float ao        = mrao.b;
+
+    vec3 N = normalize(iFragNormal);
+    vec3 T = normalize(iFragTangent);
+    vec3 TN = N_decode(texture(tNormalMap, iFragUV).xyz);
+    N = N_toWorld(N, T, TN);
+
     vec3 L = uLightVectorType.xyz;
     vec3 V = normalize(uCameraPos -iFragPos);
-    vec3 N = normalize(iFragNormal);
+    vec3 F0 =  mix(vec3(0.04), albedo, metallic);
 
-    
-    oFragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    vec3 color = BRDF(L, V, N, F0, albedo, metallic, roughness);
+    oFragColor = vec4(color, 1.0);
 }
