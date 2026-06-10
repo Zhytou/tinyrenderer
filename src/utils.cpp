@@ -1,38 +1,38 @@
 #include "utils.hpp"
 
-#include <vector>
-#include <string>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
-namespace tinyrenderer
-{
+namespace tinyrenderer {
 
-std::string readText(const std::string& filename)
-{
-	std::ifstream file{filename};
-	if(!file.is_open()) {
-		throw std::runtime_error("Could not open file: " + filename);
-	}
-
-	std::stringstream buffer;
-	buffer << file.rdbuf();
-	return buffer.str();
+std::ostream& operator<<(std::ostream& stream, const glm::vec3& vec) {
+    stream << vec.x << ' ' << vec.y << ' ' << vec.z;
+    return stream;
 }
-	
-std::vector<char> readBinary(const std::string& filename)
-{
-	std::ifstream file{filename, std::ios::binary | std::ios::ate};
-	if(!file.is_open()) {
-		throw std::runtime_error("Could not open file: " + filename);
-	}
 
-	std::streamsize size = file.tellg();
-	file.seekg(0, std::ios::beg);
-
-	std::vector<char> buffer(size);
-	file.read(buffer.data(), size);
-	return buffer;
+std::ostream& operator<<(std::ostream& stream, const glm::vec4& vec) {
+    stream << vec.x << ' ' << vec.y << ' ' << vec.z << ' ' << vec.w;
+    return stream;
 }
-    
-} // namespace tinyrenderer
+
+std::ostream& operator<<(std::ostream& stream, const glm::mat4& mat) {
+    stream << mat[0] << '\n'
+           << mat[1] << '\n'
+           << mat[2] << '\n'
+           << mat[3] << '\n';
+
+    return stream;
+}
+
+void glDebug(int i) {
+    GLenum err;
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        std::cout << "OpenGL error" << i << ":" << std::hex << err << std::dec << std::endl;
+    }
+}
+
+}  // namespace tinyrenderer

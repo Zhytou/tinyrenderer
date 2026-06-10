@@ -1,11 +1,16 @@
 #pragma once
 
-#include <vector>
+#include <glad/glad.h>
+
+#include <glm/glm.hpp>
+#include <iostream>
 #include <string>
+#include <vector>
 
-namespace tinyrenderer
-{
-std::string readText(const std::string& filename);
+namespace tinyrenderer {
+std::ostream& operator<<(std::ostream& stream, const glm::vec3& vec);
+std::ostream& operator<<(std::ostream& stream, const glm::vec4& vec);
+std::ostream& operator<<(std::ostream& stream, const glm::mat4& mat);
 
-std::vector<char> readBinary(const std::string& filename);
-} // namespace tinyrenderer
+void glDebug(int i);
+}  // namespace tinyrenderer
