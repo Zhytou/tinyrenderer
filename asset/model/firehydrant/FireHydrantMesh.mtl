@@ -1,0 +1,7 @@
+newmtl fire_hydrant
+d 1
+map_Kd firehydrant_albedo.png
+map_Ka firehydrant_ao.png
+map_Pm firehydrant_metallic.png
+map_Pr firehydrant_roughness.png
+norm firehydrant_normal.png

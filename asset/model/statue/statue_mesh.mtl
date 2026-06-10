@@ -1,0 +1,7 @@
+newmtl Model_0
+d 1
+map_Kd marble_albedo.png
+map_Ka marble_ao.png
+map_Pm marble_metallic.png
+map_Pr marble_roughness.png
+norm marble_normal.png
