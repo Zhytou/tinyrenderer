@@ -50,13 +50,14 @@ vec3 BRDF(vec3 L, vec3 V, vec3 N, vec3 F0, vec3 baseColor, float metallic, float
     vec3 kS = F;
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
 
-    vec3 diffuse = kD * baseColor;
+    vec3 diffuse = baseColor * NdotL;
+    return diffuse;
     // if (isPointLight) {
     //     diffuse /= PI;
     // }
-    vec3 specular = D * F * G / (4.0 * NdotL * NdotV + EPSILON);
+    // vec3 specular = D * F * G / (4.0 * NdotL * NdotV + EPSILON);
 
-    return diffuse + specular;
+    // return (diffuse + specular) * NdotL;
 }
 
 #endif
