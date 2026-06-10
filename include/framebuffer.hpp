@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "texture.hpp"
+#include "utils.hpp"
 
 namespace tinyrenderer {
 
@@ -27,12 +28,39 @@ class FrameBuffer {
     void setWidth(uint32_t w) { m_width = w; }
     void setHeight(uint32_t h) { m_height = h; }
 
-    //
+    // Validate the framebuffer completeness.
+    // @return True if the framebuffer is complete, False otherwise.
+    // @note Default framebuffer is always complete.
+    bool validate() const;
+    // Bind the framebuffer to the current render target.
     void bind() const;
-    //
+    // Attach a texture to the framebuffer.
+    // @param slot The attachment slot to bind the texture to.
+    // @param texture The attachment(namely texture) to bind.
     void attach(GLenum slot, const std::shared_ptr<Texture>& texture);
-    //
-    void clear(GLenum slot, const glm::vec4& color = {0.0f, 0.0f, 0.0f, 1.0f}, float depth = 1.f, int stencil = 0);
+    // Finalize the drawable attachments settings of the framebuffer.
+    void finalize();
+    // Clear the color attachment.
+    // @note Must be called after bind().
+    // @param slot The color attachment slot to clear(GL_COLOR_ATTACHMENT0/GL_COLOR_ATTACHMENT8).
+    // @param color The clear color.
+    // @param depth The clear depth.
+    // @param stencil The clear stencil value.
+    void clear(GLenum slot, const glm::vec4& color);
+    // Clear the depth and stencil attachment.
+    // @note Must be called after bind().
+    // @param target The attachment target to clear(GL_DEPTH/GL_STENCIL/GL_DEPTH_STENCIL).
+    // @param depth The clear depth.
+    // @param stencil The clear stencil value.
+    void clear(GLenum target, float depth, int stencil);
+    // Read the framebuffer attachment.
+    // @note Must be called after bind().
+    // @param target The attachment target to read(GL_COLOR/GL_DEPTH/GL_STENCIL/GL_DEPTH_STENCIL).
+    // @param slot The attachment slot to read.
+    // @param data The vector to store the read data.
+    // @param format The internal format of the read data.
+    template <typename T>
+    void read(GLenum target, GLenum slot, std::vector<T>& data, GLenum format);
 
    private:
     GLuint m_id       = 0;
@@ -40,5 +68,28 @@ class FrameBuffer {
     uint32_t m_height = 0;
     std::unordered_map<GLenum, std::shared_ptr<Texture>> m_attachments;
 };
+
+template <typename T>
+void FrameBuffer::read(GLenum target, GLenum slot, std::vector<T>& data, GLenum format) {
+    if (m_id != 0 && m_attachments.count(slot) == 0) {
+        return;
+    }
+
+    if (target == GL_COLOR) {
+        if (m_id == 0) {
+            glReadBuffer(slot);
+        } else {
+            glNamedFramebufferReadBuffer(m_id, slot);
+        }
+    }
+
+    if constexpr (std::is_same_v<T, float>) {
+        glReadPixels(0, 0, m_width, m_height, format, GL_FLOAT, data.data());
+    } else if constexpr (std::is_same_v<T, uint16_t>) {
+        glReadPixels(0, 0, m_width, m_height, format, GL_UNSIGNED_SHORT, data.data());
+    } else {  // std::is_same_v<T, uint8_t>
+        glReadPixels(0, 0, m_width, m_height, format, GL_UNSIGNED_BYTE, data.data());
+    }
+}
 
 }  // namespace tinyrenderer

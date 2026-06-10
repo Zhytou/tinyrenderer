@@ -1,6 +1,8 @@
 #include "framebuffer.hpp"
 
+#include <algorithm>
 #include <iostream>
+#include <vector>
 
 #include "utils.hpp"
 
@@ -72,6 +74,15 @@ FrameBuffer& FrameBuffer::operator=(FrameBuffer&& other) {
     return *this;
 };
 
+bool FrameBuffer::validate() const {
+    // Default framebuffer is always complete.
+    GLenum status = glCheckNamedFramebufferStatus(m_id, GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "FrameBuffer[" << m_id << "]::validate: framebuffer not complete" << std::endl;
+    }
+    return status == GL_FRAMEBUFFER_COMPLETE;
+}
+
 void FrameBuffer::bind() const {
     glViewport(0, 0, m_width, m_height);
     glBindFramebuffer(GL_FRAMEBUFFER, m_id);
@@ -107,23 +118,49 @@ void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture) {
     glNamedFramebufferTexture(m_id, slot, texture->getId(), 0);
 }
 
-void FrameBuffer::clear(GLenum slot, const glm::vec4& color, float depth, int stencil) {
+void FrameBuffer::finalize() {
     if (m_id == 0) {
-        glClearColor(color.x, color.y, color.z, color.w);
-        glClearDepth(depth);
-        glClearStencil(stencil);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         return;
     }
 
-    if (m_attachments.count(slot) == 0) {
-        return;
+    // Get the attached color slots
+    std::vector<GLenum> slots;
+    for (auto [slot, _] : m_attachments) {
+        if (slot >= GL_COLOR_ATTACHMENT0 && slot <= GL_COLOR_ATTACHMENT31) {
+            slots.push_back(slot);
+        }
     }
-    if (slot == GL_DEPTH_STENCIL_ATTACHMENT) {
-        glClearNamedFramebufferfv(m_id, GL_DEPTH, 0, &depth);
-    } else if (slot == GL_STENCIL_ATTACHMENT) {
-        glClearNamedFramebufferiv(m_id, GL_STENCIL, 0, &stencil);
-    } else {
+
+    // !Warning: Attachment order in glDrawBuffers/glNamedFramebufferDrawBuffers must match fragment shader's layout(location = N) order.
+    std::sort(slots.begin(), slots.end());
+
+    // Activate the attached color textures as drawable attachments
+    // Depth and stencil attachments are activated by DEPTH_WRITE_MASK and STENCIL_WRITE_MASK.
+    // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
+    // │                    glDrawBuffers vs glNamedFramebufferDrawBuffers                           │
+    // ├───────────────────────────────────────────────┬──────────────────────────────────────────────┤
+    // │              glDrawBuffers                    │         glNamedFramebufferDrawBuffers       │
+    // ├───────────────────────────────────────────────┼──────────────────────────────────────────────┤
+    // │ • Requires currently BOUND framebuffer        │ • Directly specifies framebuffer ID         │
+    // │ • Must call glBindFramebuffer first           │ • No bind needed (DSA style)                │
+    // │ • Changes global framebuffer state            │ • Stateless, no side effects                │
+    // │ • Traditional API (OpenGL 3.0+)               │ • Modern API (OpenGL 4.5+ / ARB_dsa)        │
+    // └───────────────────────────────────────────────┴──────────────────────────────────────────────┘
+    //
+    // Key insight:  glDrawBuffers                    = "bind then configure" (state-dependent)
+    //               glNamedFramebufferDrawBuffers    = "configure directly" (stateless, explicit)
+    glNamedFramebufferDrawBuffers(m_id, slots.size(), slots.data());
+}
+
+void FrameBuffer::clear(GLenum slot, const glm::vec4& color) {
+    int bufferIndex = -1;
+    if (m_id != 0 && slot >= GL_COLOR_ATTACHMENT0 && slot <= GL_COLOR_ATTACHMENT15 && m_attachments.count(slot)) {
+        bufferIndex = slot - GL_COLOR_ATTACHMENT0;
+    } else if (m_id == 0 && slot == GL_BACK) {
+        bufferIndex = 0;
+    }
+
+    if (bufferIndex >= 0) {
         // Clear color attachment
         //
         // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -143,7 +180,31 @@ void FrameBuffer::clear(GLenum slot, const glm::vec4& color, float depth, int st
         // Suffix meanings: fv = float vector → clears COLOR (RGBA) or DEPTH (single float or float vector)
         //                  fi = float + int  → clears DEPTH_STENCIL (depth + stencil together)
         //                  iv = int vector → clears STENCIL (single int or int vector)
-        glClearNamedFramebufferfv(m_id, GL_COLOR, slot - GL_COLOR_ATTACHMENT0, &color.x);
+        if (m_id == 0) {
+            glClearBufferfv(GL_COLOR, bufferIndex, &color.x);
+        } else {
+            glClearNamedFramebufferfv(m_id, GL_COLOR, bufferIndex, &color.x);
+        }
+    }
+}
+
+void FrameBuffer::clear(GLenum target, float depth, int stencil) {
+    if (m_id == 0) {
+        if (target == GL_DEPTH) {
+            glClearBufferfv(target, 0, &depth);
+        } else if (target == GL_STENCIL) {
+            glClearBufferiv(target, 0, &stencil);
+        } else if (target == GL_DEPTH_STENCIL) {
+            glClearBufferfi(target, 0, depth, stencil);
+        }
+    } else {
+        if (target == GL_DEPTH && m_attachments.count(GL_DEPTH_ATTACHMENT)) {
+            glClearNamedFramebufferfv(m_id, target, 0, &depth);
+        } else if (target == GL_STENCIL && m_attachments.count(GL_STENCIL_ATTACHMENT)) {
+            glClearNamedFramebufferiv(m_id, target, 0, &stencil);
+        } else if (target == GL_DEPTH_STENCIL && m_attachments.count(GL_DEPTH_STENCIL_ATTACHMENT)) {
+            glClearNamedFramebufferfi(m_id, target, 0, depth, stencil);
+        }
     }
 }
 
