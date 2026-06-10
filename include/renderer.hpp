@@ -38,7 +38,7 @@ class Renderer {
     // draw mesh
     static void draw(const RenderItem& item);
     // draw quad or skybox
-    static void draw(const std::shared_ptr<VertexLayout>& layout, const std::unique_ptr<VertexBuffer>& buffer, const std::vector<std::shared_ptr<Texture>>& textures);
+    static void draw(const std::shared_ptr<VertexLayout>& layout, uint32_t vertexCount, const std::vector<std::shared_ptr<Texture>>& textures, uint32_t startTextureSlot = 0);
 
     /// fixed-function states
     // input and output attachments
