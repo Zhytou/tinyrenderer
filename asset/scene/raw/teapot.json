@@ -1,0 +1,41 @@
+{
+    "camera": {
+        "eye": [4, 5, 2],
+        "target": [0, 0, 0],
+        "up": [0, 1, 0],
+        "fov": 45.0,
+        "near": 1,
+        "far": 30,
+        "width": 800,
+        "height": 800,
+        "speed": 0.05
+    },
+    "lights": {
+        "directionallight": [
+                {
+                    "color": [1, 1, 1],
+                    "intensity": 2.0,
+                    "direction": [1, 0, 1]
+                }
+            ],
+        "pointlight": [
+        ]            
+    },
+    "models": [
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/teapot/",
+            "name": "teapot.obj",
+            "transform": {
+            }
+        }
+    ],
+    "skybox": {
+        "baseDir": "/home/zhytou/tinyrenderer/asset/cubemap/skybox",
+        "left": "negx.jpg",
+        "right": "posx.jpg",
+        "bottom": "negy.jpg",
+        "top": "posy.jpg",
+        "front": "negz.jpg",
+        "back": "posz.jpg"
+    }
+}

@@ -5,13 +5,19 @@
         "up": [0, 1, 0],
         "fov": 45.0,
         "near": 0.1,
-        "far": 20
+        "far": 20,
+        "width": 800,
+        "height": 600,
+        "speed": 0.05
     },
     "lights": {
-        "directionallight": {
-            "color": [1, 1, 1],
-            "direction": [1, 0, 1]
-        },
+        "directionallight": [
+            {
+                "intensity": 2.0,
+                "color": [1, 1, 1],
+                "direction": [1, 0, 1]
+            }
+        ],
         "pointlight": [
         ]            
     },
@@ -19,13 +25,6 @@
         {
             "baseDir": "/home/zhytou/tinyrenderer/asset/model/gun/",
             "name": "gun.obj",
-            "textures": {
-                "albedo": "gun_albedo.png",
-                "ao": "gun_ao.png",
-                "metallic": "gun_metallic.png",
-                "roughness": "gun_roughness.png",
-                "normal": "gun_normal.png"
-            },
             "transform": {
             }
         }

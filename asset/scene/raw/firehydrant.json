@@ -1,0 +1,35 @@
+{
+    "camera": {
+        "eye": [3, 0.5, 1],
+        "target": [0, 0.5, 0],
+        "up": [0, 1, 0],
+        "fov": 45.0,
+        "near": 1.5,
+        "far": 10,
+        "width": 800,
+        "height": 800,
+        "speed": 0.05
+    },
+    "lights": {
+        "directionallight": [
+            {
+                "color": [1, 1, 1],
+                "intensity": 2.0,
+                "direction": [1, 0, 1]
+            }
+        ],
+        "pointlight": [
+        ]            
+    },
+    "models": [
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/firehydrant/",
+            "name": "firehydrant.obj",
+            "transform": {
+            }
+        }
+    ],
+    "skybox": {
+
+    }
+}

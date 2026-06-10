@@ -1,0 +1,30 @@
+{
+    "camera": {
+        "eye": [-30, -10, 8],
+        "target": [0, 0, 8],
+        "up": [0, 0, 1],
+        "fov": 45.0,
+        "near": 0.1,
+        "far": 2000,
+        "width": 800,
+        "height": 600,
+        "speed": 0.05
+    },
+    "lights": {
+        "directionallight": [
+            {
+                "color": [1, 1, 1],
+                "direction": [1, 1, 1]
+            }
+        ],
+        "pointlight": [
+
+        ]            
+    },
+    "models": [
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/statue/",
+            "modelName": "statue.obj"
+        }
+    ]
+}
