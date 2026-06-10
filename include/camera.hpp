@@ -6,7 +6,8 @@
 namespace tinyrenderer {
 
 struct alignas(16) CameraBlock {
-    glm::mat4 viewProjMatrix;
+    glm::mat4 viewMatrix;
+    glm::mat4 projMatrix;
     glm::mat4 invViewProjMatrix;
     glm::vec3 cameraPosition;
 };
@@ -22,7 +23,8 @@ class Camera {
     const glm::vec3& getEye() const { return m_eye; }
     const glm::vec3& getTarget() const { return m_target; }
 
-    const glm::mat4& getViewProjMatrix() const { return m_viewProjMatrix; }
+    const glm::mat4& getViewMatrix() const { return m_viewMatrix; }
+    const glm::mat4& getProjMatrix() const { return m_projMatrix; }
     const CameraBlock& getCameraBlock() const { return m_cameraBlock; }
 
     void setEye(glm::vec3 eye) {
@@ -60,7 +62,8 @@ class Camera {
     virtual void update() = 0;
 
     CameraBlock m_cameraBlock;
-    glm::mat4 m_viewProjMatrix;
+    glm::mat4 m_viewMatrix;
+    glm::mat4 m_projMatrix;
     glm::mat4 m_invViewProjMatrix;
     uint32_t m_dirty = 0;
     glm::vec3 m_eye;
@@ -82,12 +85,12 @@ class PerspectiveCamera : public Camera {
 
    protected:
     void update() override {
-        auto projMatrix = glm::perspective(glm::radians(m_fov), m_aspect, m_near, m_far);
-        auto viewMatrix = glm::lookAt(m_eye, m_target, m_up);
+        m_viewMatrix = glm::lookAt(m_eye, m_target, m_up);
+        m_projMatrix = glm::perspective(glm::radians(m_fov), m_aspect, m_near, m_far);
 
-        m_viewProjMatrix                = projMatrix * viewMatrix;
-        m_cameraBlock.viewProjMatrix    = m_viewProjMatrix;
-        m_cameraBlock.invViewProjMatrix = glm::inverse(m_viewProjMatrix);
+        m_cameraBlock.viewMatrix        = m_viewMatrix;
+        m_cameraBlock.projMatrix        = m_projMatrix;
+        m_cameraBlock.invViewProjMatrix = glm::inverse(m_projMatrix * m_viewMatrix);
         m_cameraBlock.cameraPosition    = m_eye;
     }
 };
@@ -99,12 +102,12 @@ class OrthographicCamera : public Camera {
 
    protected:
     void update() override {
-        auto projMatrix = glm::ortho(-m_width / 2.0f, m_width / 2.0f, -m_height / 2.0f, m_height / 2.0f, m_near, m_far);
-        auto viewMatrix = glm::lookAt(m_eye, m_target, m_up);
+        m_viewMatrix = glm::lookAt(m_eye, m_target, m_up);
+        m_projMatrix = glm::ortho(-m_width / 2.0f, m_width / 2.0f, -m_height / 2.0f, m_height / 2.0f, m_near, m_far);
 
-        m_viewProjMatrix                = projMatrix * viewMatrix;
-        m_cameraBlock.viewProjMatrix    = m_viewProjMatrix;
-        m_cameraBlock.invViewProjMatrix = glm::inverse(m_viewProjMatrix);
+        m_cameraBlock.viewMatrix        = m_viewMatrix;
+        m_cameraBlock.projMatrix        = m_projMatrix;
+        m_cameraBlock.invViewProjMatrix = glm::inverse(m_projMatrix * m_viewMatrix);
         m_cameraBlock.cameraPosition    = m_eye;
     }
 };

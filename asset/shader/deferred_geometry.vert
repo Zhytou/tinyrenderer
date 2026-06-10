@@ -13,7 +13,8 @@ layout(std140, binding = 0) uniform LightBlock {
     vec4 uLightVectorType; // use .w to distinguish between directional and point light
 };
 layout(std140, binding = 1) uniform CameraBlock {
-    mat4 uViewProjMatrix;
+    mat4 uViewMatrix;
+    mat4 uProjMatrix;
     mat4 uInvViewProjMatrix;
     vec3 uCameraPos;
 };
@@ -33,5 +34,5 @@ void main() {
     oFragUV = iVertUV;
     oLightSpaceFragPos = uLightSpaceMatrix * uModelMatrix * vec4(iVertPos, 1.0);
 
-    gl_Position = uViewProjMatrix * uModelMatrix * vec4(iVertPos, 1.0);
+    gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * vec4(iVertPos, 1.0);
 }
