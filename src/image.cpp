@@ -13,8 +13,8 @@ Image::Image(void* data, GLenum type, int width, int height, int channels) {
 }
 
 Image::Image(Image&& other) {
-    if (other.m_data) {
-        stbi_image_free(other.m_data);
+    if (m_data) {
+        stbi_image_free(m_data);
     }
     m_data           = other.m_data;
     m_type           = other.m_type;
@@ -29,8 +29,8 @@ Image::Image(Image&& other) {
 }
 
 Image& Image::operator=(Image&& other) {
-    if (other.m_data) {
-        stbi_image_free(other.m_data);
+    if (m_data) {
+        stbi_image_free(m_data);
     }
     m_data           = other.m_data;
     m_type           = other.m_type;
@@ -80,12 +80,19 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
         return nullptr;
     }
 
+    std::vector<std::shared_ptr<Image>> resizedImages;
     int width = images[0]->getWidth(), height = images[0]->getHeight(), totChannels = 0;
     GLenum type = GL_UNSIGNED_BYTE;
     for (auto& image : images) {
-        if (image == nullptr || width != image->getWidth() || height != image->getHeight() || channels < image->getChannels()) {
+        if (image == nullptr || channels < image->getChannels()) {
             return nullptr;
         }
+        if (width != image->getWidth() || height != image->getHeight()) {
+            resizedImages.push_back(resize(image, width, height));
+        } else {
+            resizedImages.push_back(image);
+        }
+
         if (image->getDataType() == GL_FLOAT) {
             type = GL_FLOAT;
         } else if (image->getDataType() == GL_UNSIGNED_SHORT && type == GL_UNSIGNED_BYTE) {
@@ -111,7 +118,7 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
         float* dst = static_cast<float*>(data);
         std::fill_n(dst, width * height * channels, 1.0f);
 
-        for (const auto& image : images) {
+        for (const auto& image : resizedImages) {
             float* src  = static_cast<float*>(image->getData());
             srcChannels = image->getChannels();
 
@@ -126,7 +133,7 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
         uint16_t* dst = static_cast<uint16_t*>(data);
         std::fill_n(dst, width * height * channels, 65535);
 
-        for (const auto& image : images) {
+        for (const auto& image : resizedImages) {
             uint16_t* src = static_cast<uint16_t*>(image->getData());
             srcChannels   = image->getChannels();
 
@@ -141,7 +148,7 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
         uint8_t* dst = static_cast<uint8_t*>(data);
         std::fill_n(dst, width * height * channels, 255);
 
-        for (const auto& image : images) {
+        for (const auto& image : resizedImages) {
             uint8_t* src = static_cast<uint8_t*>(image->getData());
             srcChannels  = image->getChannels();
 
@@ -153,6 +160,47 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
             dstChannel += srcChannels;
         }
     }
+    return std::shared_ptr<Image>(new Image(data, type, width, height, channels));
+}
+
+std::shared_ptr<Image> Image::resize(const std::shared_ptr<Image>& image, int width, int height) {
+    if (image == nullptr) {
+        return nullptr;
+    }
+
+    int channels  = image->getChannels();
+    GLenum type   = image->getDataType();
+    GLenum format = image->getFormat();
+    int bytes     = type == GL_FLOAT ? 4 : (type == GL_UNSIGNED_SHORT ? 2 : 1);
+    void* data    = malloc(width * height * channels * bytes);  // destination image data
+    if (data == nullptr) {
+        return nullptr;
+    }
+
+    stbir_pixel_layout layout = STBIR_RGBA;
+    if (format == GL_RGBA) {
+        layout = STBIR_RGBA;
+    } else if (format == GL_RGB) {
+        layout = STBIR_RGB;
+    } else if (format == GL_RG) {
+        layout = STBIR_2CHANNEL;
+    } else if (format == GL_R) {
+        layout = STBIR_1CHANNEL;
+    }
+
+    void *src = image->getData(), *dst = data;
+    int srcW = image->getWidth(), srcH = image->getHeight();
+    int dstW = width, dstH = height;
+
+    stbir_resize;
+    if (type == GL_FLOAT) {
+        stbir_resize_float_linear(static_cast<float*>(src), srcW, srcH, 0, static_cast<float*>(dst), dstW, dstH, 0, layout);
+    } else if (type == GL_UNSIGNED_SHORT) {
+        // stbir_resize_uint16_linear(static_cast<uint16_t*>(src), srcW, srcH, 0, static_cast<uint16_t*>(dst), dstW, dstH, 0, layout);
+    } else {  // GL_UNSIGNED_BYTE
+        stbir_resize_uint8_linear(static_cast<uint8_t*>(src), srcW, srcH, 0, static_cast<uint8_t*>(dst), dstW, dstH, 0, layout);
+    }
+
     return std::shared_ptr<Image>(new Image(data, type, width, height, channels));
 }
 

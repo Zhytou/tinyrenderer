@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 
 #include <stb_image/stb_image.h>
+#include <stb_image/stb_image_resize2.h>
 
 #include <filesystem>
 #include <memory>
@@ -41,13 +42,25 @@ class Image {
     }
 
     //  Create an image object from file, automatically detecting HDR/16-bit/8-bit formats
+    // @param path The image file path to load.
+    // @param desiredChannels The desired channels of the image.
+    // @param flip Whether to flip the image vertically.
+    // @return The created image.
     static std::shared_ptr<Image> create(const std::filesystem::path& path, int desiredChannels = 0, bool flip = true);
     // Merge multiple image objects into a single image object by channel packing
+    // @param images The image objects to merge.
+    // @param channels The desired channels of the merged image.
+    // @return The merged image.
     static std::shared_ptr<Image> merge(const std::vector<std::shared_ptr<Image>>& images, int channels);
+    // Resize an image object to the specified width and height
+    // @param image The image object to resize.
+    // @param width The desired width of the resized image.
+    // @param height The desired height of the resized image.
+    static std::shared_ptr<Image> resize(const std::shared_ptr<Image>& image, int width, int height);
 
    private:
     void* m_data   = nullptr;
-    GLenum m_type  = GL_UNSIGNED_BYTE;
+    GLenum m_type  = GL_UNSIGNED_BYTE;  // GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, or GL_FLOAT
     int m_width    = 0;
     int m_height   = 0;
     int m_channels = 0;
