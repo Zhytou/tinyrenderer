@@ -1,249 +1,283 @@
-#include <stdexcept>
-#include <iostream>
-#include <memory>
+#include "renderer.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/euler_angles.hpp>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
-#include "renderer.hpp"
+#include "camera.hpp"
+#include "model.hpp"
+#include "renderitem.hpp"
+#include "staticresource.hpp"
 #include "utils.hpp"
 
-namespace tinyrenderer
-{
+namespace tinyrenderer {
 
-void Renderer::setup()
-{
-	// set global OpenGL state
-	glEnable(GL_CULL_FACE);
-	glFrontFace(GL_CCW);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-	glClearDepth(1.0f);
-	// glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+void Renderer::setup() {
+    // 1. Initialize renderpasses, namely define the input and output attachments of each pipeline
+    m_passes["shadow_mapping"] = RenderPass{
+        .attachments = {
+            AttachmentDesc{
+                .name   = "shadow_map",
+                .target = GL_DEPTH,
+                .type   = GL_TEXTURE_2D,
+                .format = GL_DEPTH_COMPONENT24,
+                .slot   = GL_DEPTH_ATTACHMENT,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.depthStencil = {1.0f, 0}},
+            },
+        },
+    };
+    m_passes["deferred_geometry"] = RenderPass{
+        .attachments = {
+            AttachmentDesc{
+                .name   = "albedo",
+                .target = GL_COLOR,
+                .type   = GL_TEXTURE_2D,
+                .format = GL_RGBA8,
+                .slot   = GL_COLOR_ATTACHMENT0,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+            },
+            AttachmentDesc{
+                .name   = "normal",
+                .target = GL_COLOR,
+                .type   = GL_TEXTURE_2D,
+                .format = GL_RGBA8,
+                .slot   = GL_COLOR_ATTACHMENT1,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+            },
+            AttachmentDesc{
+                .name   = "mrao",
+                .target = GL_COLOR,
+                .type   = GL_TEXTURE_2D,
+                .format = GL_RGBA8,
+                .slot   = GL_COLOR_ATTACHMENT2,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+            },
+            AttachmentDesc{
+                .name   = "depth",
+                .target = GL_DEPTH,
+                .type   = GL_TEXTURE_2D,
+                .format = GL_DEPTH_COMPONENT24,
+                .slot   = GL_DEPTH_ATTACHMENT,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.depthStencil = {1.0f, 0}},
+            },
+        },
+    };
+    m_passes["deferred_shading"] = RenderPass{
+        .attachments = {
+            AttachmentDesc{
+                .name   = "default_color",
+                .target = GL_COLOR,
+                .type   = GL_NONE,
+                .format = GL_NONE,
+                .slot   = GL_BACK,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+            },
+            AttachmentDesc{
+                .name   = "default_depth",
+                .target = GL_DEPTH,
+                .type   = GL_NONE,
+                .format = GL_NONE,
+                .slot   = GL_NONE,
+                .loadOp = LoadOp::LOAD_OP_DONT_CARE,  // never clear depth for shading pass
+            },
+        },
+    };
+    m_passes["forward_opaque"] = RenderPass{
+        .attachments = {
+            AttachmentDesc{
+                .name   = "default_color",
+                .target = GL_COLOR,
+                .type   = GL_NONE,
+                .format = GL_NONE,
+                .slot   = GL_BACK,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+            },
+            AttachmentDesc{
+                .name   = "default_depth",
+                .target = GL_DEPTH,
+                .type   = GL_NONE,
+                .format = GL_NONE,
+                .slot   = GL_NONE,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.depthStencil = {1.0f, 0}},
+            },
+        },
+    };
 
-	// compile and link shaders
-	m_programs["shadow"] = linkProgram({
-		compileShader("../shader/shadow.vs", GL_VERTEX_SHADER),
-		compileShader("../shader/shadow.fs", GL_FRAGMENT_SHADER)
-	});
-	m_programs["pbr"] = linkProgram({
-		compileShader("../shader/pbr.vs", GL_VERTEX_SHADER),
-		compileShader("../shader/pbr.fs", GL_FRAGMENT_SHADER)
-	});
+    // 2. Initialize pipeline states for each renderpass, namely configure the fixed-function stages including rasterization/blend/depth/stencil
+    m_states["deferred_geometry"] = PipelineState{
+        .polygonMode      = GL_FILL,
+        .cullEnable       = GL_FALSE,
+        .cullMode         = GL_BACK,
+        .frontFace        = GL_CCW,
+        .blendEnable      = GL_FALSE,
+        .depthTestEnable  = GL_TRUE,
+        .depthWriteEnable = GL_TRUE,
+        .depthFunc        = GL_LESS,
+    };
+    m_states["deferred_shading"] = PipelineState{
+        .polygonMode      = GL_FILL,
+        .cullEnable       = GL_FALSE,
+        .cullMode         = GL_BACK,
+        .frontFace        = GL_CCW,
+        .blendEnable      = GL_FALSE,
+        .depthTestEnable  = GL_FALSE,
+        .depthWriteEnable = GL_FALSE,
+        .depthFunc        = GL_LESS,
+    };
+    m_states["forward_opaque"] = PipelineState{
+        .polygonMode      = GL_FILL,
+        .cullEnable       = GL_FALSE,
+        .cullMode         = GL_BACK,
+        .frontFace        = GL_CCW,
+        .blendEnable      = GL_FALSE,
+        .depthTestEnable  = GL_TRUE,
+        .depthWriteEnable = GL_TRUE,
+        .depthFunc        = GL_LESS,
+    };
 
-	// create shadow map texture
-	glGenTextures(1, &m_shadowMap);
-	glBindTexture(GL_TEXTURE_2D, m_shadowMap);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_shadowMapWidth, m_shadowMapHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	
-	// set shadow map border color
-	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    // 3. Compile and link shaders
+    m_shaders["deferred_geometry"] = std::make_shared<Shader>("../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
+    m_shaders["deferred_shading"]  = std::make_shared<Shader>("../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
+    m_shaders["forward_opaque"]    = std::make_shared<Shader>("../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
 
-	// create framebuffer object for shadow mapping
-	glGenFramebuffers(1, &m_fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-	// attach shadow map texture to framebuffer
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_shadowMap, 0);
-	
-	// set framebuffer to draw only depth
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
+    // 4. Create framebuffers
+    m_frames["screen"]  = std::make_shared<FrameBuffer>(true, m_width, m_height);
+    m_frames["gbuffer"] = std::make_shared<FrameBuffer>(false, m_width, m_height);
 
-	// unbind framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // 5. Create textures and activate them as drawable attachments for framebuffers
+    for (auto attachment : m_passes["deferred_geometry"].attachments) {
+        if (attachment.type == GL_TEXTURE_2D || attachment.type == GL_TEXTURE_CUBE_MAP) {
+            m_textures["gbuffer." + attachment.name] = std::make_shared<Texture>(m_width, m_height, attachment.type, attachment.format);
+            m_frames["gbuffer"]->attach(attachment.slot, m_textures["gbuffer." + attachment.name]);
+        }
+    }
+    m_frames["gbuffer"]->finalize();
 }
 
-void Renderer::render(const Scene& scene, int width, int height)
-{
-	// calculate view and projection matrices
-	const glm::mat4 viewMatrix = glm::lookAt(scene.camera.eye, scene.camera.target, scene.camera.up);
-	const glm::mat4 projectMatrix = glm::perspective(glm::radians(scene.camera.fov), scene.camera.aspect, scene.camera.near, scene.camera.far);
-
-	// calculate light space matrix
-	glm::vec3 dLightUp = glm::vec3(0.0f, 1.0f, 0.0f);
-	if (std::abs(glm::dot(scene.dlight.direction, dLightUp)) > 0.001f) {
-		dLightUp = glm::cross(scene.dlight.direction, dLightUp);
-	}
-	const glm::mat4 lightViewMatrix = glm::lookAt(scene.camera.target-scene.dlight.direction*5.f, scene.camera.target, dLightUp);
-	const glm::mat4 lightProjectMatrix = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 50.0f);
-	const glm::mat4 lightSpaceMatrix = lightProjectMatrix * lightViewMatrix;
-	
-	// render shadow map of directional light
-	{
-		glUseProgram(m_programs["shadow"]);
-		// bind framebuffer
-		glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER)!= GL_FRAMEBUFFER_COMPLETE) {
-    		throw std::runtime_error("Framebuffer is not complete!");
-		}
-
-		// reset viewport
-		glViewport(0, 0, m_shadowMapWidth, m_shadowMapHeight);
-		// clear depth buffer
-		glClear(GL_DEPTH_BUFFER_BIT);
-		
-		// set light MVP uniforms
-		glUniformMatrix4fv(glGetUniformLocation(m_programs["shadow"], "uLightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
-
-		for (const auto& model : scene.models) {
-			glUniformMatrix4fv(glGetUniformLocation(m_programs["shadow"], "uModelMatrix"), 1, GL_FALSE, glm::value_ptr(model.modelMatrix));
-
-			// bind vertex array and draw
-			glBindVertexArray(model.mesh.vao);
-			glDrawElements(GL_TRIANGLES, model.mesh.indices.size(), GL_UNSIGNED_INT, 0);
-		}
-
-		// unbind framebuffer
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
-	
-	// render scene with PBR shading
-	{
-		glUseProgram(m_programs["pbr"]);
-		// reset viewport
-		glViewport(0, 0, width, height);
-		// reset framebuffer
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// set VP matrix uniforms
-		glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uViewMatrix"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
-		glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uProjectMatrix"), 1, GL_FALSE, glm::value_ptr(projectMatrix));
-		glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uLightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
-
-		// set camera uniforms
-		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uCameraPos"), 1, glm::value_ptr(scene.camera.eye));
-		
-		// set directional light
-		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.direction"), 1, glm::value_ptr(scene.dlight.direction));
-		glUniform3fv(glGetUniformLocation(m_programs["pbr"], "uDirectionalLight.color"), 1, glm::value_ptr(scene.dlight.color));
-		// set pointlight uniforms
-		glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNumPointLights"), scene.plights.size());
-		for (int i = 0; i < scene.plights.size(); i++) {
-			if (scene.plights[i].color == glm::vec3(0.0)) {
-				continue;
-			}
-			char s1[40], s2[40];
-			std::sprintf(s1, "uPointLights[%d].position", i);
-			glUniform3fv(glGetUniformLocation(m_programs["pbr"], s1), 1, glm::value_ptr(scene.plights[i].position));
-			std::sprintf(s2, "uPointLights[%d].color", i);
-			glUniform3fv(glGetUniformLocation(m_programs["pbr"], s2), 1, glm::value_ptr(scene.plights[i].color));
-		}
-		
-		// set shadow map texture
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_shadowMap);
-		glUniform1i(glGetUniformLocation(m_programs["pbr"], "uShadowMap"), 0);
-
-		// iterate over models
-		for (const auto& model : scene.models) {
-			// set model matrix
-			glUniformMatrix4fv(glGetUniformLocation(m_programs["pbr"], "uModelMatrix"), 1, GL_FALSE, glm::value_ptr(model.modelMatrix));
-
-			// set pbr textures
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, model.textures.at("albedo").id);
-			glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAlbedoMap"), 1);
-			if (model.textures.count("normal")) {
-				glActiveTexture(GL_TEXTURE2);
-				glBindTexture(GL_TEXTURE_2D, model.textures.at("normal").id);
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMap"), 2);
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 1);
-			} else {
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uNormalMapped"), 0);
-			}
-			if (model.textures.count("metallic")) {
-				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_2D, model.textures.at("metallic").id);
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uMetllicMap"), 3);
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uMetllicMapped"), 1);
-			} else {
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uMetllicMapped"), 0);
-			}
-			if (model.textures.count("roughness")) {
-				glActiveTexture(GL_TEXTURE4);
-				glBindTexture(GL_TEXTURE_2D, model.textures.at("roughness").id);
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uRoughnessMap"), 4);
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uRoughnessMapped"), 1);
-			} else {
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uRoughnessMapped"), 0);
-			}
-			if (model.textures.count("ao")) {
-				glActiveTexture(GL_TEXTURE5);
-				glBindTexture(GL_TEXTURE_2D, model.textures.at("ao").id);
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMap"), 5);
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMapped"), 1);
-			} else {
-				glUniform1i(glGetUniformLocation(m_programs["pbr"], "uAOMapped"), 0);
-			}
-
-			// bind vertex array and draw
-			glBindVertexArray(model.mesh.vao);
-			glDrawElements(GL_TRIANGLES, model.mesh.indices.size(), GL_UNSIGNED_INT, 0);
-		}
-	}
-	
+void Renderer::shutdown() {
+    m_shaders.clear();
+    m_frames.clear();
+    m_uniforms.clear();
+    m_textures.clear();
 }
 
-GLuint Renderer::compileShader(const std::string& filename, GLenum type)
-{
-	const std::string src = readText(filename);
-	if(src.empty()) {
-		throw std::runtime_error("Empty shader source file: " + filename);
-	}
-	const GLchar* srcBufferPtr = src.c_str();
+void Renderer::prepare(const Scene& scene) {
+    // TODO: add multiple light sources support
+    const auto& lights = scene.getLights();
+    if (m_uniforms["light"] == nullptr) {
+        m_uniforms["light"] = std::make_shared<UniformBuffer>(sizeof(LightBlock));
+    }
+    m_uniforms["light"]->upload(0, sizeof(LightBlock), &lights[0]->getLightBlock());
+    m_uniforms["light"]->bind(0);
 
-	std::printf("Compiling GLSL shader: %s\n", filename.c_str());
+    const auto& camera = scene.getCamera();
+    if (m_uniforms["camera"] == nullptr) {
+        m_uniforms["camera"] = std::make_shared<UniformBuffer>(sizeof(CameraBlock));
+    }
+    m_uniforms["camera"]->upload(0, sizeof(CameraBlock), &camera->getCameraBlock());
+    m_uniforms["camera"]->bind(1);
 
-	GLuint shader = glCreateShader(type);
-	glShaderSource(shader, 1, &srcBufferPtr, nullptr);
-	glCompileShader(shader);
-
-	GLint status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-	if(status != GL_TRUE) {
-		GLsizei infoLogSize;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogSize);
-		std::unique_ptr<GLchar[]> infoLog(new GLchar[infoLogSize]);
-		glGetShaderInfoLog(shader, infoLogSize, nullptr, infoLog.get());
-		throw std::runtime_error(std::string("Shader compilation failed: ") + filename + "\n" + infoLog.get());
-	}
-	return shader;
-}
-	
-GLuint Renderer::linkProgram(std::initializer_list<GLuint> shaders)
-{
-	GLuint program = glCreateProgram();
-
-	for(GLuint shader : shaders) {
-		glAttachShader(program, shader);
-	}
-	glLinkProgram(program);
-	for(GLuint shader : shaders) {
-		glDetachShader(program, shader);
-		glDeleteShader(shader);
-	}
-
-	GLint status;
-	glGetProgramiv(program, GL_LINK_STATUS, &status);
-	if(status == GL_TRUE) {
-		glValidateProgram(program);
-		glGetProgramiv(program, GL_VALIDATE_STATUS, &status);
-	}
-	if(status != GL_TRUE) {
-		GLsizei infoLogSize;
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogSize);
-		std::unique_ptr<GLchar[]> infoLog(new GLchar[infoLogSize]);
-		glGetProgramInfoLog(program, infoLogSize, nullptr, infoLog.get());
-		throw std::runtime_error(std::string("Program link failed\n") + infoLog.get());
-	}
-	return program;
+    const auto& blocks = scene.getModelBlocks();
+    if (m_uniforms["model"] == nullptr) {
+        m_uniforms["model"] = std::make_shared<UniformBuffer>(sizeof(ModelBlock) * blocks.size());
+    }
+    m_uniforms["model"]->upload(0, sizeof(ModelBlock) * blocks.size(), blocks.data());
+    m_uniforms["model"]->bind(2);
 }
 
-} // namespace tinyrenderer
+void Renderer::render(const Scene& scene) {
+    std::vector<RenderItem> opaqueQueue, transparentQueue;
+    scene.getRenderQueue(opaqueQueue, true);
+    scene.getRenderQueue(transparentQueue, false);
+    // std::cout << "OpaqueQueue size: " << opaqueQueue.size() << std::endl;
+    // std::cout << "TransparentQueue size: " << transparentQueue.size() << std::endl;
+
+    {
+        m_states["deferred_geometry"].apply();
+        m_shaders["deferred_geometry"]->use();
+        m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
+        for (const auto& item : opaqueQueue) {
+            m_uniforms["model"]->bind(2, item.uoffset, sizeof(ModelBlock));
+            draw(item);
+        }
+        m_passes["deferred_geometry"].end();
+    }
+
+    {
+        m_states["deferred_shading"].apply();
+        m_shaders["deferred_shading"]->use();
+        m_passes["deferred_shading"].begin(m_frames["screen"]);
+        draw(
+            StaticResource::getInstance().getLayout("quad"),
+            StaticResource::getInstance().getBuffer("quad"),
+            {
+                m_textures["gbuffer.albedo"],
+                m_textures["gbuffer.normal"],
+                m_textures["gbuffer.mrao"],
+                m_textures["gbuffer.depth"],
+            }
+        );
+        m_passes["deferred_shading"].end();
+    }
+
+    // {
+    //     m_states["forward_opaque"].apply();
+    //     m_passes["forward_opaque"].begin(m_frames["screen"]);
+    //     m_shaders["forward_opaque"]->use();
+    //     for (const auto& item : opaqueQueue) {
+    //         m_uniforms["model"]->bind(2, item.uoffset, sizeof(ModelBlock));
+    //         draw(item);
+    //     }
+    //     m_passes["forward_opaque"].end();
+    // }
+}
+
+void Renderer::draw(const RenderItem& item) {
+    const std::shared_ptr<VertexLayout>& layout  = item.mesh->getVertexLayout();
+    const std::unique_ptr<VertexBuffer>& bufferv = item.mesh->getVertexBuffer();
+    const std::unique_ptr<IndexBuffer>& bufferi  = item.mesh->getIndexBuffer();
+
+    item.material->getAlbedoMap()->bind(0);
+    item.material->getNormalMap()->bind(1);
+    item.material->getMRAOMap()->bind(2);
+
+    layout->bind();
+    if (!layout->attach(0, bufferv, 0, sizeof(Vertex))) {
+        return;
+    }
+    if (layout->attach(bufferi)) {
+        // std::cout << "Mesh IBO Draw: length " << item.length << " offset " << item.ioffset << std::endl;
+        // !NOTE: The last parameter is the offset in byte count.
+        glDrawElements(GL_TRIANGLES, item.length, GL_UNSIGNED_INT, (void*)(sizeof(GLuint) * item.ioffset));
+    } else {
+        // std::cout << "Mesh VBO Draw: length " << item.length << " offset " << item.ioffset << std::endl;
+        // !NOTE: The offset is in vertex count, not byte count.
+        glDrawArrays(GL_TRIANGLES, item.ioffset, item.length);
+    }
+}
+
+void Renderer::draw(const std::shared_ptr<VertexLayout>& layout, const std::unique_ptr<VertexBuffer>& buffer, const std::vector<std::shared_ptr<Texture>>& textures) {
+    layout->bind();
+    if (layout->attach(0, buffer, 0, sizeof(float) * 4)) {
+        for (int i = 0; i < textures.size(); i++) {
+            textures[i]->bind(i + 4);
+        }
+        // std::cout << "Quad VBO Draw: length " << buffer->getSize() / (sizeof(float) * 4) << std::endl;
+        glDrawArrays(GL_TRIANGLES, 0, buffer->getSize() / (sizeof(float) * 4));
+    }
+    return;
+}
+
+}  // namespace tinyrenderer

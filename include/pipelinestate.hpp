@@ -16,21 +16,21 @@ namespace tinyrenderer {
  */
 struct PipelineState {
     // rasterization config
-    GLboolean cullEnable = false;
     GLenum polygonMode   = GL_FILL;
+    GLboolean cullEnable = GL_FALSE;
     GLenum cullMode      = GL_BACK;
     GLenum frontFace     = GL_CCW;
 
     // color blend config
-    GLboolean blendEnable = false;
+    GLboolean blendEnable = GL_FALSE;
     GLenum srcBlend       = GL_SRC_ALPHA;
     GLenum dstBlend       = GL_ONE_MINUS_SRC_ALPHA;
 
     // depth test and stencil test config
-    GLboolean depthTestEnable   = true;
-    GLboolean depthWriteEnable  = true;
+    GLboolean depthTestEnable   = GL_TRUE;
+    GLboolean depthWriteEnable  = GL_TRUE;
     GLenum depthFunc            = GL_LESS;
-    GLboolean stencilTestEnable = false;
+    GLboolean stencilTestEnable = GL_FALSE;
 
     inline void apply();
 };
@@ -42,7 +42,7 @@ inline void PipelineState::apply() {
     } else {
         glDisable(GL_DEPTH_TEST);
     }
-    glDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
+    glDepthMask(depthWriteEnable);
 
     if (cullEnable) {
         glEnable(GL_CULL_FACE);

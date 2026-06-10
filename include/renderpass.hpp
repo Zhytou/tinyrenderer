@@ -17,17 +17,23 @@ enum class StoreOp {
     STORE_OP_DONT_CARE
 };
 
-union ClearValue {
+struct ClearValue {
+    glm::vec4 color                    = {0.0f, 0.0f, 0.0f, 1.0f};
+    std::pair<float, int> depthStencil = {1.0f, 0};
 };
 
 struct AttachmentDesc {
     std::string name;
-    GLenum slot     = GL_COLOR_ATTACHMENT0;  // attachment slot
-    GLenum type     = GL_TEXTURE_2D;         // texture type
-    GLenum format   = GL_RGBA8;              // internal format
-    LoadOp loadOp   = LoadOp::LOAD_OP_CLEAR;
-    StoreOp storeOp = StoreOp::STORE_OP_STORE;
-    // ClearValue clearValue = ;
+    GLenum target    = GL_COLOR;              // draw target (e.g. GL_COLOR/GL_DEPTH/GL_STENCIL/GL_DEPTH_STENCIL)
+    GLenum type      = GL_TEXTURE_2D;         // storage type, could be texture/renderbuffer for off-screen rendering, or none for on-screen rendering (e.g. GL_TEXTURE_2D/GL_TEXTURE_CUBE_MAP/GL_RENDERBUFFER/GL_NONE)
+    GLenum format    = GL_RGBA8;              // internal format (e.g. GL_RGBA8/GL_RGB3/GL_DEPTH_COMPONENT24/GL_STENCIL_INDEX8/GL_NONE)
+    GLenum slot      = GL_COLOR_ATTACHMENT0;  // attachment slot for off-screen rendering and on-screen rendering(e.g. GL_COLOR_ATTACHMENT0~GL_COLOR_ATTACHMENT15/GL_FRONT/GL_BACK/GL_DEPTH_ATTACHMENT/GL_STENCIL_ATTACHMENT)
+    LoadOp loadOp    = LoadOp::LOAD_OP_DONT_CARE;
+    StoreOp storeOp  = StoreOp::STORE_OP_DONT_CARE;
+    ClearValue value = {
+        .color        = {0.0f, 0.0f, 0.0f, 1.0f},
+        .depthStencil = {1.0f, 0}
+    };
 };
 
 /**
@@ -41,12 +47,18 @@ struct RenderPass {
     void begin(const std::shared_ptr<FrameBuffer>& framebuffer) {
         framebuffer->bind();
         for (auto attachment : attachments) {
-            if (attachment.loadOp == LoadOp::LOAD_OP_CLEAR) {
-                framebuffer->clear(attachment.slot);
+            if (attachment.loadOp != LoadOp::LOAD_OP_CLEAR) {
+                continue;
+            }
+            if (attachment.target == GL_COLOR) {
+                framebuffer->clear(attachment.slot, attachment.value.color);
+            } else {
+                framebuffer->clear(attachment.target, attachment.value.depthStencil.first, attachment.value.depthStencil.second);
             }
         }
     }
     void end() {
     }
 };
+
 };  // namespace tinyrenderer
