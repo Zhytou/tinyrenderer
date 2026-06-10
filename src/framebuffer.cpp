@@ -208,4 +208,34 @@ void FrameBuffer::clear(GLenum target, float depth, int stencil) {
     }
 }
 
+void FrameBuffer::copy(const FrameBuffer& other, GLenum mask, GLenum filter) {
+    // Blit framebuffer region
+    //
+    // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
+    // │                     glBlitFramebuffer vs glBlitNamedFramebuffer                               │
+    // ├───────────────────────────────────────────────┬──────────────────────────────────────────────┤
+    // │              glBlitFramebuffer                │              glBlitNamedFramebuffer           │
+    // ├───────────────────────────────────────────────┼──────────────────────────────────────────────┤
+    // │ • Require glBindFramebuffer to set            │ • Directly pass FBO ID as parameter           │
+    // │   GL_READ_FRAMEBUFFER / GL_DRAW_FRAMEBUFFER    │ • No bind operation required (DSA style)      │
+    // │ • Traditional API (OpenGL 3.0+)               │ • Modern API (OpenGL 4.5+ / ARB_dsa)         │
+    // │ • State-dependent, easy to mix up bind target  │ • Explicit & stateless, safer to use         │
+    // │ • read/draw target can be 0 (default FBO)      │ • readFramebuffer/drawFramebuffer CAN BE 0   │
+    // │   when bound                                  │ • 0 represents default screen framebuffer    │
+    // └───────────────────────────────────────────────┴──────────────────────────────────────────────┘
+    //
+    // Key insight:  glBlitFramebuffer        = "bind read/draw target first then blit" (state-dependent)
+    //               glBlitNamedFramebuffer   = "specify read/draw FBO ID directly" (stateless, explicit)
+    // Note: Both APIs support passing 0 for framebuffer ID, 0 means the default screen framebuffer.
+    //       Depth/stencil blit only accepts GL_NEAREST filter mode, GL_LINEAR is invalid.
+    glBlitNamedFramebuffer(
+        other.m_id,                     // srcFramebuffer
+        m_id,                           // dstFramebuffer
+        0, 0,                           // srcX0, srcY0
+        other.m_width, other.m_height,  // srcX1, srcY1
+        0, 0,                           // dstX0, dstY0
+        m_width, m_height,              // dstX1, dstY1
+        mask, filter
+    );
+}
 }  // namespace tinyrenderer

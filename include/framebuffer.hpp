@@ -53,6 +53,11 @@ class FrameBuffer {
     // @param depth The clear depth.
     // @param stencil The clear stencil value.
     void clear(GLenum target, float depth, int stencil);
+    // Copy the framebuffer content to the default framebuffer for presentation.
+    // @param other The source framebuffer to copy from.
+    // @param mask The bitfield of buffers to copy (e.g., GL_COLOR_BUFFER_BIT/GL_DEPTH_BUFFER_BIT/GL_STENCIL_BUFFER_BIT).
+    // @param filter The interpolation method to apply if the image is stretched (e.g., GL_NEAREST/GL_LINEAR).
+    void copy(const FrameBuffer& other, GLenum mask, GLenum filter = GL_NEAREST);
     // Read the framebuffer attachment.
     // @note Must be called after bind().
     // @param target The attachment target to read(GL_COLOR/GL_DEPTH/GL_STENCIL/GL_DEPTH_STENCIL).
