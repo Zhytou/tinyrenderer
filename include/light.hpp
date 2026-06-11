@@ -2,6 +2,9 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
+#include <iostream>
+
+#include "utils.hpp"
 
 namespace tinyrenderer {
 
@@ -17,8 +20,6 @@ class Light {
     Light(const glm::vec3& color, float intensity) : m_color(color), m_intensity(intensity) {}
     virtual ~Light() = default;
 
-    virtual const glm::mat4& setLightSpaceMatrix(const std::pair<glm::vec3, glm::vec3>&) = 0;
-
     const glm::vec3& getColor() const { return m_color; }
     float getIntensity() const { return m_intensity; }
     const LightBlock& getLightBlock() const { return m_lightBlock; };
@@ -30,6 +31,7 @@ class Light {
         m_intensity                      = intensity;
         m_lightBlock.lightColorIntensity = glm::vec4(m_color, m_intensity);
     }
+    virtual const glm::mat4& setLightSpaceMatrix(const std::pair<glm::vec3, glm::vec3>&) = 0;
 
    protected:
     LightBlock m_lightBlock;
@@ -73,13 +75,19 @@ inline const glm::mat4& DirectionalLight::setLightSpaceMatrix(const std::pair<gl
         {xyz1.x, xyz2.y, xyz2.z},
         {xyz2.x, xyz2.y, xyz2.z},
     };
-    glm::vec3 nxyz1 = glm::vec3(1.0f), nxyz2 = glm::vec3(-1.0f);
+    glm::vec3 nxyz1 = glm::vec3(FLT_MAX), nxyz2 = glm::vec3(-FLT_MAX);
     for (int i = 0; i < 8; ++i) {
-        glm::vec4 ptInLightSpace = lightViewMatrix * glm::vec4(corners[i], 1.0f);
-        nxyz1                    = glm::min(nxyz1, glm::vec3(ptInLightSpace));
-        nxyz2                    = glm::max(nxyz2, glm::vec3(ptInLightSpace));
+        glm::vec3 ptInLightSpace = glm::vec3(lightViewMatrix * glm::vec4(corners[i], 1.0f));
+        nxyz1                    = glm::min(nxyz1, ptInLightSpace);
+        nxyz2                    = glm::max(nxyz2, ptInLightSpace);
     }
-    glm::mat4 lightProjectionMatrix = glm::ortho(nxyz1.x, nxyz2.x, nxyz1.y, nxyz2.y, nxyz1.z, nxyz2.z);
+
+    glm::mat4 lightProjectionMatrix = glm::ortho(
+        nxyz1.x, nxyz2.x,
+        nxyz1.y, nxyz2.y,
+        nxyz2.z,  // near
+        nxyz1.z   // far
+    );
 
     m_lightSpaceMatrix            = lightProjectionMatrix * lightViewMatrix;
     m_lightBlock.lightSpaceMatrix = m_lightSpaceMatrix;
