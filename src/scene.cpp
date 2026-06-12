@@ -2,7 +2,13 @@
 
 #include <rapidjson/document.h>
 
+#include <filesystem>
+
+#include "utils.hpp"
+
 namespace tinyrenderer {
+
+namespace fs = std::filesystem;
 
 void Scene::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
     for (int i = 0; i < m_models.size(); i++) {
@@ -12,7 +18,7 @@ void Scene::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
         float distance = m_camera->getDistance((xyz.first + xyz.second) / 2.f);
         for (auto& item : subQueue) {
             item.distance = distance;
-            item.uoffset  = i;
+            item.uoffset  = i * sizeof(ModelBlock);
             queue.push_back(item);
         }
     }
@@ -31,21 +37,14 @@ void Scene::initialize(const std::string& json) {
         return glm::vec3{arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat()};
     };
 
-    // lights
-    if (doc.HasMember("lights")) {
-        for (int i = 0; i < doc["lights"]["directionallight"].Size(); i++) {
-            m_lights.emplace_back(std::make_shared<DirectionalLight>(getVec3(doc["lights"]["directionallight"][i]["color"]), doc["lights"]["directionallight"][i]["intensity"].GetFloat(), getVec3(doc["lights"]["directionallight"][i]["direction"])));
-        }
-    }
-
     // models
     if (doc.HasMember("models")) {
         for (int i = 0; i < doc["models"].Size(); i++) {
-            std::string baseDir   = doc["models"][i]["baseDir"].GetString();
-            std::string modelName = doc["models"][i]["name"].GetString();
-            glm::vec3 translate   = doc["models"][i]["transform"].HasMember("translate") ? getVec3(doc["models"][i]["transform"]["translate"]) : glm::vec3(0.0f);
-            glm::vec3 rotate      = doc["models"][i]["transform"].HasMember("rotate") ? getVec3(doc["models"][i]["transform"]["rotate"]) : glm::vec3(0.0f);
-            glm::vec3 scale       = doc["models"][i]["transform"].HasMember("scale") ? getVec3(doc["models"][i]["transform"]["scale"]) : glm::vec3(1.0f);
+            fs::path baseDir    = doc["models"][i]["baseDir"].GetString();
+            fs::path modelName  = doc["models"][i]["name"].GetString();
+            glm::vec3 translate = doc["models"][i]["transform"].HasMember("translate") ? getVec3(doc["models"][i]["transform"]["translate"]) : glm::vec3(0.0f);
+            glm::vec3 rotate    = doc["models"][i]["transform"].HasMember("rotate") ? getVec3(doc["models"][i]["transform"]["rotate"]) : glm::vec3(0.0f);
+            glm::vec3 scale     = doc["models"][i]["transform"].HasMember("scale") ? getVec3(doc["models"][i]["transform"]["scale"]) : glm::vec3(1.0f);
 
             glm::mat4 transform = glm::mat4(1.0f);
             transform           = glm::translate(transform, translate);
@@ -54,17 +53,31 @@ void Scene::initialize(const std::string& json) {
             transform           = glm::rotate(transform, glm::radians(rotate.z), glm::vec3(0.0f, 0.0f, 1.0f));
             transform           = glm::scale(transform, scale);
             m_models.emplace_back(std::make_shared<Model>(baseDir, modelName, transform));
+            // std::cout << "Transform:\n"
+            //           << transform << '\n';
 
             auto [xyzi1, xyzi2] = m_models.back()->getBoundingBox();
             m_xyz.first         = glm::min(m_xyz.first, xyzi1);
             m_xyz.second        = glm::max(m_xyz.second, xyzi2);
             m_blocks.emplace_back(m_models.back()->getModelBlock());
+            // std::cout << "Model BoundingBox: [" << xyzi1 << ", " << xyzi2 << "]\n";
+        }
+    }
+
+    // lights
+    if (doc.HasMember("lights")) {
+        for (int i = 0; i < doc["lights"]["directionallight"].Size(); i++) {
+            m_lights.emplace_back(std::make_shared<DirectionalLight>(getVec3(doc["lights"]["directionallight"][i]["color"]), doc["lights"]["directionallight"][i]["intensity"].GetFloat(), getVec3(doc["lights"]["directionallight"][i]["direction"])));
+            m_lights.back()->setLightSpaceMatrix(m_xyz);  // set light space matrix
+            const glm::mat4 spaceMatrix = m_lights.back()->getLightBlock().lightSpaceMatrix;
+            // std::cout << "Directional light space matrix:\n"
+            //           << spaceMatrix << '\n';
         }
     }
 
     // camera
     if (doc.HasMember("camera")) {
-        m_camera = std::make_unique<PerspectiveCamera>();
+        m_camera = std::make_shared<PerspectiveCamera>();
         m_camera->setEye(getVec3(doc["camera"]["eye"]));
         m_camera->setTarget(getVec3(doc["camera"]["target"]));
         m_camera->setUp(getVec3(doc["camera"]["up"]));
@@ -72,6 +85,7 @@ void Scene::initialize(const std::string& json) {
         m_camera->setNear(doc["camera"]["near"].GetFloat());
         m_camera->setFar(doc["camera"]["far"].GetFloat());
         m_camera->setViewport(doc["camera"]["width"].GetInt(), doc["camera"]["height"].GetInt());
+        m_camera->setSpeed(doc["camera"]["speed"].GetFloat());
     } else {
         const glm::vec3 xyz1 = m_xyz.first, xyz2 = m_xyz.second;
         glm::vec3 target    = 0.5f * (xyz2 + xyz1);
@@ -81,16 +95,26 @@ void Scene::initialize(const std::string& json) {
         if (std::abs(glm::dot(direction, up)) > 0.99f) {
             up = {0.0f, 0.0f, 1.0f};
         }
-        m_camera = std::make_unique<PerspectiveCamera>();
+        m_camera = std::make_shared<PerspectiveCamera>();
         m_camera->setEye(eye);
         m_camera->setTarget(target);
         m_camera->setUp(up);
     }
 
-    // TODO: add environment map (IBL) support
+    if (doc.HasMember("skybox")) {
+        std::vector<fs::path> facePaths;
+        fs::path baseDir = doc["skybox"]["baseDir"].GetString();
+        for (auto face : {"right", "left", "top", "bottom", "front", "back"}) {
+            fs::path facePath = baseDir / doc["skybox"][face].GetString();
+            facePaths.push_back(facePath);
+        }
+        //! WARNING: The order of facePaths must be right, left, top, bottom, front, back
+        m_skybox = Texture::create(facePaths, GL_TEXTURE_CUBE_MAP, GL_RGB8);
+    }
 }
 
 void Scene::destroy() {
+    m_skybox.reset();
     m_camera.reset();
     m_lights.clear();
     m_models.clear();

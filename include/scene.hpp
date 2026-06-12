@@ -8,6 +8,7 @@
 #include "light.hpp"
 #include "model.hpp"
 #include "renderitem.hpp"
+#include "texture.hpp"
 
 namespace tinyrenderer {
 
@@ -19,7 +20,8 @@ class Scene {
     ~Scene() { destroy(); }
     Scene(const std::string& json) { initialize(json); }
 
-    const std::unique_ptr<Camera>& getCamera() const { return m_camera; }
+    const std::shared_ptr<Texture>& getSkybox() const { return m_skybox; }
+    const std::shared_ptr<Camera>& getCamera() const { return m_camera; }
     const std::vector<std::shared_ptr<Light>>& getLights() const { return m_lights; }
     const std::vector<std::shared_ptr<Model>>& getModels() const { return m_models; }
     const std::vector<ModelBlock>& getModelBlocks() const { return m_blocks; }
@@ -30,7 +32,8 @@ class Scene {
     void destroy();
 
    private:
-    std::unique_ptr<Camera> m_camera = nullptr;
+    std::shared_ptr<Texture> m_skybox = nullptr;
+    std::shared_ptr<Camera> m_camera  = nullptr;
     std::vector<std::shared_ptr<Light>> m_lights;
     std::vector<std::shared_ptr<Model>> m_models;
     std::vector<ModelBlock> m_blocks;
