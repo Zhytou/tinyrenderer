@@ -5,7 +5,6 @@
 layout(location = 0) in vec3 iFragNormal;
 layout(location = 1) in vec3 iFragTangent;
 layout(location = 2) in vec2 iFragUV;
-layout(location = 3) in vec4 iLightSpaceFragPos;
 
 layout(binding = 0) uniform sampler2D tAlbedoMap;
 layout(binding = 1) uniform sampler2D tNormalMap;
