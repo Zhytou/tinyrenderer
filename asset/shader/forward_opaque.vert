@@ -27,14 +27,12 @@ layout(location = 0) out vec3 oFragPos;
 layout(location = 1) out vec3 oFragNormal;
 layout(location = 2) out vec3 oFragTangent;
 layout(location = 3) out vec2 oFragUV;
-layout(location = 4) out vec4 oLightSpaceFragPos;
 
 void main() {
     oFragPos = (uModelMatrix * vec4(iVertPos, 1.0)).xyz;
     oFragNormal = (uNormalMatrix * vec4(iVertNormal, 0.0)).xyz;
     oFragTangent = (uModelMatrix * vec4(iVertTangent, 0.0)).xyz;
     oFragUV = iVertUV;
-    oLightSpaceFragPos = uLightSpaceMatrix * uModelMatrix * vec4(iVertPos, 1.0);
 
     gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * vec4(iVertPos, 1.0);
 }

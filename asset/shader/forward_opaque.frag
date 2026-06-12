@@ -2,12 +2,12 @@
 
 #include "common_brdf.glsl"
 #include "common_normal.glsl"
+#include "common_shadow.glsl"
 
 layout(location = 0) in vec3 iFragPos;
 layout(location = 1) in vec3 iFragNormal;
 layout(location = 2) in vec3 iFragTangent;
 layout(location = 3) in vec2 iFragUV;
-layout(location = 4) in vec4 iLightSpaceFragPos;
 
 layout(std140, binding = 0) uniform LightBlock {
     mat4 uLightSpaceMatrix; 
@@ -24,6 +24,7 @@ layout(std140, binding = 1) uniform CameraBlock {
 layout(binding = 0) uniform sampler2D tAlbedoMap;
 layout(binding = 1) uniform sampler2D tNormalMap;
 layout(binding = 2) uniform sampler2D tMRAOMap;
+layout(binding = 7) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value;
 
 out vec4 oFragColor;
 
@@ -39,10 +40,13 @@ void main() {
     vec3 TN = N_decode(texture(tNormalMap, iFragUV).xyz);
     N = N_toWorld(N, T, TN);
 
-    vec3 L = uLightVectorType.xyz;
-    vec3 V = normalize(uCameraPos -iFragPos);
+    vec3 L = -normalize(uLightVectorType.xyz); // frag -> light
+    vec3 V = normalize(uCameraPos -iFragPos); // frag -> camera
     vec3 F0 =  mix(vec3(0.04), albedo, metallic);
-
     vec3 color = BRDF(L, V, N, F0, albedo, metallic, roughness);
-    oFragColor = vec4(color, 1.0);
+
+    vec3 Pos_toLightSpaceUVD = Pos_toLightSpaceUVD(uLightSpaceMatrix, iFragPos);
+    float visibility = SM(tShadowDepthMap, Pos_toLightSpaceUVD.xy, Pos_toLightSpaceUVD.z);
+
+    oFragColor = vec4(color * visibility, 1.0);
 }
