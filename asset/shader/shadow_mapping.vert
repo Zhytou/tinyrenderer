@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec3 iVertPos;
 
-layout(std140, binding = 0) uniform LightBlock {
+layout(std140, binding = 1) uniform LightBlock {
     mat4 uLightSpaceMatrix; 
     vec3 uLightDirection;
     vec3 uLightColor;

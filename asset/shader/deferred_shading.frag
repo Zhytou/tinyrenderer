@@ -6,16 +6,16 @@
 
 layout(location = 0) in vec2 iFragUV;
 
-layout(std140, binding = 0) uniform LightBlock {
-    mat4 uLightSpaceMatrix; 
-    vec4 uLightColorIntensity;
-    vec4 uLightVectorType; // use .w to distinguish between directional and point light
-};
-layout(std140, binding = 1) uniform CameraBlock {
+layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
     mat4 uInvViewProjMatrix;
     vec3 uCameraPos;
+};
+layout(std140, binding = 1) uniform LightBlock {
+    mat4 uLightSpaceMatrix; 
+    vec4 uLightColorIntensity;
+    vec4 uLightVectorType; // use .w to distinguish between directional and point light (0.0 for directional, 1.0 for point)
 };
 
 layout(binding = 3) uniform sampler2D tAlbedoMap;
@@ -45,7 +45,7 @@ void main() {
     vec3 lightSpaceUVD = Pos_toLightSpaceUVD(uLightSpaceMatrix, worldPos);
 
     vec3 V = normalize(uCameraPos - worldPos); // frag -> camera
-    vec3 L = -normalize(uLightVectorType.xyz); // frag -> light
+    vec3 L = uLightVectorType.w == 0.0 ? normalize(-uLightVectorType.xyz) : normalize(uLightVectorType.xyz - worldPos); // frag -> light
     vec3 N = N_decode(texture(tNormalMap, iFragUV).xyz);
     vec3 F0 =  mix(vec3(0.04), albedo, metallic);
 

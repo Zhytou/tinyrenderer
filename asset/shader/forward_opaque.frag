@@ -9,16 +9,16 @@ layout(location = 1) in vec3 iFragNormal;
 layout(location = 2) in vec3 iFragTangent;
 layout(location = 3) in vec2 iFragUV;
 
-layout(std140, binding = 0) uniform LightBlock {
-    mat4 uLightSpaceMatrix; 
-    vec4 uLightColorIntensity;
-    vec4 uLightVectorType; // use .w to distinguish between directional and point light
-};
-layout(std140, binding = 1) uniform CameraBlock {
+layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
     mat4 uInvViewProjMatrix;
     vec3 uCameraPos;
+};
+layout(std140, binding = 1) uniform LightBlock {
+    mat4 uLightSpaceMatrix; 
+    vec4 uLightColorIntensity;
+    vec4 uLightVectorType; // use .w to distinguish between directional and point light
 };
 
 layout(binding = 0) uniform sampler2D tAlbedoMap;
@@ -40,7 +40,7 @@ void main() {
     vec3 TN = N_decode(texture(tNormalMap, iFragUV).xyz);
     N = N_toWorld(N, T, TN);
 
-    vec3 L = -normalize(uLightVectorType.xyz); // frag -> light
+    vec3 L = uLightVectorType.w == 0.0 ? normalize(-uLightVectorType.xyz) : normalize(uLightVectorType.xyz - iFragPos); // frag -> light
     vec3 V = normalize(uCameraPos -iFragPos); // frag -> camera
     vec3 F0 =  mix(vec3(0.04), albedo, metallic);
     vec3 color = BRDF(L, V, N, F0, albedo, metallic, roughness);

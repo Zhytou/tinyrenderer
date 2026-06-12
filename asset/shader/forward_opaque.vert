@@ -7,16 +7,16 @@ layout(location = 1) in vec3 iVertNormal;
 layout(location = 2) in vec3 iVertTangent;
 layout(location = 3) in vec2 iVertUV;
 
-layout(std140, binding = 0) uniform LightBlock {
-    mat4 uLightSpaceMatrix; 
-    vec4 uLightColorIntensity;
-    vec4 uLightVectorType; // use .w to distinguish between directional and point light
-};
-layout(std140, binding = 1) uniform CameraBlock {
+layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
     mat4 uInvViewProjMatrix;
     vec3 uCameraPos;
+};
+layout(std140, binding = 1) uniform LightBlock {
+    mat4 uLightSpaceMatrix; 
+    vec4 uLightColorIntensity;
+    vec4 uLightVectorType; // use .w to distinguish between directional and point light
 };
 layout(std140, binding = 2) uniform ModelBlock {
     mat4 uModelMatrix;

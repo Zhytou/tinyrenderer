@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec3 iVertPos;
 
-layout(std140, binding = 1) uniform CameraBlock {
+layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
     mat4 uInvViewProjMatrix;
