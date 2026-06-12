@@ -1,8 +1,13 @@
 #ifndef COMMON_BRDF_GLSL
 #define COMMON_BRDF_GLSL
 
+#ifndef PI
 #define PI 3.1415926535897932384626
-#define EPSILON 1e-6
+#endif
+
+#ifndef DENOM_EPSILON  // Denominator epsilon to avoid division by zero
+#define DENOM_EPSILON 1e-6
+#endif
 
 float D_GGX(float NdotH, float roughness)
 {
@@ -51,13 +56,12 @@ vec3 BRDF(vec3 L, vec3 V, vec3 N, vec3 F0, vec3 baseColor, float metallic, float
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
 
     vec3 diffuse = baseColor * NdotL;
-    return diffuse;
     // if (isPointLight) {
     //     diffuse /= PI;
     // }
-    // vec3 specular = D * F * G / (4.0 * NdotL * NdotV + EPSILON);
+    vec3 specular = D * F * G / (4.0 * NdotL * NdotV + DENOM_EPSILON);
 
-    // return (diffuse + specular) * NdotL;
+    return (diffuse + specular) * NdotL;
 }
 
 #endif
