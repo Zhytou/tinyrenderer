@@ -82,11 +82,14 @@ inline const glm::mat4& DirectionalLight::setLightSpaceMatrix(const std::pair<gl
         nxyz2                    = glm::max(nxyz2, ptInLightSpace);
     }
 
+    // std::cout << "nxyz1: " << nxyz1 << '\n'
+    //           << "nxyz2: " << nxyz2 << '\n';
+
     glm::mat4 lightProjectionMatrix = glm::ortho(
         nxyz1.x, nxyz2.x,
         nxyz1.y, nxyz2.y,
-        nxyz2.z,  // near
-        nxyz1.z   // far
+        -nxyz2.z,  // near
+        -nxyz1.z   // far
     );
 
     m_lightSpaceMatrix            = lightProjectionMatrix * lightViewMatrix;
