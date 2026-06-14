@@ -19,6 +19,7 @@ struct Light {
     mat4 viewProjMatrix; 
     vec4 colorIntensity;
     vec4 vectorType; // use .w to distinguish between directional and point light
+    vec4 uvOffsetScale;
 };
 layout(std430, binding = 0) buffer LightBuffer {
     Light uLights[];
@@ -56,12 +57,13 @@ void main() {
     
     oFragColor = vec4(0.0, 0.0, 0.0, 1.0);
     for (int i = 0; i < uLightCount; i++) {
-        vec3 lightSpaceUVD = Pos_toLightSpaceUVD(uLights[i].viewProjMatrix, worldPos);
         vec3 L = uLights[i].vectorType.w == 0.0 ? normalize(-uLights[i].vectorType.xyz) : normalize(uLights[i].vectorType.xyz - worldPos); // frag -> light
+        vec3 lightSpaceUVD = Pos_toLightSpaceUVD(uLights[i].viewProjMatrix, worldPos);
+        vec2 atlasUV = uLights[i].uvOffsetScale.xy + lightSpaceUVD.xy * uLights[i].uvOffsetScale.zw;
 
         vec3 color = BRDF(L, V, N, F0, albedo, metallic, roughness) * uLights[i].colorIntensity.rgb * uLights[i].colorIntensity.w;
-        float visibility = SM(tShadowDepthMap, lightSpaceUVD.xy, lightSpaceUVD.z);
+        float visibility = SM(tShadowDepthMap, atlasUV, lightSpaceUVD.z);
 
-        oFragColor.rgb += color;
+        oFragColor.rgb += color * visibility;
     }
 }

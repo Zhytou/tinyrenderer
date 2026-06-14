@@ -9,63 +9,67 @@
 namespace tinyrenderer {
 
 struct alignas(16) LightBlock {
-    glm::mat4 lightSpaceMatrix;
-    glm::vec4 lightColorIntensity;
-    glm::vec4 lightVectorType;  // 0: directional, 1: point
+    glm::mat4 viewProjMatrix;
+    glm::vec4 colorIntensity;
+    glm::vec4 vectorType;  // .xyz vector(direction or position) .w type(0: directional or 1: point)
+    glm::vec4 uvOffsetScale;
 };
 
 class Light {
    public:
     Light() = default;
-    Light(const glm::vec3& color, float intensity) : m_color(color), m_intensity(intensity) {
-        m_lightBlock.lightColorIntensity = glm::vec4(m_color, m_intensity);
+    Light(const glm::vec3& color, float intensity) {
+        m_lightBlock.colorIntensity = glm::vec4(color, intensity);
     }
     virtual ~Light() = default;
 
-    const glm::vec3& getColor() const { return m_color; }
-    float getIntensity() const { return m_intensity; }
+    glm::vec3 getColor() const { return glm::vec3(m_lightBlock.colorIntensity); }
+    float getIntensity() const { return m_lightBlock.colorIntensity.w; }
+    const glm::mat4& getViewProjMatrix() const { return m_lightBlock.viewProjMatrix; }
     const LightBlock& getLightBlock() const { return m_lightBlock; };
     void setColor(const glm::vec3& color) {
-        m_color                          = color;
-        m_lightBlock.lightColorIntensity = glm::vec4(m_color, m_intensity);
+        m_lightBlock.colorIntensity.x = color.x;
+        m_lightBlock.colorIntensity.y = color.y;
+        m_lightBlock.colorIntensity.z = color.z;
     }
     void setIntensity(float intensity) {
-        m_intensity                      = intensity;
-        m_lightBlock.lightColorIntensity = glm::vec4(m_color, m_intensity);
+        m_lightBlock.colorIntensity.w = intensity;
     }
-    virtual const glm::mat4& setLightSpaceMatrix(const std::pair<glm::vec3, glm::vec3>&) = 0;
+    void setUVOffsetScale(const glm::vec2& offset, const glm::vec2& scale) {
+        m_lightBlock.uvOffsetScale = glm::vec4(offset, scale);
+    }
+    virtual void setLightSpaceMatrix(const std::pair<glm::vec3, glm::vec3>&) = 0;
 
    protected:
     LightBlock m_lightBlock;
-    glm::vec3 m_color = glm::vec3(1.0f);
-    float m_intensity = 1.0f;
-    glm::mat4 m_lightSpaceMatrix;
 };
 
 class DirectionalLight : public Light {
    public:
     DirectionalLight() = default;
-    DirectionalLight(const glm::vec3& color, float intensity, const glm::vec3& direction) : Light(color, intensity), m_direction(glm::normalize(direction)) {
-        m_lightBlock.lightVectorType = glm::vec4(m_direction, 0.0f);
+    DirectionalLight(const glm::vec3& color, float intensity, const glm::vec3& direction) : Light(color, intensity) {
+        m_lightBlock.vectorType = glm::vec4(glm::normalize(direction), 0.0f);
     }
     ~DirectionalLight() = default;
 
-    inline const glm::mat4& setLightSpaceMatrix(const std::pair<glm::vec3, glm::vec3>& xyz) override;
-
-   private:
-    glm::vec3 m_direction;
+    glm::vec3 getDirection() const { return glm::vec3(m_lightBlock.vectorType); }
+    void setDirection(const glm::vec3& direction) {
+        m_lightBlock.vectorType = glm::vec4(glm::normalize(direction), 0.0f);
+    }
+    inline void setLightSpaceMatrix(const std::pair<glm::vec3, glm::vec3>& xyz) override;
 };
 
-inline const glm::mat4& DirectionalLight::setLightSpaceMatrix(const std::pair<glm::vec3, glm::vec3>& xyz) {
+inline void DirectionalLight::setLightSpaceMatrix(const std::pair<glm::vec3, glm::vec3>& xyz) {
     auto& [xyz1, xyz2] = xyz;  // xyz is bounding box of the scene
 
+    glm::vec3 direction   = getDirection();
     glm::vec3 sceneCenter = (xyz1 + xyz2) / 2.0f;
-    glm::vec3 lightPos    = sceneCenter - m_direction * glm::length(xyz2 - xyz1) * 0.5f;
+    glm::vec3 lightPos    = sceneCenter - direction * glm::length(xyz2 - xyz1) * 0.5f;
     glm::vec3 lightUp     = {0.0f, 1.0f, 0.0f};
-    if (std::abs(glm::dot(m_direction, lightUp)) > 0.99f) {
+    if (std::abs(glm::dot(direction, lightUp)) > 0.99f) {
         lightUp = {0.0f, 0.0f, 1.0f};
     }
-    glm::mat4 lightViewMatrix = glm::lookAt(lightPos, sceneCenter, lightUp);
+    glm::mat4 viewMatrix = glm::lookAt(lightPos, sceneCenter, lightUp);
 
     glm::vec3 corners[8] = {
         {xyz1.x, xyz1.y, xyz1.z},
@@ -79,24 +83,20 @@ inline const glm::mat4& DirectionalLight::setLightSpaceMatrix(const std::pair<gl
     };
     glm::vec3 nxyz1 = glm::vec3(FLT_MAX), nxyz2 = glm::vec3(-FLT_MAX);
     for (int i = 0; i < 8; ++i) {
-        glm::vec3 ptInLightSpace = glm::vec3(lightViewMatrix * glm::vec4(corners[i], 1.0f));
+        glm::vec3 ptInLightSpace = glm::vec3(viewMatrix * glm::vec4(corners[i], 1.0f));
         nxyz1                    = glm::min(nxyz1, ptInLightSpace);
         nxyz2                    = glm::max(nxyz2, ptInLightSpace);
     }
 
-    // std::cout << "nxyz1: " << nxyz1 << '\n'
-    //           << "nxyz2: " << nxyz2 << '\n';
-
-    glm::mat4 lightProjectionMatrix = glm::ortho(
+    glm::mat4 projMatrix = glm::ortho(
         nxyz1.x, nxyz2.x,
         nxyz1.y, nxyz2.y,
         -nxyz2.z,  // near
         -nxyz1.z   // far
     );
 
-    m_lightSpaceMatrix            = lightProjectionMatrix * lightViewMatrix;
-    m_lightBlock.lightSpaceMatrix = m_lightSpaceMatrix;
-    return m_lightSpaceMatrix;
+    m_lightBlock.viewProjMatrix = projMatrix * viewMatrix;
+    return;
 }
 
 };  // namespace tinyrenderer

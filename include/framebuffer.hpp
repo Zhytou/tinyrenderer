@@ -63,9 +63,14 @@ class FrameBuffer {
     // @param target The attachment target to read(GL_COLOR/GL_DEPTH/GL_STENCIL/GL_DEPTH_STENCIL).
     // @param slot The attachment slot to read.
     // @param data The vector to store the read data.
-    // @param format The internal format of the read data.
+    // @param format The format of the read data(GL_RGB/GL_RED/GL_DEPTH_COMPONENT).
     template <typename T>
     void read(GLenum target, GLenum slot, std::vector<T>& data, GLenum format);
+    // Divides the total framebuffer canvas into a compact, asymmetric grid of sub-tiles.
+    // @param[out] rects Contains viewport rectangles parsed as 4-element groups [X, Y, Width, Height] in absolute pixel coordinates, ready for direct engine glViewport injection.
+    // @param[out] remaps Contains texture coordinate remapping scales and offsets parsed as 4-element groups [offsetX, offsetY, scaleX, scaleY].
+    // @param[in]  count The total number of active elements (e.g., shadow-casting light sources) to accommodate.
+    void divide(std::vector<int>& rects, std::vector<float>& remaps, size_t count, int tileX = 1000, int tileY = 1000, int padding = 12);
 
    private:
     GLuint m_id       = 0;

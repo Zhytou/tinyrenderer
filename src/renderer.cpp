@@ -127,51 +127,43 @@ void Renderer::setup() {
 
     // 2. Initialize pipeline states for each renderpass, namely configure the fixed-function stages including rasterization/blend/depth/stencil
     m_states["shadow_mapping"] = PipelineState{
-        .polygonMode      = GL_FILL,
-        .cullEnable       = GL_FALSE,
-        .cullMode         = GL_BACK,
-        .frontFace        = GL_CCW,
-        .blendEnable      = GL_FALSE,
+        .viewPortDynamic  = GL_TRUE,
         .depthTestEnable  = GL_TRUE,
         .depthWriteEnable = GL_TRUE,
         .depthFunc        = GL_LESS,
     };
     m_states["deferred_geometry"] = PipelineState{
-        .polygonMode      = GL_FILL,
-        .cullEnable       = GL_FALSE,
-        .cullMode         = GL_BACK,
-        .frontFace        = GL_CCW,
-        .blendEnable      = GL_FALSE,
+        .viewX            = 0,
+        .viewY            = 0,
+        .viewW            = (GLsizei)m_width,
+        .viewH            = (GLsizei)m_height,
         .depthTestEnable  = GL_TRUE,
         .depthWriteEnable = GL_TRUE,
         .depthFunc        = GL_LESS,
     };
     m_states["deferred_shading"] = PipelineState{
-        .polygonMode      = GL_FILL,
-        .cullEnable       = GL_FALSE,
-        .cullMode         = GL_BACK,
-        .frontFace        = GL_CCW,
-        .blendEnable      = GL_FALSE,
+        .viewX            = 0,
+        .viewY            = 0,
+        .viewW            = (GLsizei)m_width,
+        .viewH            = (GLsizei)m_height,
         .depthTestEnable  = GL_FALSE,
         .depthWriteEnable = GL_FALSE,
         .depthFunc        = GL_LESS,
     };
     m_states["forward_opaque"] = PipelineState{
-        .polygonMode      = GL_FILL,
-        .cullEnable       = GL_FALSE,
-        .cullMode         = GL_BACK,
-        .frontFace        = GL_CCW,
-        .blendEnable      = GL_FALSE,
+        .viewX            = 0,
+        .viewY            = 0,
+        .viewW            = (GLsizei)m_width,
+        .viewH            = (GLsizei)m_height,
         .depthTestEnable  = GL_TRUE,
         .depthWriteEnable = GL_TRUE,
         .depthFunc        = GL_LESS,
     };
     m_states["skybox"] = PipelineState{
-        .polygonMode      = GL_FILL,
-        .cullEnable       = GL_FALSE,
-        .cullMode         = GL_BACK,
-        .frontFace        = GL_CCW,
-        .blendEnable      = GL_FALSE,
+        .viewX            = 0,
+        .viewY            = 0,
+        .viewW            = (GLsizei)m_width,
+        .viewH            = (GLsizei)m_height,
         .depthTestEnable  = GL_TRUE,
         .depthWriteEnable = GL_FALSE,
         .depthFunc        = GL_LEQUAL,
@@ -301,8 +293,43 @@ void Renderer::prepare(const Scene& scene) {
     m_buffers["light"]->upload(0, sizeof(LightBlock) * lightBlocks.size(), lightBlocks.data());
     m_buffers["light"]->bind(0);
 
-    // 2. Precalculate environment map
+    // 2. Generate render item queue(draw command)
+    std::vector<RenderItem> opaqueQueue, transparentQueue;
+    scene.getRenderQueue(opaqueQueue, true);
+    scene.getRenderQueue(transparentQueue, false);
+
+    // 3. Precalculate environment map
     // TODO: add environment map support
+    if (m_enableEnvMap) {
+    }
+
+    // 4. Render shadow map and update the light shader storage buffer if needed
+    if (m_enableShadowMap) {
+        std::vector<std::shared_ptr<Light>> lights = scene.getLights();
+        std::vector<int> rects;
+        std::vector<float> remaps;
+
+        m_frames["shadow"]->divide(rects, remaps, lights.size());
+        m_states["shadow_mapping"].apply();
+        m_passes["shadow_mapping"].begin(m_frames["shadow"]);
+        m_shaders["shadow_mapping"]->use();
+        for (int i = 0; i < lights.size(); i++) {
+            m_states["shadow_mapping"].view(rects[i * 4], rects[i * 4 + 1], rects[i * 4 + 2], rects[i * 4 + 3]);
+            m_shaders["shadow_mapping"]->setUniformValue("uLightViewProjMatrix", lights[i]->getViewProjMatrix());
+            for (const auto& item : opaqueQueue) {
+                m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
+                draw(item);
+            }
+            lights[i]->setUVOffsetScale({remaps[i * 4], remaps[i * 4 + 1]}, {remaps[i * 4 + 2], remaps[i * 4 + 3]});
+        }
+        m_passes["shadow_mapping"].end();
+
+        scene.getLightBlocks(lightBlocks);
+        m_buffers["light"]->upload(0, sizeof(LightBlock) * lightBlocks.size(), lightBlocks.data());
+    } else {
+        float depth = 1.0f;
+        m_textures["shadow.depth"]->clear(&depth, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+    }
 }
 
 void Renderer::render(const Scene& scene) {
@@ -313,73 +340,57 @@ void Renderer::render(const Scene& scene) {
     // std::cout << "OpaqueQueue size: " << opaqueQueue.size() << std::endl;
     // std::cout << "TransparentQueue size: " << transparentQueue.size() << std::endl;
 
-    if (0) {
-        m_states["shadow_mapping"].apply();
-        m_shaders["shadow_mapping"]->use();
-        m_passes["shadow_mapping"].begin(m_frames["shadow"]);
+    {
+        m_states["deferred_geometry"].apply();
+        m_shaders["deferred_geometry"]->use();
+        m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
         for (const auto& item : opaqueQueue) {
             m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
             draw(item);
         }
-        m_passes["shadow_mapping"].end();
-    } else {
-        float depth = 1.0f;
-        m_textures["shadow.depth"]->clear(&depth, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+        m_passes["deferred_geometry"].end();
     }
-
-    // {
-    //     m_states["deferred_geometry"].apply();
-    //     m_shaders["deferred_geometry"]->use();
-    //     m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
-    //     for (const auto& item : opaqueQueue) {
-    //         m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-    //         draw(item);
-    //     }
-    //     m_passes["deferred_geometry"].end();
-    // }
-
-    // {
-    //     //! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
-    //     m_frames["screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
-
-    //     m_states["deferred_shading"].apply();
-    //     m_passes["deferred_shading"].begin(m_frames["screen"]);
-    //     m_shaders["deferred_shading"]->use();
-
-    //     m_shaders["deferred_shading"]->setUniformValue("uLightCount", scene.getLights().size());
-    //     draw(
-    //         instance.getLayout("quad"),
-    //         instance.getCounts("quad"),
-    //         {
-    //             m_textures["gbuffer.albedo"],
-    //             m_textures["gbuffer.normal"],
-    //             m_textures["gbuffer.mrao"],
-    //             m_textures["gbuffer.depth"],
-    //             m_textures["shadow.depth"],
-    //         },
-    //         3
-    //     );
-    //     m_passes["deferred_shading"].end();
-    // }
 
     {
-        m_states["forward_opaque"].apply();
-        m_shaders["forward_opaque"]->use();
-        m_passes["forward_opaque"].begin(m_frames["screen"]);
+        //! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
+        m_frames["screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
 
-        m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
-        for (const auto& item : opaqueQueue) {
-            m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-            m_textures["shadow.depth"]->bind(7);
-            draw(item);
-        }
-        m_passes["forward_opaque"].end();
+        m_states["deferred_shading"].apply();
+        m_passes["deferred_shading"].begin(m_frames["screen"]);
+        m_shaders["deferred_shading"]->use();
+        m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
+        draw(
+            instance.getLayout("quad"),
+            instance.getCounts("quad"),
+            {
+                m_textures["gbuffer.albedo"],
+                m_textures["gbuffer.normal"],
+                m_textures["gbuffer.mrao"],
+                m_textures["gbuffer.depth"],
+                m_textures["shadow.depth"],
+            },
+            3
+        );
+        m_passes["deferred_shading"].end();
     }
+
+    // {
+    //     m_states["forward_opaque"].apply();
+    //     m_passes["forward_opaque"].begin(m_frames["screen"]);
+    //     m_shaders["forward_opaque"]->use();
+    //     m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
+    //     for (const auto& item : opaqueQueue) {
+    //         m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
+    //         m_textures["shadow.depth"]->bind(7);
+    //         draw(item);
+    //     }
+    //     m_passes["forward_opaque"].end();
+    // }
 
     if (scene.getSkybox()) {
         m_states["skybox"].apply();
-        m_shaders["skybox"]->use();
         m_passes["skybox"].begin(m_frames["screen"]);
+        m_shaders["skybox"]->use();
         draw(
             instance.getLayout("skybox"),
             instance.getCounts("skybox"),

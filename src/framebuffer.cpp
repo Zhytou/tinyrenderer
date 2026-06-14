@@ -84,7 +84,6 @@ bool FrameBuffer::validate() const {
 }
 
 void FrameBuffer::bind() const {
-    glViewport(0, 0, m_width, m_height);
     glBindFramebuffer(GL_FRAMEBUFFER, m_id);
 }
 
@@ -131,8 +130,12 @@ void FrameBuffer::finalize() {
         }
     }
 
-    // !Warning: Attachment order in glDrawBuffers/glNamedFramebufferDrawBuffers must match fragment shader's layout(location = N) order.
-    std::sort(slots.begin(), slots.end());
+    if (slots.empty()) {
+        slots = {GL_NONE};
+    } else {
+        // !Warning: Attachment order in glDrawBuffers/glNamedFramebufferDrawBuffers must match fragment shader's layout(location = N) order.
+        std::sort(slots.begin(), slots.end());
+    }
 
     // Activate the attached color textures as drawable attachments
     // Depth and stencil attachments are activated by DEPTH_WRITE_MASK and STENCIL_WRITE_MASK.
@@ -238,4 +241,49 @@ void FrameBuffer::copy(const FrameBuffer& other, GLenum mask, GLenum filter) {
         mask, filter
     );
 }
+
+void FrameBuffer::divide(std::vector<int>& rects, std::vector<float>& remaps, size_t count, int tileX, int tileY, int padding) {
+    if (count == 0) {
+        return;
+    }
+
+    int n     = static_cast<int>(std::ceil(std::sqrt(count)));               // number of grid columns
+    int m     = static_cast<int>(std::ceil(static_cast<float>(count) / n));  // number of grid rows
+    int cellX = tileX + padding;
+    int cellY = tileY + padding;
+    if (m_width < cellX * n || m_height < cellY * m) {
+        return;
+    }
+
+    rects.clear();
+    remaps.clear();
+    rects.reserve(count * 4);   // [viewportX, viewportY, viewportW, viewportH]
+    remaps.reserve(count * 4);  // [offsetX, offsetY, scaleX, scaleY]
+
+    size_t lightIdx = 0;
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            if (lightIdx >= count) break;
+
+            int x = j * cellX;
+            int y = i * cellY;
+            rects.push_back(x);
+            rects.push_back(y);
+            rects.push_back(tileX);
+            rects.push_back(tileY);
+
+            float offsetX = static_cast<float>(x) / (m_width * 1.0f);
+            float offsetY = static_cast<float>(y) / (m_height * 1.0f);
+            float scaleX  = static_cast<float>(tileX) / (m_width * 1.0f);
+            float scaleY  = static_cast<float>(tileY) / (m_height * 1.0f);
+            remaps.push_back(offsetX);
+            remaps.push_back(offsetY);
+            remaps.push_back(scaleX);
+            remaps.push_back(scaleY);
+
+            lightIdx++;
+        }
+    }
+}
+
 }  // namespace tinyrenderer
