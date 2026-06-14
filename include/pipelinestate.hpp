@@ -15,6 +15,13 @@ namespace tinyrenderer {
  * and mimics modern Pipeline State Objects (PSO) found in Vulkan and DX12.
  */
 struct PipelineState {
+    // viewport
+    GLboolean viewPortDynamic = GL_FALSE;
+    GLint viewX               = 0;
+    GLint viewY               = 0;
+    GLsizei viewW             = 1;
+    GLsizei viewH             = 1;
+
     // rasterization config
     GLenum polygonMode   = GL_FILL;
     GLboolean cullEnable = GL_FALSE;
@@ -26,23 +33,37 @@ struct PipelineState {
     GLenum srcBlend       = GL_SRC_ALPHA;
     GLenum dstBlend       = GL_ONE_MINUS_SRC_ALPHA;
 
-    // depth test and stencil test config
-    GLboolean depthTestEnable   = GL_TRUE;
-    GLboolean depthWriteEnable  = GL_TRUE;
-    GLenum depthFunc            = GL_LESS;
+    // depth test config
+    GLboolean depthTestEnable  = GL_TRUE;
+    GLboolean depthWriteEnable = GL_TRUE;
+    GLenum depthFunc           = GL_LESS;
+
+    // stencil test config
     GLboolean stencilTestEnable = GL_FALSE;
+    GLenum stencilFunc          = GL_ALWAYS;
+    GLint stencilRef            = 0;
+    GLuint stencilMask          = 0xFFFFFFFF;
+    GLuint stencilWriteMask     = 0xFFFFFFFF;
+
+    // scissor test config
+    GLboolean scissorTestEnable = GL_FALSE;
+    GLint scissorX              = 0;
+    GLint scissorY              = 0;
+    GLsizei scissorW            = 1;
+    GLsizei scissorH            = 1;
 
     inline void apply();
+    inline void view(GLint x, GLint y, GLsizei w, GLsizei h) {
+        if (viewPortDynamic) {
+            glViewport(x, y, w, h);
+        }
+    }
 };
 
 inline void PipelineState::apply() {
-    if (depthTestEnable) {
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(depthFunc);
-    } else {
-        glDisable(GL_DEPTH_TEST);
+    if (!viewPortDynamic) {
+        glViewport(viewX, viewY, viewW, viewH);
     }
-    glDepthMask(depthWriteEnable);
 
     if (cullEnable) {
         glEnable(GL_CULL_FACE);
@@ -58,6 +79,29 @@ inline void PipelineState::apply() {
         glBlendFunc(srcBlend, dstBlend);
     } else {
         glDisable(GL_BLEND);
+    }
+
+    if (depthTestEnable) {
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(depthFunc);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
+    glDepthMask(depthWriteEnable);
+
+    if (stencilTestEnable) {
+        glEnable(GL_STENCIL_TEST);
+        glStencilFunc(stencilFunc, stencilRef, stencilMask);
+        glStencilMask(stencilWriteMask);
+    } else {
+        glDisable(GL_STENCIL_TEST);
+    }
+
+    if (scissorTestEnable) {
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(scissorX, scissorY, scissorW, scissorH);
+    } else {
+        glDisable(GL_SCISSOR_TEST);
     }
 }
 
