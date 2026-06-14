@@ -17,7 +17,9 @@ struct alignas(16) LightBlock {
 class Light {
    public:
     Light() = default;
-    Light(const glm::vec3& color, float intensity) : m_color(color), m_intensity(intensity) {}
+    Light(const glm::vec3& color, float intensity) : m_color(color), m_intensity(intensity) {
+        m_lightBlock.lightColorIntensity = glm::vec4(m_color, m_intensity);
+    }
     virtual ~Light() = default;
 
     const glm::vec3& getColor() const { return m_color; }
