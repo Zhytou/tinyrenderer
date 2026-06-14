@@ -13,19 +13,16 @@ namespace tinyrenderer {
 
 class Application {
    public:
-    // create application window and initialize OpenGL context
     Application(uint32_t width, uint32_t height, const std::string& title);
-
-    // destroy application window and release resources
     ~Application();
 
     // initialize application window and OpenGL context
     void setup(const std::string& title);
-    // release OpenGL resources
+    // destroy OpenGL resources and terminate GLFW
     void shutdown();
 
-    // load model, light and camera
-    void load(const std::string& config);
+    // load scene(model/material/light/camera)
+    void load(const std::string& scenePath);
 
     // run application main loop
     void run();
