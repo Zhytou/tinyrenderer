@@ -13,12 +13,7 @@ layout(std140, binding = 0) uniform CameraBlock {
     mat4 uInvViewProjMatrix;
     vec3 uCameraPos;
 };
-layout(std140, binding = 1) uniform LightBlock {
-    mat4 uLightSpaceMatrix; 
-    vec4 uLightColorIntensity;
-    vec4 uLightVectorType; // use .w to distinguish between directional and point light
-};
-layout(std140, binding = 2) uniform ModelBlock {
+layout(std140, binding = 1) uniform ModelBlock {
     mat4 uModelMatrix;
     mat4 uNormalMatrix;
 };

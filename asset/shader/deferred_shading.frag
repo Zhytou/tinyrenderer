@@ -6,17 +6,24 @@
 
 layout(location = 0) in vec2 iFragUV;
 
+// ubo block
 layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
     mat4 uInvViewProjMatrix;
     vec3 uCameraPos;
 };
-layout(std140, binding = 1) uniform LightBlock {
-    mat4 uLightSpaceMatrix; 
-    vec4 uLightColorIntensity;
-    vec4 uLightVectorType; // use .w to distinguish between directional and point light (0.0 for directional, 1.0 for point)
+
+// ssbo array
+struct Light {
+    mat4 viewProjMatrix; 
+    vec4 colorIntensity;
+    vec4 vectorType; // use .w to distinguish between directional and point light
 };
+layout(std430, binding = 0) buffer LightBuffer {
+    Light uLights[];
+};
+uniform int uLightCount;
 
 layout(binding = 3) uniform sampler2D tAlbedoMap;
 layout(binding = 4) uniform sampler2D tNormalMap;
@@ -42,15 +49,19 @@ void main() {
 
     vec3 pos = vec3(iFragUV, depth) * 2.0 - 1.0;
     vec3 worldPos = Pos_toWord(pos);
-    vec3 lightSpaceUVD = Pos_toLightSpaceUVD(uLightSpaceMatrix, worldPos);
 
     vec3 V = normalize(uCameraPos - worldPos); // frag -> camera
-    vec3 L = uLightVectorType.w == 0.0 ? normalize(-uLightVectorType.xyz) : normalize(uLightVectorType.xyz - worldPos); // frag -> light
     vec3 N = N_decode(texture(tNormalMap, iFragUV).xyz);
     vec3 F0 =  mix(vec3(0.04), albedo, metallic);
+    
+    oFragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    for (int i = 0; i < uLightCount; i++) {
+        vec3 lightSpaceUVD = Pos_toLightSpaceUVD(uLights[i].viewProjMatrix, worldPos);
+        vec3 L = uLights[i].vectorType.w == 0.0 ? normalize(-uLights[i].vectorType.xyz) : normalize(uLights[i].vectorType.xyz - worldPos); // frag -> light
 
-    vec3 color = BRDF(L, V, N, F0, albedo, metallic, roughness);
-    float visibility = SM(tShadowDepthMap, lightSpaceUVD.xy, lightSpaceUVD.z);
+        vec3 color = BRDF(L, V, N, F0, albedo, metallic, roughness) * uLights[i].colorIntensity.rgb * uLights[i].colorIntensity.w;
+        float visibility = SM(tShadowDepthMap, lightSpaceUVD.xy, lightSpaceUVD.z);
 
-    oFragColor = vec4(color * visibility, 1.0);
+        oFragColor.rgb += color;
+    }
 }

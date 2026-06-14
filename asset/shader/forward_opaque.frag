@@ -9,17 +9,24 @@ layout(location = 1) in vec3 iFragNormal;
 layout(location = 2) in vec3 iFragTangent;
 layout(location = 3) in vec2 iFragUV;
 
+// ubo block
 layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
     mat4 uInvViewProjMatrix;
     vec3 uCameraPos;
 };
-layout(std140, binding = 1) uniform LightBlock {
-    mat4 uLightSpaceMatrix; 
-    vec4 uLightColorIntensity;
-    vec4 uLightVectorType; // use .w to distinguish between directional and point light
+
+// ssbo array
+struct Light {
+    mat4 viewProjMatrix; 
+    vec4 colorIntensity;
+    vec4 vectorType; // use .w to distinguish between directional and point light
 };
+layout(std430, binding = 0) buffer LightBuffer {
+    Light uLights[];
+};
+uniform int uLightCount;
 
 layout(binding = 0) uniform sampler2D tAlbedoMap;
 layout(binding = 1) uniform sampler2D tNormalMap;
@@ -35,18 +42,20 @@ void main() {
     float roughness = mrao.g;
     float ao        = mrao.b;
 
+    vec3 F0 =  mix(vec3(0.04), albedo, metallic);
+    vec3 V = normalize(uCameraPos -iFragPos); // frag -> camera
     vec3 N = normalize(iFragNormal);
     vec3 T = normalize(iFragTangent);
     vec3 TN = N_decode(texture(tNormalMap, iFragUV).xyz);
     N = N_toWorld(N, T, TN);
 
-    vec3 L = uLightVectorType.w == 0.0 ? normalize(-uLightVectorType.xyz) : normalize(uLightVectorType.xyz - iFragPos); // frag -> light
-    vec3 V = normalize(uCameraPos -iFragPos); // frag -> camera
-    vec3 F0 =  mix(vec3(0.04), albedo, metallic);
-    vec3 color = BRDF(L, V, N, F0, albedo, metallic, roughness);
+    oFragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    for (int i = 0; i < uLightCount; i++) {
+        vec3 L = uLights[i].vectorType.w == 0.0 ? normalize(-uLights[i].vectorType.xyz) : normalize(uLights[i].vectorType.xyz - iFragPos); // frag -> light
+        vec3 lightSpaceUVD = Pos_toLightSpaceUVD(uLights[i].viewProjMatrix, iFragPos);
 
-    vec3 Pos_toLightSpaceUVD = Pos_toLightSpaceUVD(uLightSpaceMatrix, iFragPos);
-    float visibility = SM(tShadowDepthMap, Pos_toLightSpaceUVD.xy, Pos_toLightSpaceUVD.z);
-
-    oFragColor = vec4(color * visibility, 1.0);
+        vec3 color = BRDF(L, V, N, F0, albedo, metallic, roughness) * uLights[i].colorIntensity.rgb * uLights[i].colorIntensity.w;
+        float visibility = SM(tShadowDepthMap, lightSpaceUVD.xy, lightSpaceUVD.z);
+        oFragColor.rgb += color * visibility;
+    }    
 }
