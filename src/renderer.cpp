@@ -11,7 +11,9 @@
 #include "camera.hpp"
 #include "model.hpp"
 #include "renderitem.hpp"
+#include "shaderstoragebuffer.hpp"
 #include "staticresource.hpp"
+#include "uniformbuffer.hpp"
 #include "utils.hpp"
 
 namespace tinyrenderer {
@@ -266,39 +268,38 @@ void Renderer::setup() {
 void Renderer::shutdown() {
     m_shaders.clear();
     m_frames.clear();
-    m_uniforms.clear();
+    m_buffers.clear();
     m_samplers.clear();
     m_textures.clear();
 }
 
 void Renderer::prepare(const Scene& scene) {
-    // 1. Update uniform buffers with scene data, and bind them to shader binding points
-    // 1.1 Camera block
+    // 1. Update uniform/shaderstorage buffers with scene data, and bind them to shader binding points
+    // 1.1 Camera uniform block
     const auto& camera = scene.getCamera();
-    if (m_uniforms["camera"] == nullptr) {
-        m_uniforms["camera"] = std::make_shared<UniformBuffer>(sizeof(CameraBlock));
+    if (m_buffers["camera"] == nullptr) {
+        m_buffers["camera"] = std::make_shared<UniformBuffer>(sizeof(CameraBlock));
     }
-    m_uniforms["camera"]->upload(0, sizeof(CameraBlock), &camera->getCameraBlock());
-    m_uniforms["camera"]->bind(0);
+    m_buffers["camera"]->upload(0, sizeof(CameraBlock), &camera->getCameraBlock());
+    m_buffers["camera"]->bind(0);
 
-    // 1.2 Light block
-    // TODO: add multiple light sources support
-    std::vector<LightBlock> lightBlocks;
-    scene.getLightBlocks(lightBlocks);
-    if (m_uniforms["light"] == nullptr) {
-        m_uniforms["light"] = std::make_shared<UniformBuffer>(sizeof(LightBlock) * lightBlocks.size());
-    }
-    m_uniforms["light"]->upload(0, sizeof(LightBlock) * lightBlocks.size(), lightBlocks.data());
-    m_uniforms["light"]->bind(1);
-
-    // 1.3 Model block
+    // 1.2 Model uniform block
     std::vector<ModelBlock> modelBlocks;
     scene.getModelBlocks(modelBlocks);
-    if (m_uniforms["model"] == nullptr) {
-        m_uniforms["model"] = std::make_shared<UniformBuffer>(sizeof(ModelBlock) * modelBlocks.size());
+    if (m_buffers["model"] == nullptr) {
+        m_buffers["model"] = std::make_shared<UniformBuffer>(sizeof(ModelBlock) * modelBlocks.size());
     }
-    m_uniforms["model"]->upload(0, sizeof(ModelBlock) * modelBlocks.size(), modelBlocks.data());
-    m_uniforms["model"]->bind(2);
+    m_buffers["model"]->upload(0, sizeof(ModelBlock) * modelBlocks.size(), modelBlocks.data());
+    m_buffers["model"]->bind(1);
+
+    // 1.3 Light shader storage array
+    std::vector<LightBlock> lightBlocks;
+    scene.getLightBlocks(lightBlocks);
+    if (m_buffers["light"] == nullptr) {
+        m_buffers["light"] = std::make_shared<ShaderStorageBuffer>(sizeof(LightBlock) * lightBlocks.size());
+    }
+    m_buffers["light"]->upload(0, sizeof(LightBlock) * lightBlocks.size(), lightBlocks.data());
+    m_buffers["light"]->bind(0);
 
     // 2. Precalculate environment map
     // TODO: add environment map support
@@ -317,7 +318,7 @@ void Renderer::render(const Scene& scene) {
         m_shaders["shadow_mapping"]->use();
         m_passes["shadow_mapping"].begin(m_frames["shadow"]);
         for (const auto& item : opaqueQueue) {
-            m_uniforms["model"]->bind(2, item.uoffset, sizeof(ModelBlock));
+            m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
             draw(item);
         }
         m_passes["shadow_mapping"].end();
@@ -326,50 +327,54 @@ void Renderer::render(const Scene& scene) {
         m_textures["shadow.depth"]->clear(&depth, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
     }
 
-    {
-        m_states["deferred_geometry"].apply();
-        m_shaders["deferred_geometry"]->use();
-        m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
-        for (const auto& item : opaqueQueue) {
-            m_uniforms["model"]->bind(2, item.uoffset, sizeof(ModelBlock));
-            draw(item);
-        }
-        m_passes["deferred_geometry"].end();
-    }
-
-    {
-        //! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
-        m_frames["screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
-
-        m_states["deferred_shading"].apply();
-        m_shaders["deferred_shading"]->use();
-        m_passes["deferred_shading"].begin(m_frames["screen"]);
-        draw(
-            instance.getLayout("quad"),
-            instance.getCounts("quad"),
-            {
-                m_textures["gbuffer.albedo"],
-                m_textures["gbuffer.normal"],
-                m_textures["gbuffer.mrao"],
-                m_textures["gbuffer.depth"],
-                m_textures["shadow.depth"],
-            },
-            3
-        );
-        m_passes["deferred_shading"].end();
-    }
-
     // {
-    //     m_states["forward_opaque"].apply();
-    //     m_shaders["forward_opaque"]->use();
-    //     m_passes["forward_opaque"].begin(m_frames["screen"]);
+    //     m_states["deferred_geometry"].apply();
+    //     m_shaders["deferred_geometry"]->use();
+    //     m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
     //     for (const auto& item : opaqueQueue) {
-    //         m_uniforms["model"]->bind(2, item.uoffset, sizeof(ModelBlock));
-    //         m_textures["shadow.depth"]->bind(7);
+    //         m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
     //         draw(item);
     //     }
-    //     m_passes["forward_opaque"].end();
+    //     m_passes["deferred_geometry"].end();
     // }
+
+    // {
+    //     //! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
+    //     m_frames["screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
+
+    //     m_states["deferred_shading"].apply();
+    //     m_passes["deferred_shading"].begin(m_frames["screen"]);
+    //     m_shaders["deferred_shading"]->use();
+
+    //     m_shaders["deferred_shading"]->setUniformValue("uLightCount", scene.getLights().size());
+    //     draw(
+    //         instance.getLayout("quad"),
+    //         instance.getCounts("quad"),
+    //         {
+    //             m_textures["gbuffer.albedo"],
+    //             m_textures["gbuffer.normal"],
+    //             m_textures["gbuffer.mrao"],
+    //             m_textures["gbuffer.depth"],
+    //             m_textures["shadow.depth"],
+    //         },
+    //         3
+    //     );
+    //     m_passes["deferred_shading"].end();
+    // }
+
+    {
+        m_states["forward_opaque"].apply();
+        m_shaders["forward_opaque"]->use();
+        m_passes["forward_opaque"].begin(m_frames["screen"]);
+
+        m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
+        for (const auto& item : opaqueQueue) {
+            m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
+            m_textures["shadow.depth"]->bind(7);
+            draw(item);
+        }
+        m_passes["forward_opaque"].end();
+    }
 
     if (scene.getSkybox()) {
         m_states["skybox"].apply();

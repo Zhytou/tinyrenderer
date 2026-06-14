@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "bindablebuffer.hpp"
 #include "framebuffer.hpp"
 #include "pipelinestate.hpp"
 #include "renderitem.hpp"
@@ -13,7 +14,6 @@
 #include "sampler.hpp"
 #include "scene.hpp"
 #include "shader.hpp"
-#include "uniformbuffer.hpp"
 #include "vertexbuffer.hpp"
 #include "vertexlayout.hpp"
 
@@ -52,7 +52,7 @@ class Renderer {
     std::unordered_map<std::string, std::shared_ptr<Shader>> m_shaders;
     std::unordered_map<std::string, std::shared_ptr<Texture>> m_textures;
     std::unordered_map<std::string, std::shared_ptr<FrameBuffer>> m_frames;
-    std::unordered_map<std::string, std::shared_ptr<UniformBuffer>> m_uniforms;
+    std::unordered_map<std::string, std::shared_ptr<BindableBuffer>> m_buffers;
 
     uint32_t m_width = 800, m_height = 600;
     uint32_t m_shadowMapWidth = 1024, m_shadowMapHeight = 1024;
