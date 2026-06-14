@@ -13,7 +13,12 @@ class GraphicBuffer {
 
     GLuint getId() const { return m_id; }
     GLenum getType() const { return m_type; }
+    GLsizeiptr getSize() const { return m_size; }
 
+    // Upload data to graphic buffer.
+    // @param offset The offset of data to upload.
+    // @param length The length of data to upload.
+    // @param data The data to upload.
     void upload(GLintptr offset, GLsizeiptr length, const void* data);
 
    protected:
