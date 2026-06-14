@@ -17,16 +17,20 @@ class Camera {
     Camera()          = default;
     virtual ~Camera() = default;
 
+    float getSpeed() const { return m_speed; }
     int getWidth() const { return m_width; }
     int getHeight() const { return m_height; }
     float getDistance(const glm::vec3& position) const { return glm::distance(m_eye, position); }
     const glm::vec3& getEye() const { return m_eye; }
     const glm::vec3& getTarget() const { return m_target; }
 
-    const glm::mat4& getViewMatrix() const { return m_viewMatrix; }
-    const glm::mat4& getProjMatrix() const { return m_projMatrix; }
+    const glm::mat4& getViewMatrix() const { return m_cameraBlock.viewMatrix; }
+    const glm::mat4& getProjMatrix() const { return m_cameraBlock.projMatrix; }
     const CameraBlock& getCameraBlock() const { return m_cameraBlock; }
 
+    void setSpeed(float speed) {
+        m_speed = speed;
+    }
     void setEye(glm::vec3 eye) {
         m_eye = eye;
         update();
@@ -62,10 +66,6 @@ class Camera {
     virtual void update() = 0;
 
     CameraBlock m_cameraBlock;
-    glm::mat4 m_viewMatrix;
-    glm::mat4 m_projMatrix;
-    glm::mat4 m_invViewProjMatrix;
-    uint32_t m_dirty = 0;
     glm::vec3 m_eye;
     glm::vec3 m_target;
     glm::vec3 m_up;
@@ -76,6 +76,7 @@ class Camera {
     float m_aspect;
     int m_width;
     int m_height;
+    float m_speed;
 };
 
 class PerspectiveCamera : public Camera {
@@ -85,12 +86,9 @@ class PerspectiveCamera : public Camera {
 
    protected:
     void update() override {
-        m_viewMatrix = glm::lookAt(m_eye, m_target, m_up);
-        m_projMatrix = glm::perspective(glm::radians(m_fov), m_aspect, m_near, m_far);
-
-        m_cameraBlock.viewMatrix        = m_viewMatrix;
-        m_cameraBlock.projMatrix        = m_projMatrix;
-        m_cameraBlock.invViewProjMatrix = glm::inverse(m_projMatrix * m_viewMatrix);
+        m_cameraBlock.viewMatrix        = glm::lookAt(m_eye, m_target, m_up);
+        m_cameraBlock.projMatrix        = glm::perspective(glm::radians(m_fov), m_aspect, m_near, m_far);
+        m_cameraBlock.invViewProjMatrix = glm::inverse(m_cameraBlock.projMatrix * m_cameraBlock.viewMatrix);
         m_cameraBlock.cameraPosition    = m_eye;
     }
 };
@@ -102,12 +100,9 @@ class OrthographicCamera : public Camera {
 
    protected:
     void update() override {
-        m_viewMatrix = glm::lookAt(m_eye, m_target, m_up);
-        m_projMatrix = glm::ortho(-m_width / 2.0f, m_width / 2.0f, -m_height / 2.0f, m_height / 2.0f, m_near, m_far);
-
-        m_cameraBlock.viewMatrix        = m_viewMatrix;
-        m_cameraBlock.projMatrix        = m_projMatrix;
-        m_cameraBlock.invViewProjMatrix = glm::inverse(m_projMatrix * m_viewMatrix);
+        m_cameraBlock.viewMatrix        = glm::lookAt(m_eye, m_target, m_up);
+        m_cameraBlock.projMatrix        = glm::ortho(-m_width / 2.0f, m_width / 2.0f, -m_height / 2.0f, m_height / 2.0f, m_near, m_far);
+        m_cameraBlock.invViewProjMatrix = glm::inverse(m_cameraBlock.projMatrix * m_cameraBlock.viewMatrix);
         m_cameraBlock.cameraPosition    = m_eye;
     }
 };
