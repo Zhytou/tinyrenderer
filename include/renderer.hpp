@@ -10,6 +10,7 @@
 #include "pipelinestate.hpp"
 #include "renderitem.hpp"
 #include "renderpass.hpp"
+#include "sampler.hpp"
 #include "scene.hpp"
 #include "shader.hpp"
 #include "uniformbuffer.hpp"
@@ -47,12 +48,14 @@ class Renderer {
     std::unordered_map<std::string, PipelineState> m_states;
 
     /// assets and resources
+    std::unordered_map<uint32_t, std::shared_ptr<Sampler>> m_samplers;
     std::unordered_map<std::string, std::shared_ptr<Shader>> m_shaders;
     std::unordered_map<std::string, std::shared_ptr<Texture>> m_textures;
     std::unordered_map<std::string, std::shared_ptr<FrameBuffer>> m_frames;
     std::unordered_map<std::string, std::shared_ptr<UniformBuffer>> m_uniforms;
 
-    uint32_t m_width, m_height;
+    uint32_t m_width = 800, m_height = 600;
+    uint32_t m_shadowMapWidth = 1024, m_shadowMapHeight = 1024;
 };
 
 }  // namespace tinyrenderer

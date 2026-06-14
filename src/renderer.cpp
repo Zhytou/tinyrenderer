@@ -21,7 +21,7 @@ void Renderer::setup() {
     m_passes["shadow_mapping"] = RenderPass{
         .attachments = {
             AttachmentDesc{
-                .name   = "shadow_map",
+                .name   = "depth",
                 .target = GL_DEPTH,
                 .type   = GL_TEXTURE_2D,
                 .format = GL_DEPTH_COMPONENT24,
@@ -124,6 +124,16 @@ void Renderer::setup() {
     };
 
     // 2. Initialize pipeline states for each renderpass, namely configure the fixed-function stages including rasterization/blend/depth/stencil
+    m_states["shadow_mapping"] = PipelineState{
+        .polygonMode      = GL_FILL,
+        .cullEnable       = GL_FALSE,
+        .cullMode         = GL_BACK,
+        .frontFace        = GL_CCW,
+        .blendEnable      = GL_FALSE,
+        .depthTestEnable  = GL_TRUE,
+        .depthWriteEnable = GL_TRUE,
+        .depthFunc        = GL_LESS,
+    };
     m_states["deferred_geometry"] = PipelineState{
         .polygonMode      = GL_FILL,
         .cullEnable       = GL_FALSE,
@@ -166,6 +176,7 @@ void Renderer::setup() {
     };
 
     // 3. Compile and link shaders
+    m_shaders["shadow_mapping"]    = std::make_shared<Shader>("../asset/shader/shadow_mapping.vert", "../asset/shader/shadow_mapping.frag");
     m_shaders["deferred_geometry"] = std::make_shared<Shader>("../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
     m_shaders["deferred_shading"]  = std::make_shared<Shader>("../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
     m_shaders["forward_opaque"]    = std::make_shared<Shader>("../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
@@ -174,53 +185,123 @@ void Renderer::setup() {
 
     // 4. Create framebuffers
     m_frames["screen"]  = std::make_shared<FrameBuffer>(true, m_width, m_height);
+    m_frames["shadow"]  = std::make_shared<FrameBuffer>(false, m_shadowMapWidth, m_shadowMapHeight);
     m_frames["gbuffer"] = std::make_shared<FrameBuffer>(false, m_width, m_height);
 
     // 5. Create textures and activate them as drawable attachments for framebuffers
-    for (auto attachment : m_passes["deferred_geometry"].attachments) {
-        if (attachment.type == GL_TEXTURE_2D || attachment.type == GL_TEXTURE_CUBE_MAP) {
-            m_textures["gbuffer." + attachment.name] = std::make_shared<Texture>(m_width, m_height, attachment.type, attachment.format);
-            m_frames["gbuffer"]->attach(attachment.slot, m_textures["gbuffer." + attachment.name]);
+    std::unordered_map<std::string, std::string> pass_2_frame = {
+        {"shadow_mapping", "shadow"},
+        {"deferred_geometry", "gbuffer"},
+    };
+
+    for (const auto& [passName, pass] : m_passes) {
+        if (pass_2_frame.count(passName) == 0) {
+            continue;
+        }
+        const auto& frameName = pass_2_frame[passName];
+        std::cout << "Creating attachments [";
+        for (auto attachment : pass.attachments) {
+            auto attchName = frameName + "." + attachment.name;
+
+            std::cout << attchName << ", ";
+            m_textures[attchName] = std::make_shared<Texture>(m_frames[frameName]->getWidth(), m_frames[frameName]->getHeight(), attachment.type, attachment.format);
+            m_frames[frameName]->attach(attachment.slot, m_textures[attchName]);
+        }
+        std::cout << "]\n";
+        m_frames[frameName]->finalize();
+        m_frames[frameName]->validate();
+    }
+
+    // 6. Create samplers for corresponding textures
+    // | Slot | Macro        | Texture Name    |
+    // |------|--------------|-----------------|
+    // | 0    | GL_TEXTURE0  | material.albedo |
+    // | 1    | GL_TEXTURE1  | material.normal |
+    // | 2    | GL_TEXTURE2  | material.maro   |
+    // | 3    | GL_TEXTURE3  | gbuffer.albedo  |
+    // | 4    | GL_TEXTURE4  | gbuffer.normal  |
+    // | 5    | GL_TEXTURE5  | gbuffer.maro    |
+    // | 6    | GL_TEXTURE6  | gbuffer.depth   |
+    // | 7    | GL_TEXTURE7  | shadow.depth    |
+    // | 8    | GL_TEXTURE8  | scene.skybox    |
+    m_samplers[0x0007] = std::make_shared<Sampler>(SamplerDesc{
+        // slot 0, 1, 2
+        .minFilter = GL_LINEAR_MIPMAP_LINEAR,
+        .magFilter = GL_LINEAR,
+        .wrapS     = GL_REPEAT,
+        .wrapT     = GL_REPEAT,
+    });
+    m_samplers[0x0078] = std::make_shared<Sampler>(SamplerDesc{
+        // slot 3, 4, 5, 6
+        .minFilter = GL_NEAREST,
+        .magFilter = GL_NEAREST,
+        .wrapS     = GL_CLAMP_TO_EDGE,
+        .wrapT     = GL_CLAMP_TO_EDGE,
+    });
+    m_samplers[0x0080] = std::make_shared<Sampler>(SamplerDesc{
+        // slot 7
+        .minFilter   = GL_NEAREST,
+        .magFilter   = GL_NEAREST,
+        .wrapS       = GL_CLAMP_TO_BORDER,
+        .wrapT       = GL_CLAMP_TO_BORDER,
+        .borderColor = {1.0f, 1.0f, 1.0f, 1.0f},
+    });
+    m_samplers[0x0100] = std::make_shared<Sampler>(SamplerDesc{
+        // slot 8
+        .minFilter = GL_LINEAR,
+        .magFilter = GL_LINEAR,
+        .wrapS     = GL_CLAMP_TO_EDGE,
+        .wrapT     = GL_CLAMP_TO_EDGE,
+        .wrapR     = GL_CLAMP_TO_EDGE,
+    });
+    for (auto& [slotMask, sampler] : m_samplers) {
+        for (uint32_t slot = 0; slot < 9; slot++) {
+            if (slotMask & (1 << slot)) {
+                sampler->bind(slot);
+            }
         }
     }
-    m_frames["gbuffer"]->finalize();
 }
 
 void Renderer::shutdown() {
     m_shaders.clear();
     m_frames.clear();
     m_uniforms.clear();
+    m_samplers.clear();
     m_textures.clear();
 }
 
 void Renderer::prepare(const Scene& scene) {
     // 1. Update uniform buffers with scene data, and bind them to shader binding points
-    // 1.1 Light block
-    const auto& lights = scene.getLights();
-    if (m_uniforms["light"] == nullptr) {
-        // TODO: add multiple light sources support
-        m_uniforms["light"] = std::make_shared<UniformBuffer>(sizeof(LightBlock));
-    }
-    m_uniforms["light"]->upload(0, sizeof(LightBlock), &lights[0]->getLightBlock());
-    m_uniforms["light"]->bind(0);
-
-    // 1.2 Camera block
+    // 1.1 Camera block
     const auto& camera = scene.getCamera();
     if (m_uniforms["camera"] == nullptr) {
         m_uniforms["camera"] = std::make_shared<UniformBuffer>(sizeof(CameraBlock));
     }
     m_uniforms["camera"]->upload(0, sizeof(CameraBlock), &camera->getCameraBlock());
-    m_uniforms["camera"]->bind(1);
+    m_uniforms["camera"]->bind(0);
+
+    // 1.2 Light block
+    // TODO: add multiple light sources support
+    std::vector<LightBlock> lightBlocks;
+    scene.getLightBlocks(lightBlocks);
+    if (m_uniforms["light"] == nullptr) {
+        m_uniforms["light"] = std::make_shared<UniformBuffer>(sizeof(LightBlock) * lightBlocks.size());
+    }
+    m_uniforms["light"]->upload(0, sizeof(LightBlock) * lightBlocks.size(), lightBlocks.data());
+    m_uniforms["light"]->bind(1);
 
     // 1.3 Model block
-    const auto& blocks = scene.getModelBlocks();
+    std::vector<ModelBlock> modelBlocks;
+    scene.getModelBlocks(modelBlocks);
     if (m_uniforms["model"] == nullptr) {
-        m_uniforms["model"] = std::make_shared<UniformBuffer>(sizeof(ModelBlock) * blocks.size());
+        m_uniforms["model"] = std::make_shared<UniformBuffer>(sizeof(ModelBlock) * modelBlocks.size());
     }
-    m_uniforms["model"]->upload(0, sizeof(ModelBlock) * blocks.size(), blocks.data());
+    m_uniforms["model"]->upload(0, sizeof(ModelBlock) * modelBlocks.size(), modelBlocks.data());
     m_uniforms["model"]->bind(2);
 
     // 2. Precalculate environment map
+    // TODO: add environment map support
 }
 
 void Renderer::render(const Scene& scene) {
@@ -230,6 +311,20 @@ void Renderer::render(const Scene& scene) {
     scene.getRenderQueue(transparentQueue, false);
     // std::cout << "OpaqueQueue size: " << opaqueQueue.size() << std::endl;
     // std::cout << "TransparentQueue size: " << transparentQueue.size() << std::endl;
+
+    if (0) {
+        m_states["shadow_mapping"].apply();
+        m_shaders["shadow_mapping"]->use();
+        m_passes["shadow_mapping"].begin(m_frames["shadow"]);
+        for (const auto& item : opaqueQueue) {
+            m_uniforms["model"]->bind(2, item.uoffset, sizeof(ModelBlock));
+            draw(item);
+        }
+        m_passes["shadow_mapping"].end();
+    } else {
+        float depth = 1.0f;
+        m_textures["shadow.depth"]->clear(&depth, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+    }
 
     {
         m_states["deferred_geometry"].apply();
@@ -243,7 +338,7 @@ void Renderer::render(const Scene& scene) {
     }
 
     {
-        //! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer. This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
+        //! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
         m_frames["screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
 
         m_states["deferred_shading"].apply();
@@ -257,18 +352,11 @@ void Renderer::render(const Scene& scene) {
                 m_textures["gbuffer.normal"],
                 m_textures["gbuffer.mrao"],
                 m_textures["gbuffer.depth"],
+                m_textures["shadow.depth"],
             },
-            4
+            3
         );
         m_passes["deferred_shading"].end();
-    }
-
-    std::vector<float> depth(m_width * m_height);
-    m_frames["screen"]->read(GL_DEPTH, GL_DEPTH_ATTACHMENT, depth, GL_DEPTH_COMPONENT32);
-    for (int i = 0; i < depth.size(); i++) {
-        if (depth[i] < 1.0f && depth[i] > 0.0f) {
-            std::cout << "Depth at pixel " << i << ": " << depth[i] << std::endl;
-        }
     }
 
     // {
@@ -277,12 +365,13 @@ void Renderer::render(const Scene& scene) {
     //     m_passes["forward_opaque"].begin(m_frames["screen"]);
     //     for (const auto& item : opaqueQueue) {
     //         m_uniforms["model"]->bind(2, item.uoffset, sizeof(ModelBlock));
+    //         m_textures["shadow.depth"]->bind(7);
     //         draw(item);
     //     }
     //     m_passes["forward_opaque"].end();
     // }
 
-    {
+    if (scene.getSkybox()) {
         m_states["skybox"].apply();
         m_shaders["skybox"]->use();
         m_passes["skybox"].begin(m_frames["screen"]);
