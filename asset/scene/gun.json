@@ -1,6 +1,6 @@
 {
     "camera": {
-        "eye": [1, 0, 1],
+        "eye": [5, 1, 3],
         "target": [0, 0, 0],
         "up": [0, 1, 0],
         "fov": 45.0,
@@ -15,7 +15,7 @@
             {
                 "intensity": 2.0,
                 "color": [1, 1, 1],
-                "direction": [1, 0, 1]
+                "direction": [-1, -1, -1]
             }
         ],
         "pointlight": [
@@ -26,7 +26,17 @@
             "baseDir": "/home/zhytou/tinyrenderer/asset/model/gun/",
             "name": "gun.obj",
             "transform": {
+                "scale": [3, 3, 3]
             }
         }
-    ]
+    ],
+    "skybox":{
+        "baseDir": "/home/zhytou/tinyrenderer/asset/cubemap/grace-cathedral",
+        "left": "negx.jpg",
+        "right": "posx.jpg",
+        "bottom": "negy.jpg",
+        "top": "posy.jpg",
+        "front": "negz.jpg",
+        "back": "posz.jpg"
+    }
 }

@@ -1,6 +1,6 @@
 {
     "camera": {
-        "eye": [-30, -10, 8],
+        "eye": [2, 20, 0],
         "target": [0, 0, 8],
         "up": [0, 0, 1],
         "fov": 45.0,
@@ -14,7 +14,8 @@
         "directionallight": [
             {
                 "color": [1, 1, 1],
-                "direction": [1, 1, 1]
+                "intensity": 2.0,
+                "direction": [-1, -1, 1]
             }
         ],
         "pointlight": [
@@ -24,7 +25,19 @@
     "models": [
         {
             "baseDir": "/home/zhytou/tinyrenderer/asset/model/statue/",
-            "modelName": "statue.obj"
+            "name": "statue.obj",
+            "transform": {
+                "rotate": [0, 0, 0]
+            }
         }
-    ]
+    ],
+    "skybox": {
+        "baseDir": "/home/zhytou/tinyrenderer/asset/cubemap/skybox",
+        "left": "negx.jpg",
+        "right": "posx.jpg",
+        "bottom": "negy.jpg",
+        "top": "posy.jpg",
+        "front": "negz.jpg",
+        "back": "posz.jpg"
+    }
 }

@@ -4,7 +4,7 @@
         "target": [0, 0.5, 0],
         "up": [0, 1, 0],
         "fov": 45.0,
-        "near": 1.5,
+        "near": 0.1,
         "far": 10,
         "width": 800,
         "height": 800,
@@ -15,7 +15,12 @@
             {
                 "color": [1, 1, 1],
                 "intensity": 2.0,
-                "direction": [1, 0, 1]
+                "direction": [-1, -1, 1]
+            },
+            {
+                "color": [0.7, 0.3, 0.0],
+                "intensity": 3.0,
+                "direction": [1, -1, 1]
             }
         ],
         "pointlight": [
@@ -27,9 +32,13 @@
             "name": "firehydrant.obj",
             "transform": {
             }
+        },
+        {
+            "baseDir": "/home/zhytou/tinyrenderer/asset/model/floor/",
+            "name": "floor.obj",
+            "transform": {
+                "scale": [1.7, 1, 1.7]
+            }
         }
-    ],
-    "skybox": {
-
-    }
+    ]
 }

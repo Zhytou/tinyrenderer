@@ -2,20 +2,15 @@
 
 **Render Example**:
 
-![gun](./result/gun.gif)
+![teapot](./result/teapot.png)
 
-gun in rotating camera mode
+![gun](./result/gun.png)
 
-![firehydrantWithFloor](./result/firehydrantWithFloor.gif)
-
-firehydrant with floor in rotation light mode
+![firehydrant](./result/firehydrant.png)
 
 **Build & Run**:
 
 ```bash
-# install glfw, glm and rapidjson
-sudo apt install libglfw3-dev libglm-dev rapidjson-dev
-
 # build and compile
 mkdir build
 cd build
@@ -28,18 +23,8 @@ make all
 
 **Main Features**:
 
-- Load one or multiple .obj models with configuration data in one .json file.
-- Render the loaded data physically using the OpenGL api.
-- Display the scene with different mode(camera/light rotation).
-
-**TODO List**:
-
-- [x] Different Display Mode(camera/light rotation)
-- [x] Model/Mesh/Texture/Scene
-- [x] PBR
-- [x] Basic Shadow Mapping
-- [x] Soft Shadow(PCF/PCSS)
-- [ ] Anti Aliasing
-- [ ] Transparent Object Rendering
-- [ ] Screen Space Reflection
-- [ ] Complicated Scene Rendering
+- .obj loading.
+- physically based rendering.
+- basic altas shadow mapping.
+- skybox rendering.
+- image based lighting.
