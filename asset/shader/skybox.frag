@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec3 iFragDir;
 
-layout(binding = 8) uniform samplerCube tSkyboxMap;
+layout(binding = 20) uniform samplerCube tSkyboxMap;
 
 out vec4 oFragColor;
 

@@ -32,7 +32,7 @@ uniform int uLightCount;
 layout(binding = 0) uniform sampler2D tAlbedoMap;
 layout(binding = 1) uniform sampler2D tNormalMap;
 layout(binding = 2) uniform sampler2D tMRAOMap;
-layout(binding = 7) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value;
+layout(binding = 16) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value;
 
 out vec4 oFragColor;
 

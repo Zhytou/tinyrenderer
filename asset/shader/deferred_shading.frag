@@ -26,11 +26,11 @@ layout(std430, binding = 0) buffer LightBuffer {
 };
 uniform int uLightCount;
 
-layout(binding = 3) uniform sampler2D tAlbedoMap;
-layout(binding = 4) uniform sampler2D tNormalMap;
-layout(binding = 5) uniform sampler2D tMRAOMap;
-layout(binding = 6) uniform sampler2D tDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
-layout(binding = 7) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
+layout(binding = 9) uniform sampler2D tAlbedoMap;
+layout(binding = 10) uniform sampler2D tNormalMap;
+layout(binding = 11) uniform sampler2D tMRAOMap;
+layout(binding = 12) uniform sampler2D tDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
+layout(binding = 16) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
 
 out vec4 oFragColor;
 
