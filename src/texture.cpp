@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "utils.hpp"
+
 namespace tinyrenderer {
 
 namespace fs = std::filesystem;
@@ -49,13 +51,9 @@ Texture::Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFo
     //
     // Key insight: glTextureStorage2D = "allocate once, use forever" (best practice)
     //              glTexImage2D       = "flexible but slower" (legacy path)
-    glTextureStorage2D(m_id, m_mipLevels, m_internalFormat, m_width, m_height);
-
-    // Set sampler parameters
-    glTextureParameteri(m_id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTextureParameteri(m_id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTextureParameteri(m_id, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTextureParameteri(m_id, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    if (m_type == GL_TEXTURE_2D || m_type == GL_TEXTURE_CUBE_MAP) {
+        glTextureStorage2D(m_id, m_mipLevels, m_internalFormat, m_width, m_height);
+    }
 }
 
 Texture::Texture(Texture&& other) {
@@ -84,10 +82,12 @@ Texture& Texture::operator=(Texture&& other) {
 }
 
 Texture ::~Texture() {
-    if (m_id) glDeleteTextures(1, &m_id);
+    if (m_id) {
+        glDeleteTextures(1, &m_id);
+    }
 }
 
-void Texture::bind(uint32_t unit) const {
+void Texture::bind(uint32_t slot) const {
     // Bind texture to a specific texture slot, namely the glsl binding index
     //
     // ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -97,16 +97,16 @@ void Texture::bind(uint32_t unit) const {
     // ├───────────────────────────────────────────────┼─────────────────────────────────┤
     // │ • Two function calls                          │ • Single function call          │
     // │ • Changes global "active" state               │ • Direct, stateless binding     │
-    // │ • Error-prone (forget glActiveTexture)        │ • Explicit unit specification   │
+    // │ • Error-prone (forget glActiveTexture)        │ • Explicit slot specification   │
     // │ • Works with all OpenGL versions              │ • Requires OpenGL 4.5+ / DSA    │
     // │ • Must specify texture target (e.g., GL_TEXTURE_2D) │ • Target inferred from texture object │
     // │ • Slower (state validation overhead)          │ • Faster (direct state access)  │
     // └───────────────────────────────────────────────┴─────────────────────────────────┘
-    glBindTextureUnit(unit, m_id);
+    glBindTextureUnit(slot, m_id);
 }
 
 std::shared_ptr<Texture> Texture::create(const fs::path& path, GLenum internalFormat, int desiredChannels) {
-    std::cout << "Creating texture from image [" << path << "]\n";
+    std::cout << "Creating texture from file [" << path << "]\n";
 
     std::shared_ptr<Image> image     = Image::create(path, desiredChannels);
     std::shared_ptr<Texture> texture = nullptr;
@@ -118,14 +118,27 @@ std::shared_ptr<Texture> Texture::create(const fs::path& path, GLenum internalFo
     return texture;
 }
 
-std::shared_ptr<Texture> Texture::create(const std::initializer_list<fs::path>& paths, GLenum type, GLenum internalFormat, int desiredChannels) {
-    std::vector<std::shared_ptr<Image>> images;
+std::shared_ptr<Texture> Texture::create(const glm::vec4& value, GLenum internalFormat) {
+    std::cout << "Creating texture from value [" << value << "]\n";
 
-    std::cout << "Creating texture from images [";
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, internalFormat);
+    texture->clear(&value.x, GL_RGBA, GL_FLOAT);
+    return texture;
+}
+
+std::shared_ptr<Texture> Texture::create(const std::vector<fs::path>& paths, GLenum type, GLenum internalFormat, int desiredChannels) {
+    std::cout << "Creating texture from files [";
+
+    std::vector<std::shared_ptr<Image>> images;
     for (auto path : paths) {
-        std::cout << path << ' ';
         auto image = Image::create(path, desiredChannels);
-        images.push_back(image);
+        if (image == nullptr) {
+            return nullptr;
+            // throw std::runtime_error("Failed to load image: " + path.string());
+        } else {
+            images.push_back(image);
+        }
+        std::cout << path << ' ';
     }
     std::cout << "]\n";
 
@@ -136,12 +149,26 @@ std::shared_ptr<Texture> Texture::create(const std::initializer_list<fs::path>& 
             texture = std::make_shared<Texture>(mimage->getWidth(), mimage->getHeight(), type, internalFormat);
             texture->upload(mimage);
         }
+    } else if (type == GL_TEXTURE_CUBE_MAP) {
+        texture = std::make_shared<Texture>(images[0]->getWidth(), images[0]->getHeight(), type, internalFormat);
+        for (size_t i = 0; i < images.size(); i++) {
+            texture->upload(images[i], i, 0);
+        }
     }
     return texture;
 }
 
-void Texture::upload(const std::shared_ptr<Image>& img, uint32_t level) {
-    std::cout << "Uploading texture data from image [" << img->getWidth() << ' ' << img->getHeight() << ' ' << img->getChannels() << ' ' << std::showbase << std::hex << img->getFormat() << ' ' << img->getDataType() << std::dec << "] to level" << level << " GPU memory\n";
+void Texture::clear(const void* value, GLenum format, GLenum type, GLint level) {
+    if (m_id == 0) {
+        return;
+    }
+
+    glClearTexSubImage(m_id, level, 0, 0, 0, m_width, m_height, 1, format, type, value);
+}
+
+void Texture::upload(const std::shared_ptr<Image>& img, GLint level) {
+    // std::cout << "Uploading texture data from image [" << img->getWidth() << ' ' << img->getHeight() << ' ' << img->getChannels() << ' ' << std::showbase << std::hex << img->getFormat() << ' ' << img->getDataType() << std::dec << "] to level" << level << " GPU memory\n";
+
     // Upload texture data to GPU memory
     //
     // ┌──────────────────────────────────────────────────────────────────────────────────────────┐
@@ -160,6 +187,13 @@ void Texture::upload(const std::shared_ptr<Image>& img, uint32_t level) {
     // Key insight:  glTexImage2D  = "allocate + upload" (once at texture creation)
     //               glTexSubImage2D = "upload only" (update existing texture, e.g., video, dynamic UI)
     glTextureSubImage2D(m_id, level, 0, 0, m_width, m_height, img->getFormat(), img->getDataType(), img->getData());
+}
+
+void Texture::upload(const std::shared_ptr<Image>& img, GLint pos, GLint level) {
+    // std::cout << "Uploading texture data from image [" << img->getWidth() << ' ' << img->getHeight() << ' ' << img->getChannels() << ' ' << std::showbase << std::hex << img->getFormat() << ' ' << img->getDataType() << std::dec << "] to level" << level << " GPU memory\n";
+
+    // Upload texture data to GPU memory
+    glTextureSubImage3D(m_id, level, 0, 0, pos, m_width, m_height, 1, img->getFormat(), img->getDataType(), img->getData());
 }
 
 }  // namespace tinyrenderer
