@@ -10,7 +10,22 @@ namespace tinyrenderer {
 
 namespace fs = std::filesystem;
 
+void Scene::getLightBlocks(std::vector<LightBlock>& blocks) const {
+    blocks.clear();
+    for (auto& light : m_lights) {
+        blocks.emplace_back(light->getLightBlock());
+    }
+}
+
+void Scene::getModelBlocks(std::vector<ModelBlock>& blocks) const {
+    blocks.clear();
+    for (auto& model : m_models) {
+        blocks.emplace_back(model->getModelBlock());
+    }
+}
+
 void Scene::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
+    queue.clear();
     for (int i = 0; i < m_models.size(); i++) {
         std::vector<RenderItem> subQueue;
         m_models[i]->getRenderQueue(subQueue, opaque);
@@ -59,8 +74,7 @@ void Scene::initialize(const std::string& json) {
             auto [xyzi1, xyzi2] = m_models.back()->getBoundingBox();
             m_xyz.first         = glm::min(m_xyz.first, xyzi1);
             m_xyz.second        = glm::max(m_xyz.second, xyzi2);
-            m_blocks.emplace_back(m_models.back()->getModelBlock());
-            // std::cout << "Model BoundingBox: [" << xyzi1 << ", " << xyzi2 << "]\n";
+            std::cout << "Model BoundingBox: [" << xyzi1 << ", " << xyzi2 << "]\n";
         }
     }
 
@@ -69,9 +83,6 @@ void Scene::initialize(const std::string& json) {
         for (int i = 0; i < doc["lights"]["directionallight"].Size(); i++) {
             m_lights.emplace_back(std::make_shared<DirectionalLight>(getVec3(doc["lights"]["directionallight"][i]["color"]), doc["lights"]["directionallight"][i]["intensity"].GetFloat(), getVec3(doc["lights"]["directionallight"][i]["direction"])));
             m_lights.back()->setLightSpaceMatrix(m_xyz);  // set light space matrix
-            const glm::mat4 spaceMatrix = m_lights.back()->getLightBlock().lightSpaceMatrix;
-            // std::cout << "Directional light space matrix:\n"
-            //           << spaceMatrix << '\n';
         }
     }
 
@@ -118,7 +129,6 @@ void Scene::destroy() {
     m_camera.reset();
     m_lights.clear();
     m_models.clear();
-    m_blocks.clear();
 }
 
 }  // namespace tinyrenderer

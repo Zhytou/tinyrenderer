@@ -105,7 +105,7 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
     }
 
     int bytes = type == GL_FLOAT ? 4 : (type == GL_UNSIGNED_SHORT ? 2 : 1);
-    //! NOTE: Must use STBI_MALLOC, since desturctor use STBI_FREE.
+    //! WARNING: Must use STBI_MALLOC, since desturctor use STBI_FREE.
     // #define STBI_MALLOC malloc
     void* data = malloc(width * height * channels * bytes);
     if (data == nullptr) {

@@ -54,7 +54,7 @@ class Renderer {
     std::unordered_map<std::string, std::shared_ptr<FrameBuffer>> m_frames;
     std::unordered_map<std::string, std::shared_ptr<BindableBuffer>> m_buffers;
 
-    bool m_enableEnvMap = false, m_enableShadowMap = true;
+    bool m_enableIBL = false, m_enableShadow = false;
     uint32_t m_width = 800, m_height = 600;
     uint32_t m_shadowMapWidth = 4096, m_shadowMapHeight = 4096;
 };

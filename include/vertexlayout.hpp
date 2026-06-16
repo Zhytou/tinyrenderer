@@ -12,12 +12,12 @@
 namespace tinyrenderer {
 
 struct VertexAttribute {
-    GLuint location      = 0;         // attribute index (e.g. layout location = 0)
-    GLuint size          = 0;         // size of attribute(e.g.vec3 is 3)
-    GLenum type          = GL_FLOAT;  // data type (e.g. GL_FLOAT)
-    GLuint offset        = 0;         // offset of attribute in bytes (e.g. {vec3 pos; vec3 normal} 0 for position, 12 for normal)
-    GLboolean normalized = GL_FALSE;  // whether to normalize the attribute (e.g. {vec3 pos; vec3 normal} GL_FALSE for position, GL_TRUE for normal)
-    GLuint stride        = 0;         // stride of data in bytes (e.g. {vec3 pos; vec3 normal} 24 for each vertex)
+    GLuint location      = 0;         // attribute index (e.g., layout location = 0)
+    GLuint size          = 0;         // size of attribute(e.g., vec3 is 3)
+    GLenum type          = GL_FLOAT;  // data type (e.g., GL_FLOAT)
+    GLuint offset        = 0;         // offset of attribute in bytes (e.g., {vec3 pos; vec3 normal} 0 for position, 12 for normal)
+    GLboolean normalized = GL_FALSE;  // whether to normalize the attribute (e.g., {vec3 pos; vec3 normal} GL_FALSE for position, GL_TRUE for normal)
+    GLuint stride        = 0;         // stride of data in bytes (e.g., {vec3 pos; vec3 normal} 24 for each vertex)
     GLuint slot          = 0;         // vertex buffer object binding slot
 };
 

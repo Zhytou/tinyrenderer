@@ -35,7 +35,7 @@ class Mesh {
 
     const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_xyz; }
     const std::vector<SubMesh>& getSubMeshes() const { return m_submeshes; }
-    const std::shared_ptr<VertexLayout>& getVertexLayout() { return m_layout; }
+    const std::shared_ptr<VertexLayout>& getVertexLayout() const { return m_layout; }
     const std::unique_ptr<VertexBuffer>& getVertexBuffer() const { return m_bufferv; }
     const std::unique_ptr<IndexBuffer>& getIndexBuffer() const { return m_bufferi; }
 

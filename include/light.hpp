@@ -64,7 +64,7 @@ inline void DirectionalLight::setLightSpaceMatrix(const std::pair<glm::vec3, glm
 
     glm::vec3 direction   = getDirection();
     glm::vec3 sceneCenter = (xyz1 + xyz2) / 2.0f;
-    glm::vec3 lightPos    = sceneCenter - direction * glm::length(xyz2 - xyz1) * 0.5f;
+    glm::vec3 lightPos    = sceneCenter - direction * glm::length(xyz2 - xyz1) * 0.75f;
     glm::vec3 lightUp     = {0.0f, 1.0f, 0.0f};
     if (std::abs(glm::dot(direction, lightUp)) > 0.99f) {
         lightUp = {0.0f, 0.0f, 1.0f};

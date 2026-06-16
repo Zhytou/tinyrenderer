@@ -170,12 +170,12 @@ void Renderer::setup() {
     };
 
     // 3. Compile and link shaders
-    m_shaders["shadow_mapping"]    = std::make_shared<Shader>("../asset/shader/shadow_mapping.vert", "../asset/shader/shadow_mapping.frag");
-    m_shaders["deferred_geometry"] = std::make_shared<Shader>("../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
-    m_shaders["deferred_shading"]  = std::make_shared<Shader>("../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
-    m_shaders["forward_opaque"]    = std::make_shared<Shader>("../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
-    // m_shaders["forward_transparent"] = std::make_shared<Shader>("../asset/shader/forward_transparent.vert", "../asset/shader/forward_transparent.frag");
-    m_shaders["skybox"] = std::make_shared<Shader>("../asset/shader/skybox.vert", "../asset/shader/skybox.frag");
+    m_shaders["shadow_mapping"]      = std::make_shared<Shader>("../asset/shader/shadow_mapping.vert", "../asset/shader/shadow_mapping.frag");
+    m_shaders["deferred_geometry"]   = std::make_shared<Shader>("../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
+    m_shaders["deferred_shading"]    = std::make_shared<Shader>("../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
+    m_shaders["forward_opaque"]      = std::make_shared<Shader>("../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
+    m_shaders["forward_transparent"] = std::make_shared<Shader>("../asset/shader/forward_transparent.vert", "../asset/shader/forward_transparent.frag");
+    m_shaders["skybox"]              = std::make_shared<Shader>("../asset/shader/skybox.vert", "../asset/shader/skybox.frag");
 
     // 4. Create framebuffers
     m_frames["screen"]  = std::make_shared<FrameBuffer>(true, m_width, m_height);
@@ -299,12 +299,12 @@ void Renderer::prepare(const Scene& scene) {
     scene.getRenderQueue(transparentQueue, false);
 
     // 3. Precalculate environment map
-    // TODO: add environment map support
-    if (m_enableEnvMap) {
+    // TODO: add imaged based light support
+    if (m_enableIBL) {
     }
 
     // 4. Render shadow map and update the light shader storage buffer if needed
-    if (m_enableShadowMap) {
+    if (m_enableShadow) {
         std::vector<std::shared_ptr<Light>> lights = scene.getLights();
         std::vector<int> rects;
         std::vector<float> remaps;
@@ -340,52 +340,52 @@ void Renderer::render(const Scene& scene) {
     // std::cout << "OpaqueQueue size: " << opaqueQueue.size() << std::endl;
     // std::cout << "TransparentQueue size: " << transparentQueue.size() << std::endl;
 
-    {
-        m_states["deferred_geometry"].apply();
-        m_shaders["deferred_geometry"]->use();
-        m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
-        for (const auto& item : opaqueQueue) {
-            m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-            draw(item);
-        }
-        m_passes["deferred_geometry"].end();
-    }
-
-    {
-        //! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
-        m_frames["screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
-
-        m_states["deferred_shading"].apply();
-        m_passes["deferred_shading"].begin(m_frames["screen"]);
-        m_shaders["deferred_shading"]->use();
-        m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
-        draw(
-            instance.getLayout("quad"),
-            instance.getCounts("quad"),
-            {
-                m_textures["gbuffer.albedo"],
-                m_textures["gbuffer.normal"],
-                m_textures["gbuffer.mrao"],
-                m_textures["gbuffer.depth"],
-                m_textures["shadow.depth"],
-            },
-            3
-        );
-        m_passes["deferred_shading"].end();
-    }
-
     // {
-    //     m_states["forward_opaque"].apply();
-    //     m_passes["forward_opaque"].begin(m_frames["screen"]);
-    //     m_shaders["forward_opaque"]->use();
-    //     m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
+    //     m_states["deferred_geometry"].apply();
+    //     m_shaders["deferred_geometry"]->use();
+    //     m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
     //     for (const auto& item : opaqueQueue) {
     //         m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-    //         m_textures["shadow.depth"]->bind(7);
     //         draw(item);
     //     }
-    //     m_passes["forward_opaque"].end();
+    //     m_passes["deferred_geometry"].end();
     // }
+
+    // {
+    //     //! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
+    //     m_frames["screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
+
+    //     m_states["deferred_shading"].apply();
+    //     m_passes["deferred_shading"].begin(m_frames["screen"]);
+    //     m_shaders["deferred_shading"]->use();
+    //     m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
+    //     draw(
+    //         instance.getLayout("quad"),
+    //         instance.getCounts("quad"),
+    //         {
+    //             m_textures["gbuffer.albedo"],
+    //             m_textures["gbuffer.normal"],
+    //             m_textures["gbuffer.mrao"],
+    //             m_textures["gbuffer.depth"],
+    //             m_textures["shadow.depth"],
+    //         },
+    //         3
+    //     );
+    //     m_passes["deferred_shading"].end();
+    // }
+
+    {
+        m_states["forward_opaque"].apply();
+        m_passes["forward_opaque"].begin(m_frames["screen"]);
+        m_shaders["forward_opaque"]->use();
+        m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
+        for (const auto& item : opaqueQueue) {
+            m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
+            m_textures["shadow.depth"]->bind(7);
+            draw(item);
+        }
+        m_passes["forward_opaque"].end();
+    }
 
     if (scene.getSkybox()) {
         m_states["skybox"].apply();

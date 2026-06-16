@@ -31,7 +31,7 @@ std::ostream& operator<<(std::ostream& stream, const glm::mat4& mat) {
 void glDebug(int i) {
     GLenum err;
     while ((err = glGetError()) != GL_NO_ERROR) {
-        std::cout << "OpenGL error" << i << ":" << std::hex << err << std::dec << std::endl;
+        std::cout << "OpenGL error" << i << ": 0x" << std::hex << err << std::dec << std::endl;
     }
 }
 

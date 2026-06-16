@@ -1,6 +1,5 @@
-#include <glad/glad.h>
+#include "model.hpp"
 
-#include <GLFW/glfw3.h>
 #include <obj_loader/tiny_obj_loader.h>
 
 #include <iostream>
@@ -8,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "model.hpp"
+#include "utils.hpp"
 
 namespace tinyrenderer {
 
@@ -59,6 +58,7 @@ Model::~Model() {
 }
 
 void Model::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
+    queue.clear();
     for (auto& sm : m_mesh->getSubMeshes()) {
         if (m_materials[sm.matid]->isOpaque() != opaque) {
             continue;

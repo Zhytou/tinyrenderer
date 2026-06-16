@@ -1,14 +1,16 @@
 #include <iostream>
 
 #include "application.hpp"
+#include "utils.hpp"
 
-int main(int argc, char** argv)
-{
-    tinyrenderer::Application app(800, 600, "TinyRenderer");
+std::string scene = "../asset/scene/raw/sponza.json";
+
+int main(int argc, char** argv) {
     try {
-        app.load("../asset/scene/gunWithFloor.json", false);
-        app.run(tinyrenderer::AppMode::None);
-    } catch(const std::exception& e) {
+        tinyrenderer::Application app(1200, 900, "TinyRenderer");
+        app.load(scene);
+        app.run();
+    } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
