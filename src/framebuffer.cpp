@@ -87,12 +87,9 @@ void FrameBuffer::bind() const {
     glBindFramebuffer(GL_FRAMEBUFFER, m_id);
 }
 
-void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture) {
+void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture, GLint level) {
     if (m_id == 0) {
         throw std::runtime_error("FrameBuffer::attach: framebuffer not created");
-    }
-    if (m_attachments.count(slot)) {
-        throw std::runtime_error("FrameBuffer::attach: attachment already attached");
     }
     m_attachments[slot] = texture;
 
@@ -114,7 +111,23 @@ void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture) {
     //
     // Key insight:  glFramebufferTexture2D   = "bind then attach" (state-dependent)
     //               glNamedFramebufferTexture = "attach directly" (stateless, explicit)
-    glNamedFramebufferTexture(m_id, slot, texture->getId(), 0);
+    glNamedFramebufferTexture(m_id, slot, texture->getId(), level);
+}
+
+void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture, GLint level, GLint layer) {
+    if (m_id == 0) {
+        throw std::runtime_error("FrameBuffer::attach: framebuffer not created");
+    }
+    m_attachments[slot] = texture;
+
+    if (texture->getType() != GL_TEXTURE_CUBE_MAP &&
+        texture->getType() != GL_TEXTURE_2D_ARRAY &&
+        texture->getType() != GL_TEXTURE_3D) {
+        throw std::runtime_error("FrameBuffer::attach: attachment type not supported");
+    }
+
+    // Attach a 2D texture level to a framebuffer
+    glNamedFramebufferTextureLayer(m_id, slot, texture->getId(), level, layer);
 }
 
 void FrameBuffer::finalize() {
