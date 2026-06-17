@@ -56,6 +56,16 @@ std::shared_ptr<Image> Image::create(const std::filesystem::path& path, int desi
     void* data  = nullptr;
     GLenum type = GL_UNSIGNED_BYTE;
     int width = 0, height = 0, channels = 0;
+
+    if (!stbi_info(path.c_str(), &width, &height, &channels)) {
+        const char* reason = stbi_failure_reason();
+        // std::cerr << "[STBI ERROR] Invalid image or format not supported: " << path.string()
+        //           << "\n  Reason: " << (reason ? reason : "Unknown") << std::endl;
+        throw std::runtime_error("Image::create: stbi load failed " + path.string() + " (" + (reason ? reason : "unknown") + ")");
+        return nullptr;
+    }
+    std::cout << width << " " << height << " " << channels << " " << desiredChannels << std::endl;
+
     if (stbi_is_hdr(path.c_str())) {
         data = stbi_loadf(path.c_str(), &width, &height, &channels, desiredChannels);
         type = GL_FLOAT;
@@ -68,6 +78,10 @@ std::shared_ptr<Image> Image::create(const std::filesystem::path& path, int desi
     }
 
     if (data == nullptr) {
+        const char* reason = stbi_failure_reason();
+        // std::cerr << "[STBI ERROR] Failed to load image: " << path.string()
+        //           << "\n  Reason: " << (reason ? reason : "Unknown stbi error") << std::endl;
+        throw std::runtime_error("Image::create: stbi load failed " + path.string() + " (" + (reason ? reason : "unknown") + ")");
         return nullptr;
     }
 
