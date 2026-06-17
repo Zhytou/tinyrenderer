@@ -148,6 +148,21 @@ void StaticResource::initialize() {
     // 4. Attach vertex layouts to buffers for quad and skybox
     m_layouts["quad"]->attach(0, m_buffers["quad"], 0, sizeof(float) * 4);
     m_layouts["skybox"]->attach(0, m_buffers["skybox"], 0, sizeof(float) * 3);
+
+    // 5. Initialize view projection matrices
+    glm::mat4 projMatrix    = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+    glm::mat4 viewMatrixs[] = {
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
+    };
+    for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
+        int index        = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+        m_matrixs[index] = projMatrix * viewMatrixs[index];
+    }
 }
 
 void StaticResource::destroy() {
