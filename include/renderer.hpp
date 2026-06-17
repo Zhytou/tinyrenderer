@@ -37,9 +37,9 @@ class Renderer {
 
    private:
     // draw mesh
-    static void draw(const RenderItem& item);
+    void draw(const RenderItem& item, const std::vector<std::string>& textures);
     // draw quad or skybox
-    static void draw(const std::shared_ptr<VertexLayout>& layout, uint32_t vertexCount, const std::vector<std::shared_ptr<Texture>>& textures, uint32_t startTextureSlot = 0);
+    void draw(const std::shared_ptr<VertexLayout>& layout, const std::vector<std::string>& textures, GLsizei count);
 
     /// fixed-function states
     // input and output attachments
@@ -54,8 +54,13 @@ class Renderer {
     std::unordered_map<std::string, std::shared_ptr<FrameBuffer>> m_frames;
     std::unordered_map<std::string, std::shared_ptr<BindableBuffer>> m_buffers;
 
+    // name mappings
+    std::unordered_map<std::string, std::string> m_pass2FrameNames;
+    std::unordered_map<std::string, uint32_t> m_texture2SlotIndexs;
+
     bool m_enableIBL = false, m_enableShadow = false;
     uint32_t m_width = 800, m_height = 600;
+    uint32_t m_skyboxSize     = 512;
     uint32_t m_shadowMapWidth = 4096, m_shadowMapHeight = 4096;
 };
 
