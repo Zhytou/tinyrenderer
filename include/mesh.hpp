@@ -33,7 +33,7 @@ class Mesh {
     Mesh& operator=(const Mesh&) = delete;
     ~Mesh();
 
-    const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_xyz; }
+    const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_bounds; }
     const std::vector<SubMesh>& getSubMeshes() const { return m_submeshes; }
     const std::shared_ptr<VertexLayout>& getVertexLayout() const { return m_layout; }
     const std::unique_ptr<VertexBuffer>& getVertexBuffer() const { return m_bufferv; }
@@ -45,7 +45,7 @@ class Mesh {
     std::unique_ptr<IndexBuffer> m_bufferi  = nullptr;  // index buffer object
     std::vector<SubMesh> m_submeshes;
 
-    std::pair<glm::vec3, glm::vec3> m_xyz = {glm::vec3(FLT_MAX), glm::vec3(-FLT_MAX)};
+    std::pair<glm::vec3, glm::vec3> m_bounds = {glm::vec3(FLT_MAX), glm::vec3(-FLT_MAX)};
 };
 
 }  // namespace tinyrenderer

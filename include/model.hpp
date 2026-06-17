@@ -30,7 +30,7 @@ class Model {
     Model(const std::filesystem::path& baseDir, const std::filesystem::path& modelName, const glm::mat4& transform);
     ~Model();
 
-    const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_xyz; }
+    const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_bounds; }
     const ModelBlock& getModelBlock() const { return m_modelBlock; }
     void getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const;
     void setTransformMatrix(const glm::mat4& transform) {
@@ -42,14 +42,14 @@ class Model {
         auto [xyz1, xyz2] = m_mesh->getBoundingBox();
         xyz1              = glm::vec3(transform * glm::vec4(xyz1, 1.f));
         xyz2              = glm::vec3(transform * glm::vec4(xyz2, 1.f));
-        m_xyz             = {xyz1, xyz2};
+        m_bounds          = {xyz1, xyz2};
     }
 
    private:
     std::vector<std::shared_ptr<Material>> m_materials;
     std::unique_ptr<Mesh> m_mesh;
 
-    std::pair<glm::vec3, glm::vec3> m_xyz = {
+    std::pair<glm::vec3, glm::vec3> m_bounds = {
         glm::vec3(FLT_MAX),
         glm::vec3(-FLT_MAX),
     };
