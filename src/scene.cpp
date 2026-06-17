@@ -42,11 +42,11 @@ void Scene::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
 void Scene::initialize(const std::string& json) {
     rapidjson::Document doc;
     if (doc.Parse(json.c_str()).HasParseError()) {
-        throw std::runtime_error("Error parsing JSON");
+        throw std::runtime_error("Scene::initialize: Error parsing JSON");
     }
     auto getVec3 = [](rapidjson::Value& arr) -> glm::vec3 {
         if (!arr.IsArray() || arr.Size() != 3 || !arr[0].IsNumber() || !arr[1].IsNumber() || !arr[2].IsNumber()) {
-            throw std::runtime_error("Invalid array size or element type");
+            throw std::runtime_error("Scene::initialize: Invalid array size or element type");
         }
 
         return glm::vec3{arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat()};
@@ -72,9 +72,9 @@ void Scene::initialize(const std::string& json) {
             //           << transform << '\n';
 
             auto [xyzi1, xyzi2] = m_models.back()->getBoundingBox();
-            m_xyz.first         = glm::min(m_xyz.first, xyzi1);
-            m_xyz.second        = glm::max(m_xyz.second, xyzi2);
-            std::cout << "Model BoundingBox: [" << xyzi1 << ", " << xyzi2 << "]\n";
+            m_bounds.first      = glm::min(m_bounds.first, xyzi1);
+            m_bounds.second     = glm::max(m_bounds.second, xyzi2);
+            // std::cout << "Model BoundingBox: [" << xyzi1 << ", " << xyzi2 << "]\n";
         }
     }
 
@@ -82,7 +82,7 @@ void Scene::initialize(const std::string& json) {
     if (doc.HasMember("lights")) {
         for (int i = 0; i < doc["lights"]["directionallight"].Size(); i++) {
             m_lights.emplace_back(std::make_shared<DirectionalLight>(getVec3(doc["lights"]["directionallight"][i]["color"]), doc["lights"]["directionallight"][i]["intensity"].GetFloat(), getVec3(doc["lights"]["directionallight"][i]["direction"])));
-            m_lights.back()->setLightSpaceMatrix(m_xyz);  // set light space matrix
+            m_lights.back()->setLightSpaceMatrix(m_bounds);  // set light space matrix
         }
     }
 
@@ -98,7 +98,7 @@ void Scene::initialize(const std::string& json) {
         m_camera->setViewport(doc["camera"]["width"].GetInt(), doc["camera"]["height"].GetInt());
         m_camera->setSpeed(doc["camera"]["speed"].GetFloat());
     } else {
-        const glm::vec3 xyz1 = m_xyz.first, xyz2 = m_xyz.second;
+        const glm::vec3 xyz1 = m_bounds.first, xyz2 = m_bounds.second;
         glm::vec3 target    = 0.5f * (xyz2 + xyz1);
         glm::vec3 eye       = target + 1.0f * (xyz2 - xyz1);
         glm::vec3 direction = glm::normalize(xyz2 - xyz1);
@@ -113,19 +113,27 @@ void Scene::initialize(const std::string& json) {
     }
 
     if (doc.HasMember("skybox")) {
-        std::vector<fs::path> facePaths;
-        fs::path baseDir = doc["skybox"]["baseDir"].GetString();
-        for (auto face : {"right", "left", "top", "bottom", "front", "back"}) {
-            fs::path facePath = baseDir / doc["skybox"][face].GetString();
-            facePaths.push_back(facePath);
+        if (doc["skybox"].HasMember("cubemap")) {
+            std::vector<fs::path> facePaths;
+            fs::path baseDir = doc["skybox"]["cubemap"]["baseDir"].GetString();
+            for (auto face : {"right", "left", "top", "bottom", "front", "back"}) {
+                fs::path facePath = baseDir / doc["skybox"]["cubemap"][face].GetString();
+                facePaths.push_back(facePath);
+            }
+            //! WARNING: The order of facePaths must be right, left, top, bottom, front, back
+            m_skyboxCubemap = Texture::create(facePaths, GL_TEXTURE_CUBE_MAP, GL_RGB32F);
         }
-        //! WARNING: The order of facePaths must be right, left, top, bottom, front, back
-        m_skybox = Texture::create(facePaths, GL_TEXTURE_CUBE_MAP, GL_RGB8);
+        if (doc["skybox"].HasMember("equirect")) {
+            fs::path baseDir      = doc["skybox"]["equirect"]["baseDir"].GetString();
+            fs::path equirectName = doc["skybox"]["equirect"]["name"].GetString();
+            m_skyboxEquirect      = Texture::create(baseDir / equirectName, GL_RGB32F);
+        }
     }
 }
 
 void Scene::destroy() {
-    m_skybox.reset();
+    m_skyboxCubemap.reset();
+    m_skyboxEquirect.reset();
     m_camera.reset();
     m_lights.clear();
     m_models.clear();

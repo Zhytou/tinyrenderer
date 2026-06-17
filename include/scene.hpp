@@ -20,11 +20,12 @@ class Scene {
     ~Scene() { destroy(); }
     Scene(const std::string& json) { initialize(json); }
 
-    const std::shared_ptr<Texture>& getSkybox() const { return m_skybox; }
+    const std::shared_ptr<Texture>& getSkyboxCubeMap() const { return m_skyboxCubemap; }
+    const std::shared_ptr<Texture>& getSkyboxEquirect() const { return m_skyboxEquirect; }
     const std::shared_ptr<Camera>& getCamera() const { return m_camera; }
     const std::vector<std::shared_ptr<Light>>& getLights() const { return m_lights; }
     const std::vector<std::shared_ptr<Model>>& getModels() const { return m_models; }
-    const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_xyz; }
+    const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_bounds; }
     void getModelBlocks(std::vector<ModelBlock>& blocks) const;
     void getLightBlocks(std::vector<LightBlock>& blocks) const;
     void getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const;
@@ -33,11 +34,12 @@ class Scene {
     void destroy();
 
    private:
-    std::shared_ptr<Texture> m_skybox = nullptr;
-    std::shared_ptr<Camera> m_camera  = nullptr;
+    std::shared_ptr<Texture> m_skyboxCubemap  = nullptr;
+    std::shared_ptr<Texture> m_skyboxEquirect = nullptr;
+    std::shared_ptr<Camera> m_camera          = nullptr;
     std::vector<std::shared_ptr<Light>> m_lights;
     std::vector<std::shared_ptr<Model>> m_models;
-    std::pair<glm::vec3, glm::vec3> m_xyz = {glm::vec3(0.0f), glm::vec3(0.0f)};
+    std::pair<glm::vec3, glm::vec3> m_bounds = {glm::vec3(0.0f), glm::vec3(0.0f)};
 };
 
 }  // namespace tinyrenderer
