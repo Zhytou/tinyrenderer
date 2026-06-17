@@ -6,6 +6,8 @@
 #include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
 
 #include "texture.hpp"
 
@@ -22,17 +24,17 @@ class Material {
 
     bool isOpaque() const { return m_opacity == 1.0f; }
     float getOpacity() const { return m_opacity; }
-    const std::shared_ptr<Texture>& getAlbedoMap() const { return m_albedo; }
-    const std::shared_ptr<Texture>& getNormalMap() const { return m_normal; }
-    const std::shared_ptr<Texture>& getMRAOMap() const { return m_mrao; }
+    std::shared_ptr<Texture> getTexture(const std::string& name) const {
+        if (m_textures.count(name)) {
+            return m_textures.at(name);
+        }
+        return nullptr;
+    }
 
    private:
     std::string m_name;
     float m_opacity = 1.0f;
-
-    std::shared_ptr<Texture> m_albedo = nullptr;
-    std::shared_ptr<Texture> m_normal = nullptr;
-    std::shared_ptr<Texture> m_mrao   = nullptr;
+    std::unordered_map<std::string, std::shared_ptr<Texture>> m_textures;
 };
 
 }  // namespace tinyrenderer
