@@ -70,8 +70,8 @@ void StaticResource::initialize() {
         },
     });
 
-    m_layouts["skybox"] = std::make_shared<VertexLayout>();
-    m_layouts["skybox"]->initialize({
+    m_layouts["cube"] = std::make_shared<VertexLayout>();
+    m_layouts["cube"]->initialize({
         VertexAttribute{
             .location   = 0,
             .size       = 3,
@@ -83,7 +83,7 @@ void StaticResource::initialize() {
         },
     });
 
-    // 2. Create static vertex buffers for quad and skybox
+    // 2. Create static vertex buffers for quad and cube
     float quad[] = {
         // Position(2f)   // TexCoords(2f)
         -1.0f, 1.0f, 0.0f, 1.0f,
@@ -95,7 +95,7 @@ void StaticResource::initialize() {
     };
     m_buffers["quad"] = std::make_unique<VertexBuffer>(sizeof(quad), quad);
 
-    float skybox[] = {
+    float cube[] = {
         // +X
         1.0f, -1.0f, 1.0f,
         1.0f, -1.0f, -1.0f,
@@ -139,15 +139,15 @@ void StaticResource::initialize() {
         1.0f, -1.0f, -1.0f,
         1.0f, 1.0f, -1.0f
     };
-    m_buffers["skybox"] = std::make_unique<VertexBuffer>(sizeof(skybox), skybox);
+    m_buffers["cube"] = std::make_unique<VertexBuffer>(sizeof(cube), cube);
 
-    // 3. Calculate vertex counts for quad and skybox
-    m_counts["quad"]   = sizeof(quad) / (sizeof(float) * 4);
-    m_counts["skybox"] = sizeof(skybox) / (sizeof(float) * 3);
+    // 3. Calculate vertex counts for quad and cube
+    m_counts["quad"] = sizeof(quad) / (sizeof(float) * 4);
+    m_counts["cube"] = sizeof(cube) / (sizeof(float) * 3);
 
-    // 4. Attach vertex layouts to buffers for quad and skybox
+    // 4. Attach vertex layouts to buffers for quad and cube
     m_layouts["quad"]->attach(0, m_buffers["quad"], 0, sizeof(float) * 4);
-    m_layouts["skybox"]->attach(0, m_buffers["skybox"], 0, sizeof(float) * 3);
+    m_layouts["cube"]->attach(0, m_buffers["cube"], 0, sizeof(float) * 3);
 
     // 5. Initialize view projection matrices
     glm::mat4 projMatrix    = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
