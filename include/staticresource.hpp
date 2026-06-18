@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <format>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
@@ -48,7 +49,7 @@ class StaticResource {
     }
     glm::mat4 getCaptureMatrix(GLint index) const {
         if (index < 0 || index >= 6) {
-            throw std::runtime_error("StaticResource::getCaptureMatrix: CaptureMatrix " + std::to_string(index) + " not found in StaticResource");
+            throw std::runtime_error(std::format("StaticResource::getCaptureMatrix: CaptureMatrix {} not found in StaticResource", index));
         }
         return m_matrixs[index];
     }

@@ -8,6 +8,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <typeinfo>
 #include <unordered_map>
 #include <vector>
 
@@ -70,7 +72,7 @@ void Shader::setUniformValue(const std::string& name, const T& value) {
     } else if constexpr (std::is_same_v<T, glm::mat4>) {
         glProgramUniformMatrix4fv(m_id, loc, 1, GL_FALSE, glm::value_ptr(value));
     } else {
-        throw std::runtime_error("Shader uniform valuable set failed: " + name);
+        throw std::runtime_error("Shader::setUniformValue: uniform valuable set failed for " + name + " of type " + typeid(T).name() + ".");
     }
 }
 
