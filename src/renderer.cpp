@@ -51,6 +51,7 @@ void Renderer::setup() {
         {"skybox.equirect", 21},
         {"ibl.diffuse", 22},
         {"ibl.specular", 23},
+        {"ibl.brdf_lut", 24},
     };
 
     // 1. Initialize renderpasses, namely define the input and output attachments of each pipeline
@@ -83,13 +84,14 @@ void Renderer::setup() {
     m_passes["ibl_prefiltered"] = RenderPass{
         .attachments = {
             AttachmentDesc{
-                .name   = "specular",
-                .target = GL_COLOR,
-                .type   = GL_TEXTURE_CUBE_MAP,
-                .format = GL_RGBA32F,
-                .slot   = GL_COLOR_ATTACHMENT0,
-                .loadOp = LoadOp::LOAD_OP_CLEAR,
-                .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+                .name     = "specular",
+                .target   = GL_COLOR,
+                .type     = GL_TEXTURE_CUBE_MAP,
+                .format   = GL_RGBA32F,
+                .slot     = GL_COLOR_ATTACHMENT0,
+                .mipLevel = 7,
+                .loadOp   = LoadOp::LOAD_OP_CLEAR,
+                .value    = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
             },
         },
     };
@@ -295,7 +297,7 @@ void Renderer::setup() {
         for (auto attachment : pass.attachments) {
             auto attchName = frameName + "." + attachment.name;
             std::cout << attchName << ", ";
-            m_textures[attchName] = std::make_shared<Texture>(m_frames[frameName]->getWidth(), m_frames[frameName]->getHeight(), attachment.type, attachment.format);
+            m_textures[attchName] = std::make_shared<Texture>(m_frames[frameName]->getWidth(), m_frames[frameName]->getHeight(), attachment.type, attachment.format, attachment.mipLevel);
             m_frames[frameName]->attach(attachment.slot, m_textures[attchName]);
         }
         std::cout << "]\n";
@@ -352,7 +354,9 @@ void Renderer::shutdown() {
 }
 
 void Renderer::prepare(const Scene& scene) {
-    StaticResource& instance = StaticResource::getInstance();
+    StaticResource& instance             = StaticResource::getInstance();
+    std::shared_ptr<VertexLayout> layout = instance.getLayout("cube");
+    GLsizei count                        = instance.getCounts("cube");
 
     // 1. Convert equirect skybox into cube map skybox if needed
     const auto& cubemap           = scene.getSkyboxCubeMap();
@@ -361,11 +365,9 @@ void Renderer::prepare(const Scene& scene) {
         m_states["equirect_to_cubemap"].apply();
         m_shaders["equirect_to_cubemap"]->use();
         for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
-            GLint index   = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-            GLsizei count = instance.getCounts("cube");
-            auto& layout  = instance.getLayout("cube");
-            m_frames["skybox"]->attach(GL_COLOR_ATTACHMENT0, m_textures["skybox.cubemap"], 0, index);
+            GLint index = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
             m_shaders["equirect_to_cubemap"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
+            m_frames["skybox"]->attach(GL_COLOR_ATTACHMENT0, m_textures["skybox.cubemap"], 0, index);
             m_passes["equirect_to_cubemap"].begin(m_frames["skybox"]);
             draw(layout, {"skybox.equirect"}, count);
             m_passes["equirect_to_cubemap"].end();
@@ -381,11 +383,9 @@ void Renderer::prepare(const Scene& scene) {
             m_states["ibl_irradiance"].apply();
             m_shaders["ibl_irradiance"]->use();
             for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
-                GLint index   = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-                GLsizei count = instance.getCounts("cube");
-                auto& layout  = instance.getLayout("cube");
-                m_frames["ibl"]->attach(GL_COLOR_ATTACHMENT0, m_textures["ibl.diffuse"], 0, index);
+                GLint index = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
                 m_shaders["ibl_irradiance"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
+                m_frames["ibl"]->attach(GL_COLOR_ATTACHMENT0, m_textures["ibl.diffuse"], 0, index);
                 m_passes["ibl_irradiance"].begin(m_frames["ibl"]);
                 draw(layout, {"skybox.cubemap"}, count);
                 m_passes["ibl_irradiance"].end();
@@ -394,10 +394,35 @@ void Renderer::prepare(const Scene& scene) {
 
         // 2.2 Precalculate prefiltered environment map
         {
+            m_states["ibl_prefiltered"].apply();
+            m_shaders["ibl_prefiltered"]->use();
+            for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
+                GLint index      = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+                GLsizei mipLevel = m_textures["ibl.specular"]->getMipLevel();
+                m_shaders["ibl_prefiltered"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
+
+                for (GLsizei level = 0; level < mipLevel; level++) {
+                    float roughness = static_cast<float>(level) / mipLevel;
+
+                    m_shaders["ibl_prefiltered"]->setUniformValue("uRoughness", roughness);
+                    m_frames["ibl"]->attach(GL_COLOR_ATTACHMENT0, m_textures["ibl.specular"], level, index);
+
+                    m_passes["ibl_prefiltered"].begin(m_frames["ibl"]);
+                    draw(layout, {"skybox.cubemap"}, count);
+                    m_passes["ibl_prefiltered"].end();
+                }
+            }
+        }
+
+        // 2.3 Precalculate BRDF LUT
+        {
         }
     } else {
         glm::vec4 color = {0.0f, 0.0f, 0.0f, 1.0f};
         m_textures["ibl.diffuse"]->clear(&color, GL_RGBA, GL_FLOAT, 0);
+        for (GLint level = 0; level < m_textures["ibl.diffuse"]->getMipLevel(); level++) {
+            m_textures["ibl.diffuse"]->clear(&color, GL_RGBA, GL_FLOAT, level);
+        }
     }
 }
 
@@ -497,7 +522,7 @@ void Renderer::render(const Scene& scene) {
     //     m_shaders["deferred_shading"]->use();
     //     m_passes["deferred_shading"].begin(m_frames["screen"]);
     //     m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
-    //     draw(layout, {"gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow.basic", "ibl.diffuse"}, count);
+    //     draw(layout, {"gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow.basic", "ibl.diffuse", "ibl.specular"}, count);
     //     m_passes["deferred_shading"].end();
     // }
 
@@ -508,7 +533,7 @@ void Renderer::render(const Scene& scene) {
         m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
         for (const auto& item : opaqueQueue) {
             m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-            draw(item, {"albedo", "normal", "mrao", "shadow.basic", "ibl.diffuse"});
+            draw(item, {"albedo", "normal", "mrao", "shadow.basic", "ibl.diffuse", "ibl.specular"});
         }
         m_passes["forward_opaque"].end();
     }
