@@ -1,10 +1,6 @@
 #ifndef COMMON_SHADOW_GLSL
 #define COMMON_SHADOW_GLSL
 
-#ifndef PI
-#define PI 3.1415926535897932384626
-#endif
-
 #ifndef BIAS_EPSILON
 #define BIAS_EPSILON     0.0005    // shadow bias
 #endif
@@ -17,7 +13,8 @@ vec2 disk[NUM_SAMPLES];
 
 // Generate a random vec2 sequence with poisson disk sampling
 void Poisson_sampling(const in vec2 seed) {
-
+    const float PI = 3.1415926535897932384626;
+    
     float angleStep = 2.0 * PI * float(NUM_RINGS) / float(NUM_SAMPLES);
     float invSample = 1.0 / float(NUM_SAMPLES);
 
