@@ -114,19 +114,35 @@ void Scene::initialize(const std::string& json) {
 
     if (doc.HasMember("skybox")) {
         if (doc["skybox"].HasMember("cubemap")) {
-            std::vector<fs::path> facePaths;
+            std::vector<std::shared_ptr<Image>> images;
             fs::path baseDir = doc["skybox"]["cubemap"]["baseDir"].GetString();
+            uint32_t width = 0, height = 0;
+            //! WARNING: Face order must be: right, left, top, bottom, front, back.
+            //! This sequence perfectly aligns with OpenGL DSA texture array layer mapping (0 to 5).
             for (auto face : {"right", "left", "top", "bottom", "front", "back"}) {
-                fs::path facePath = baseDir / doc["skybox"]["cubemap"][face].GetString();
-                facePaths.push_back(facePath);
+                std::string imageName = doc["skybox"]["cubemap"][face].GetString();
+                auto image            = Image::create(baseDir / imageName);
+                if (width == 0 && height == 0) {
+                    width  = image->getWidth();
+                    height = image->getHeight();
+                } else if (width != image->getWidth() || height != image->getHeight()) {
+                    throw std::runtime_error("Scene::initialize: Cubemap face " + std::string(face) + " has different size from other faces.");
+                }
+                images.push_back(image);
             }
-            //! WARNING: The order of facePaths must be right, left, top, bottom, front, back
-            m_skyboxCubemap = Texture::create(facePaths, GL_TEXTURE_CUBE_MAP, GL_RGB32F);
+
+            m_skyboxCubemap = std::make_shared<Texture>(width, height, GL_TEXTURE_CUBE_MAP, GL_RGBA32F, 1);
+            for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
+                GLint index = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+                m_skyboxCubemap->upload(images[index], index, 0);
+            }
         }
         if (doc["skybox"].HasMember("equirect")) {
             fs::path baseDir      = doc["skybox"]["equirect"]["baseDir"].GetString();
             fs::path equirectName = doc["skybox"]["equirect"]["name"].GetString();
-            m_skyboxEquirect      = Texture::create(baseDir / equirectName, GL_RGB32F);
+            auto image            = Image::create(baseDir / equirectName);
+            m_skyboxEquirect      = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA32F, 1);
+            m_skyboxEquirect->upload(image, 0, 0);
         }
     }
 }
