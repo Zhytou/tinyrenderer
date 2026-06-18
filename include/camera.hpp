@@ -12,10 +12,40 @@ struct alignas(16) CameraBlock {
     glm::vec3 cameraPosition;
 };
 
+enum class CameraMovement {
+    FORWARD,   // POSITIVE_Z
+    BACKWARD,  // NEGATIVE_Z
+    LEFT,      // NEGATIVE_X
+    RIGHT,     // POSITIVE_X
+    UPWARD,    // POSITIVE_Y
+    DOWNWARD,  // NEGATIVE_Y
+};
+
 class Camera {
    public:
     Camera()          = default;
     virtual ~Camera() = default;
+
+    // Rotate camera to new direction
+    // @param yaw Yaw angle in degrees(Left to Right, -180 to 180, oriented around Y axis)
+    // @param pitch Pitch angle in degrees(Up to Down, -90 to 90, oriented around X axis)
+    // @param sensitivity Sensitivity of the camera rotation
+    void rotate(float yaw, float pitch, float sensitivity = 0.1f);
+    // Move camera to new position
+    // @param direction CameraMovement direction
+    // @param deltaTime Time delta in seconds
+    void move(CameraMovement direction, float deltaTime);
+    // Zoom camera to new position
+    // @param offset Zoom offset
+    // @param sensitivity Sensitivity of the camera zoom
+    void zoom(float offset, float sensitivity = 0.1f);
+    // Reset camera to original position
+    void reset() {
+        m_eye    = m_eyeOriginal;
+        m_target = m_targetOriginal;
+        update();
+    }
+    virtual void update() = 0;
 
     float getSpeed() const { return m_speed; }
     int getWidth() const { return m_width; }
@@ -23,7 +53,6 @@ class Camera {
     float getDistance(const glm::vec3& position) const { return glm::distance(m_eye, position); }
     const glm::vec3& getEye() const { return m_eye; }
     const glm::vec3& getTarget() const { return m_target; }
-
     const glm::mat4& getViewMatrix() const { return m_cameraBlock.viewMatrix; }
     const glm::mat4& getProjMatrix() const { return m_cameraBlock.projMatrix; }
     const CameraBlock& getCameraBlock() const { return m_cameraBlock; }
@@ -32,10 +61,16 @@ class Camera {
         m_speed = speed;
     }
     void setEye(glm::vec3 eye) {
+        if (std::isnan(m_eyeOriginal.x) || std::isnan(m_eyeOriginal.y) || std::isnan(m_eyeOriginal.z)) {
+            m_eyeOriginal = eye;
+        }
         m_eye = eye;
         update();
     }
     void setTarget(glm::vec3 target) {
+        if (std::isnan(m_targetOriginal.x) || std::isnan(m_targetOriginal.y) || std::isnan(m_targetOriginal.z)) {
+            m_targetOriginal = target;
+        }
         m_target = target;
         update();
     }
@@ -63,12 +98,13 @@ class Camera {
     }
 
    protected:
-    virtual void update() = 0;
-
     CameraBlock m_cameraBlock;
     glm::vec3 m_eye;
     glm::vec3 m_target;
     glm::vec3 m_up;
+
+    glm::vec3 m_eyeOriginal    = glm::vec3(std::nanf(""));
+    glm::vec3 m_targetOriginal = glm::vec3(std::nanf(""));
 
     float m_fov;
     float m_near;
