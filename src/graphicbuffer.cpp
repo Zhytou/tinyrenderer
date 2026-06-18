@@ -63,7 +63,7 @@ GraphicBuffer::~GraphicBuffer() {
 
 void GraphicBuffer::upload(GLintptr offset, GLsizeiptr length, const void* data) {
     if (offset < 0 || offset + length > m_size) {
-        throw std::runtime_error("GraphicBuffer::upload:offset or length out of range!");
+        throw std::runtime_error("GraphicBuffer::upload: offset or length out of range!");
     }
 
     // Upload data to the graphic buffer object at the specified offset and length

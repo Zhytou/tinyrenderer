@@ -64,7 +64,6 @@ std::shared_ptr<Image> Image::create(const std::filesystem::path& path, int desi
         throw std::runtime_error("Image::create: stbi load failed " + path.string() + " (" + (reason ? reason : "unknown") + ")");
         return nullptr;
     }
-    std::cout << width << " " << height << " " << channels << " " << desiredChannels << std::endl;
 
     if (stbi_is_hdr(path.c_str())) {
         data = stbi_loadf(path.c_str(), &width, &height, &channels, desiredChannels);

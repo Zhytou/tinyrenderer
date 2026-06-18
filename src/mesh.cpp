@@ -28,8 +28,8 @@ Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape
                 if (t >= 0) {
                     uv[j] = glm::vec2(attributes.texcoords[2 * t], attributes.texcoords[2 * t + 1]);
                 }
-                m_xyz.first  = glm::min(m_xyz.first, vertex[j]);
-                m_xyz.second = glm::max(m_xyz.second, vertex[j]);
+                m_bounds.first  = glm::min(m_bounds.first, vertex[j]);
+                m_bounds.second = glm::max(m_bounds.second, vertex[j]);
             }
 
             {

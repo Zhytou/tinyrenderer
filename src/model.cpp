@@ -37,7 +37,7 @@ Model::Model(const fs::path& baseDir, const fs::path& modelName, const glm::mat4
     std::vector<tinyobj::material_t> materials;
     std::string err;
     if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &err, modelPath.c_str(), baseDir.c_str(), true)) {
-        throw std::runtime_error(err);
+        throw std::runtime_error("Model::Model: " + err);
     }
 
     // 2. Create mesh from tinyobj shapes

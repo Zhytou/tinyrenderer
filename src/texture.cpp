@@ -132,10 +132,7 @@ std::shared_ptr<Texture> Texture::create(const std::vector<fs::path>& paths, GLe
     std::vector<std::shared_ptr<Image>> images;
     for (auto path : paths) {
         auto image = Image::create(path, desiredChannels);
-        if (image == nullptr) {
-            return nullptr;
-            // throw std::runtime_error("Failed to load image: " + path.string());
-        } else {
+        if (image) {
             images.push_back(image);
         }
         std::cout << path << ' ';

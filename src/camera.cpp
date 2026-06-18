@@ -24,7 +24,7 @@ void Camera::rotate(float yaw, float pitch, float sensitivity) {
 }
 
 void Camera::move(CameraMovement direction, float deltaTime) {
-    float velocity = m_speed * deltaTime;
+    float velocity = getSpeed() * deltaTime;
 
     glm::vec3 front = glm::normalize(m_target - m_eye);
     glm::vec3 right = glm::normalize(glm::cross(front, m_up));

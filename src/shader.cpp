@@ -51,10 +51,10 @@ std::string Shader::precompile(const fs::path& shaderPath) {
     fs::path baseDir = shaderPath.parent_path();
 
     if (!fs::exists(shaderPath)) {
-        throw std::runtime_error("Shader source file not found: " + shaderPath.string());
+        throw std::runtime_error("Shader::compile: Shader source file not found: " + shaderPath.string());
     }
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open: " + shaderPath.string());
+        throw std::runtime_error("Shader::compile: Failed to open: " + shaderPath.string());
     }
 
     while (std::getline(file, line)) {
@@ -87,7 +87,7 @@ GLuint Shader::compile(const std::string& source, GLenum type) {
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogSize);
         std::vector<GLchar> infoLog(infoLogSize);
         glGetShaderInfoLog(shader, infoLogSize, nullptr, infoLog.data());
-        throw std::runtime_error("Shader compilation failed\n" + std::string(infoLog.data()));
+        throw std::runtime_error("Shader::compile: Shader compilation failed\n" + std::string(infoLog.data()));
     }
     return shader;
 }
@@ -115,7 +115,7 @@ GLuint Shader::link(const std::initializer_list<GLuint>& shaders) {
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogSize);
         std::vector<GLchar> infoLog(infoLogSize);
         glGetProgramInfoLog(program, infoLogSize, nullptr, infoLog.data());
-        throw std::runtime_error("Program link failed\n" + std::string(infoLog.data()));
+        throw std::runtime_error("Shader::link: Program link failed\n" + std::string(infoLog.data()));
     }
     return program;
 }
