@@ -22,6 +22,8 @@ void Renderer::setup() {
     // 0. Define name mappings
     m_pass2FrameNames = {
         {"equirect_to_cubemap", "skybox"},
+        {"ibl_irradiance", "ibl"},
+        {"ibl_prefiltered", "ibl"},
         {"shadow_mapping", "shadow"},
         {"deferred_geometry", "gbuffer"},
         {"deferred_shading", "screen"},
@@ -29,16 +31,16 @@ void Renderer::setup() {
         {"skybox", "screen"},
     };
     m_texture2SlotIndexs = {
-        // 0~8: material textures
+        // 0~7: material textures
         {"albedo", 0},
         {"normal", 1},
         {"mrao", 2},
 
-        // 9~15: gbuffer textures
-        {"gbuffer.albedo", 9},
-        {"gbuffer.normal", 10},
-        {"gbuffer.mrao", 11},
-        {"gbuffer.depth", 12},
+        // 8~15: gbuffer textures
+        {"gbuffer.albedo", 8},
+        {"gbuffer.normal", 9},
+        {"gbuffer.mrao", 10},
+        {"gbuffer.depth", 11},
 
         // 16~19: shadow textures
         {"shadow.basic", 16},
@@ -58,7 +60,33 @@ void Renderer::setup() {
                 .name   = "cubemap",
                 .target = GL_COLOR,
                 .type   = GL_TEXTURE_CUBE_MAP,
-                .format = GL_RGB32F,
+                .format = GL_RGBA32F,
+                .slot   = GL_COLOR_ATTACHMENT0,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+            },
+        },
+    };
+    m_passes["ibl_irradiance"] = RenderPass{
+        .attachments = {
+            AttachmentDesc{
+                .name   = "diffuse",
+                .target = GL_COLOR,
+                .type   = GL_TEXTURE_CUBE_MAP,
+                .format = GL_RGBA32F,
+                .slot   = GL_COLOR_ATTACHMENT0,
+                .loadOp = LoadOp::LOAD_OP_CLEAR,
+                .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+            },
+        },
+    };
+    m_passes["ibl_prefiltered"] = RenderPass{
+        .attachments = {
+            AttachmentDesc{
+                .name   = "specular",
+                .target = GL_COLOR,
+                .type   = GL_TEXTURE_CUBE_MAP,
+                .format = GL_RGBA32F,
                 .slot   = GL_COLOR_ATTACHMENT0,
                 .loadOp = LoadOp::LOAD_OP_CLEAR,
                 .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
@@ -178,7 +206,22 @@ void Renderer::setup() {
         .viewH            = (GLsizei)m_skyboxSize,
         .depthTestEnable  = GL_FALSE,
         .depthWriteEnable = GL_FALSE,
-        .depthFunc        = GL_LEQUAL,
+    };
+    m_states["ibl_irradiance"] = PipelineState{
+        .viewX            = 0,
+        .viewY            = 0,
+        .viewW            = (GLsizei)m_skyboxSize,
+        .viewH            = (GLsizei)m_skyboxSize,
+        .depthTestEnable  = GL_FALSE,
+        .depthWriteEnable = GL_FALSE,
+    };
+    m_states["ibl_prefiltered"] = PipelineState{
+        .viewX            = 0,
+        .viewY            = 0,
+        .viewW            = (GLsizei)m_skyboxSize,
+        .viewH            = (GLsizei)m_skyboxSize,
+        .depthTestEnable  = GL_FALSE,
+        .depthWriteEnable = GL_FALSE,
     };
     m_states["shadow_mapping"] = PipelineState{
         .viewPortDynamic  = GL_TRUE,
@@ -202,7 +245,6 @@ void Renderer::setup() {
         .viewH            = (GLsizei)m_height,
         .depthTestEnable  = GL_FALSE,
         .depthWriteEnable = GL_FALSE,
-        .depthFunc        = GL_LESS,
     };
     m_states["forward_opaque"] = PipelineState{
         .viewX            = 0,
@@ -225,6 +267,8 @@ void Renderer::setup() {
 
     // 3. Compile and link shaders
     m_shaders["equirect_to_cubemap"] = std::make_shared<Shader>("../asset/shader/equirect_to_cubemap.vert", "../asset/shader/equirect_to_cubemap.frag");
+    m_shaders["ibl_irradiance"]      = std::make_shared<Shader>("../asset/shader/ibl_irradiance.vert", "../asset/shader/ibl_irradiance.frag");
+    m_shaders["ibl_prefiltered"]     = std::make_shared<Shader>("../asset/shader/ibl_prefiltered.vert", "../asset/shader/ibl_prefiltered.frag");
     m_shaders["shadow_mapping"]      = std::make_shared<Shader>("../asset/shader/shadow_mapping.vert", "../asset/shader/shadow_mapping.frag");
     m_shaders["deferred_geometry"]   = std::make_shared<Shader>("../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
     m_shaders["deferred_shading"]    = std::make_shared<Shader>("../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
@@ -233,8 +277,9 @@ void Renderer::setup() {
 
     // 4. Create framebuffers
     m_frames["screen"]  = std::make_shared<FrameBuffer>(true, m_width, m_height);
-    m_frames["shadow"]  = std::make_shared<FrameBuffer>(false, m_shadowMapWidth, m_shadowMapHeight);
     m_frames["skybox"]  = std::make_shared<FrameBuffer>(false, m_skyboxSize, m_skyboxSize);
+    m_frames["ibl"]     = std::make_shared<FrameBuffer>(false, m_skyboxSize, m_skyboxSize);
+    m_frames["shadow"]  = std::make_shared<FrameBuffer>(false, m_shadowMapWidth, m_shadowMapHeight);
     m_frames["gbuffer"] = std::make_shared<FrameBuffer>(false, m_width, m_height);
 
     // 5. Create textures and activate them as drawable attachments for framebuffers
@@ -307,6 +352,56 @@ void Renderer::shutdown() {
 }
 
 void Renderer::prepare(const Scene& scene) {
+    StaticResource& instance = StaticResource::getInstance();
+
+    // 1. Convert equirect skybox into cube map skybox if needed
+    const auto& cubemap           = scene.getSkyboxCubeMap();
+    m_textures["skybox.equirect"] = scene.getSkyboxEquirect();
+    if (cubemap == nullptr && m_textures["skybox.equirect"] != nullptr) {
+        m_states["equirect_to_cubemap"].apply();
+        m_shaders["equirect_to_cubemap"]->use();
+        for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
+            GLint index   = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+            GLsizei count = instance.getCounts("cube");
+            auto& layout  = instance.getLayout("cube");
+            m_frames["skybox"]->attach(GL_COLOR_ATTACHMENT0, m_textures["skybox.cubemap"], 0, index);
+            m_shaders["equirect_to_cubemap"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
+            m_passes["equirect_to_cubemap"].begin(m_frames["skybox"]);
+            draw(layout, {"skybox.equirect"}, count);
+            m_passes["equirect_to_cubemap"].end();
+        }
+    } else {
+        m_textures["skybox.cubemap"] = scene.getSkyboxCubeMap();
+    }
+
+    // 2. Precalculate environment map
+    if (m_enableIBL) {
+        // 2.1 Precalculate irradiance map
+        {
+            m_states["ibl_irradiance"].apply();
+            m_shaders["ibl_irradiance"]->use();
+            for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
+                GLint index   = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+                GLsizei count = instance.getCounts("cube");
+                auto& layout  = instance.getLayout("cube");
+                m_frames["ibl"]->attach(GL_COLOR_ATTACHMENT0, m_textures["ibl.diffuse"], 0, index);
+                m_shaders["ibl_irradiance"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
+                m_passes["ibl_irradiance"].begin(m_frames["ibl"]);
+                draw(layout, {"skybox.cubemap"}, count);
+                m_passes["ibl_irradiance"].end();
+            }
+        }
+
+        // 2.2 Precalculate prefiltered environment map
+        {
+        }
+    } else {
+        glm::vec4 color = {0.0f, 0.0f, 0.0f, 1.0f};
+        m_textures["ibl.diffuse"]->clear(&color, GL_RGBA, GL_FLOAT, 0);
+    }
+}
+
+void Renderer::update(const Scene& scene) {
     // 1. Update uniform/shaderstorage buffers with scene data, and bind them to shader binding points
     {
         // 1.1 Camera uniform block
@@ -370,37 +465,6 @@ void Renderer::prepare(const Scene& scene) {
         float depth = 1.0f;
         m_textures["shadow.basic"]->clear(&depth, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
     }
-
-    // 4. Convert equirect skybox into cube map skybox if needed
-    const auto& cubemap           = scene.getSkyboxCubeMap();
-    m_textures["skybox.equirect"] = scene.getSkyboxEquirect();
-    if (cubemap == nullptr && m_textures["skybox.equirect"] != nullptr) {
-        std::cout << "Converting equirect skybox into cube map skybox..." << std::endl;
-
-        m_states["equirect_to_cubemap"].apply();
-        m_shaders["equirect_to_cubemap"]->use();
-
-        for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
-            GLint index   = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-            GLsizei count = instance.getCounts("skybox");
-            auto& layout  = instance.getLayout("skybox");
-
-            m_frames["skybox"]->attach(GL_COLOR_ATTACHMENT0, m_textures["skybox.cubemap"], 0, index);
-            m_shaders["equirect_to_cubemap"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
-            m_passes["equirect_to_cubemap"].begin(m_frames["skybox"]);
-            draw(layout, {"skybox.equirect"}, count);
-            m_passes["equirect_to_cubemap"].end();
-        }
-    } else {
-        std::cout << "Using existing cube map skybox." << std::endl;
-        std::cout << cubemap << ' ' << m_textures["skybox.equirect"] << std::endl;
-        m_textures["skybox.cubemap"] = scene.getSkyboxCubeMap();
-    }
-
-    // 5. Precalculate environment map
-    // TODO: add imaged based light support
-    if (m_enableIBL) {
-    }
 }
 
 void Renderer::render(const Scene& scene) {
@@ -422,7 +486,7 @@ void Renderer::render(const Scene& scene) {
     //     m_passes["deferred_geometry"].end();
     // }
 
-    //! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
+    // // ! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
     // m_frames["screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
 
     // {
@@ -433,7 +497,7 @@ void Renderer::render(const Scene& scene) {
     //     m_shaders["deferred_shading"]->use();
     //     m_passes["deferred_shading"].begin(m_frames["screen"]);
     //     m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
-    //     draw(layout, {"gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow.basic"}, count);
+    //     draw(layout, {"gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow.basic", "ibl.diffuse"}, count);
     //     m_passes["deferred_shading"].end();
     // }
 
@@ -444,14 +508,14 @@ void Renderer::render(const Scene& scene) {
         m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
         for (const auto& item : opaqueQueue) {
             m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-            draw(item, {"albedo", "normal", "mrao", "shadow.basic"});
+            draw(item, {"albedo", "normal", "mrao", "shadow.basic", "ibl.diffuse"});
         }
         m_passes["forward_opaque"].end();
     }
 
     if (m_textures["skybox.cubemap"] != nullptr) {
-        GLsizei count = instance.getCounts("skybox");
-        auto& layout  = instance.getLayout("skybox");
+        GLsizei count = instance.getCounts("cube");
+        auto& layout  = instance.getLayout("cube");
 
         m_states["skybox"].apply();
         m_shaders["skybox"]->use();
@@ -490,6 +554,9 @@ void Renderer::draw(const RenderItem& item, const std::vector<std::string>& text
         // !WARNING: The second parameter is vertex offset in vertex count, not bytes.
         glDrawArrays(GL_TRIANGLES, item.ioffset, item.length);
     }
+
+    m_drawCall++;
+    return;
 }
 
 void Renderer::draw(const std::shared_ptr<VertexLayout>& layout, const std::vector<std::string>& textures, GLsizei count) {
@@ -505,6 +572,8 @@ void Renderer::draw(const std::shared_ptr<VertexLayout>& layout, const std::vect
     }
     // std::cout << "Quad/Skybox VBO Draw: vertex count " << count << std::endl;
     glDrawArrays(GL_TRIANGLES, 0, count);
+
+    m_drawCall++;
     return;
 }
 

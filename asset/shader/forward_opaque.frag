@@ -33,6 +33,8 @@ layout(binding = 0) uniform sampler2D tAlbedoMap;
 layout(binding = 1) uniform sampler2D tNormalMap;
 layout(binding = 2) uniform sampler2D tMRAOMap;
 layout(binding = 16) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value;
+layout(binding = 22) uniform samplerCube tIBLDiffuseMap;
+layout(binding = 23) uniform samplerCube tIBLSpecularMap;
 
 out vec4 oFragColor;
 
@@ -50,7 +52,10 @@ void main() {
     vec3 TN = N_decode(texture(tNormalMap, iFragUV).xyz);
     N = N_toWorld(N, T, TN);
 
-    oFragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    // ----------------------------------------------------------------
+    // Evaluate direct light color
+    // ----------------------------------------------------------------
+    vec3 dLightColor = vec3(0.0);
     for (int i = 0; i < uLightCount; i++) {
         vec3 L = uLights[i].vectorType.w == 0.0 ? normalize(-uLights[i].vectorType.xyz) : normalize(uLights[i].vectorType.xyz - iFragPos); // frag -> light
         vec3 lightSpaceUVD = Pos_toLightSpaceUVD(uLights[i].viewProjMatrix, iFragPos);
@@ -59,6 +64,17 @@ void main() {
         vec3 color = BRDF(L, V, N, F0, albedo, metallic, roughness) * uLights[i].colorIntensity.rgb * uLights[i].colorIntensity.w;
         float visibility = SM(tShadowDepthMap, atlasUV, lightSpaceUVD.z);
         
-        oFragColor.rgb += color * visibility;
+        dLightColor += color * visibility;
     }    
+
+    // ----------------------------------------------------------------
+    // Evaluate indirect light color
+    // ----------------------------------------------------------------
+    float NdotV = clamp(dot(N, V), 0.0, 1.0);
+    vec3 kS = F_Schlick(NdotV, F0);
+    vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
+    vec3 irradiance = texture(tIBLDiffuseMap, N).rgb;
+    vec3 indLightColor = kD * albedo * irradiance;
+
+    oFragColor = vec4(dLightColor + indLightColor, 1.0);
 }
