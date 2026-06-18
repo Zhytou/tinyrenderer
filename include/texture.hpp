@@ -18,7 +18,9 @@ namespace tinyrenderer {
  */
 class Texture {
    public:
-    Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFormat, GLuint mipLevel = 1);
+    Texture(uint32_t size, GLenum type, GLenum internalFormat, GLsizei mipLevel);
+    Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFormat, GLsizei mipLevel);
+    Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum type, GLenum internalFormat, GLsizei mipLevel);
     Texture(const Texture&)            = delete;
     Texture& operator=(const Texture&) = delete;
     Texture(Texture&& other);
@@ -30,31 +32,11 @@ class Texture {
     uint32_t getWidth() const { return m_width; }
     uint32_t getHeight() const { return m_height; }
     GLenum getInternalFormat() const { return m_internalFormat; }
+    GLsizei getMipLevel() const { return m_mipLevel; }
 
     // Bind texture to a specific texture slot, namely the glsl binding index
     // @param slot The texture slot to bind to.
     void bind(uint32_t slot) const;
-
-    // Create a 1*1 texture from a vec4 value
-    // @param value The value to create the texture from.
-    // @param internalFormat The internal format of the texture.
-    // @return The created texture.
-    static std::shared_ptr<Texture> create(const glm::vec4& value, GLenum internalFormat);
-
-    // Create a 2d texture from a single image file, and upload the image data to GPU memory
-    // @param path The image file path to create the texture from.
-    // @param internalFormat The internal format of the texture.
-    // @param desiredChannels The desired channels of the texture.
-    // @return The created texture.
-    static std::shared_ptr<Texture> create(const std::filesystem::path& path, GLenum internalFormat, int desiredChannels = 0);
-
-    // Create a 2d or cubemap texture from multiple image files, and upload the image data to GPU memory
-    // @param paths The image file paths to create the texture from.
-    // @param type The texture type.
-    // @param internalFormat The internal format of the texture.
-    // @param desiredChannels The desired channels of the texture.
-    // @return The created texture.
-    static std::shared_ptr<Texture> create(const std::vector<std::filesystem::path>& paths, GLenum type, GLenum internalFormat, int desiredChannels = 0);
 
     // Clear the entire texture image storage to a constant value.
     // @param value Pointer to a single texel data containing the clear value. Pass 'nullptr' to clear the entire texture to black / zero natively.
@@ -83,12 +65,14 @@ class Texture {
     void upload(const std::shared_ptr<Image>& img, GLint pos, GLint level = 0);
 
    private:
+    uint32_t m_size         = 0;
     uint32_t m_width        = 0;
     uint32_t m_height       = 0;
+    uint32_t m_depth        = 0;
     GLuint m_id             = 0;
     GLenum m_type           = GL_TEXTURE_2D;  // texture type indicates the target to bind and upload texture data to, and also how the texture storage is organized in GPU memory (e.g., 2D array for GL_TEXTURE_2D, or 6-face cube for GL_TEXTURE_CUBE_MAP)
     GLenum m_internalFormat = GL_RGBA8;       // texture gpu format indicates both the channel ORDER and the data TYPE (e.g., GL_RGBA8 for 8-bit RGBA format, GL_RGB16F for 16-bit float RGB format, GL_R32F for 32-bit float R format, etc.)
-    GLuint m_mipLevels      = 1;
+    GLsizei m_mipLevel      = 1;
 };
 
 }  // namespace tinyrenderer

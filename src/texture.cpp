@@ -1,6 +1,8 @@
 #include "texture.hpp"
 
+#include <format>
 #include <iostream>
+#include <stdexcept>
 
 #include "utils.hpp"
 
@@ -8,7 +10,25 @@ namespace tinyrenderer {
 
 namespace fs = std::filesystem;
 
-Texture::Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFormat, GLuint mipLevel) : m_width(width), m_height(height), m_type(type), m_internalFormat(internalFormat), m_mipLevels(mipLevel) {
+Texture::Texture(uint32_t size, GLenum type, GLenum internalFormat, GLsizei mipLevel) : m_type(type), m_internalFormat(internalFormat), m_mipLevel(mipLevel) {
+    if (size == 0 || mipLevel > 10 || size < (1 << mipLevel)) {
+        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {} for mip level {}", size, mipLevel));
+    }
+
+    glCreateTextures(m_type, 1, &m_id);
+
+    if (m_type == GL_TEXTURE_1D) {
+        glTextureStorage1D(m_id, m_mipLevel, m_internalFormat, size);
+    } else {
+        throw std::runtime_error("Texture::Texture: Texture type is not 1D");
+    }
+}
+
+Texture::Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFormat, GLsizei mipLevel) : m_width(width), m_height(height), m_type(type), m_internalFormat(internalFormat), m_mipLevel(mipLevel) {
+    if (width == 0 || height == 0 || mipLevel > 10 || width < (1 << mipLevel) || height < (1 << mipLevel)) {
+        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{} for mip level {}", width, height, mipLevel));
+    }
+
     // Create texture handle
     //
     // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -52,7 +72,23 @@ Texture::Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFo
     // Key insight: glTextureStorage2D = "allocate once, use forever" (best practice)
     //              glTexImage2D       = "flexible but slower" (legacy path)
     if (m_type == GL_TEXTURE_2D || m_type == GL_TEXTURE_CUBE_MAP) {
-        glTextureStorage2D(m_id, m_mipLevels, m_internalFormat, m_width, m_height);
+        glTextureStorage2D(m_id, m_mipLevel, m_internalFormat, m_width, m_height);
+    } else {
+        throw std::runtime_error("Texture::Texture: Texture type is not 2D or cube map");
+    }
+}
+
+Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum type, GLenum internalFormat, GLsizei mipLevel) : m_type(type), m_width(width), m_height(height), m_depth(depth), m_mipLevel(mipLevel), m_internalFormat(internalFormat) {
+    if (width == 0 || height == 0 || depth == 0 || mipLevel > 10 || width < (1 << mipLevel) || height < (1 << mipLevel)) {
+        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{}x{} for mip level {}", width, height, depth, mipLevel));
+    }
+
+    glCreateTextures(m_type, 1, &m_id);
+
+    if (m_type == GL_TEXTURE_3D) {
+        glTextureStorage3D(m_id, m_mipLevel, m_internalFormat, m_width, m_height, m_depth);
+    } else {
+        throw std::runtime_error("Texture::Texture: Texture type is not 3D");
     }
 }
 
@@ -105,56 +141,6 @@ void Texture::bind(uint32_t slot) const {
     glBindTextureUnit(slot, m_id);
 }
 
-std::shared_ptr<Texture> Texture::create(const fs::path& path, GLenum internalFormat, int desiredChannels) {
-    std::cout << "Creating texture from file [" << path << "]\n";
-
-    std::shared_ptr<Image> image     = Image::create(path, desiredChannels);
-    std::shared_ptr<Texture> texture = nullptr;
-    if (image) {
-        texture = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, internalFormat);
-        texture->upload(image);
-    }
-
-    return texture;
-}
-
-std::shared_ptr<Texture> Texture::create(const glm::vec4& value, GLenum internalFormat) {
-    std::cout << "Creating texture from value [" << value << "]\n";
-
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, internalFormat);
-    texture->clear(&value.x, GL_RGBA, GL_FLOAT);
-    return texture;
-}
-
-std::shared_ptr<Texture> Texture::create(const std::vector<fs::path>& paths, GLenum type, GLenum internalFormat, int desiredChannels) {
-    std::cout << "Creating texture from files [";
-
-    std::vector<std::shared_ptr<Image>> images;
-    for (auto path : paths) {
-        auto image = Image::create(path, desiredChannels);
-        if (image) {
-            images.push_back(image);
-        }
-        std::cout << path << ' ';
-    }
-    std::cout << "]\n";
-
-    std::shared_ptr<Texture> texture = nullptr;
-    if (type == GL_TEXTURE_2D) {
-        std::shared_ptr<Image> mimage = Image::merge(images, 3);
-        if (mimage) {
-            texture = std::make_shared<Texture>(mimage->getWidth(), mimage->getHeight(), type, internalFormat);
-            texture->upload(mimage);
-        }
-    } else if (type == GL_TEXTURE_CUBE_MAP) {
-        texture = std::make_shared<Texture>(images[0]->getWidth(), images[0]->getHeight(), type, internalFormat);
-        for (size_t i = 0; i < images.size(); i++) {
-            texture->upload(images[i], i, 0);
-        }
-    }
-    return texture;
-}
-
 void Texture::clear(const void* value, GLenum format, GLenum type, GLint level) {
     if (m_id == 0) {
         return;
@@ -165,6 +151,19 @@ void Texture::clear(const void* value, GLenum format, GLenum type, GLint level) 
 
 void Texture::upload(const std::shared_ptr<Image>& img, GLint level) {
     // std::cout << "Uploading texture data from image [" << img->getWidth() << ' ' << img->getHeight() << ' ' << img->getChannels() << ' ' << std::showbase << std::hex << img->getFormat() << ' ' << img->getDataType() << std::dec << "] to level" << level << " GPU memory\n";
+
+    // Check if image data is valid
+    if (img == nullptr || img->getData() == nullptr) {
+        throw std::runtime_error("Texture::upload: image data is null");
+    }
+    if (level < 0 || level >= m_mipLevel) {
+        throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevel));
+    }
+    uint32_t width  = img->getWidth();
+    uint32_t height = img->getHeight();
+    if (width > m_width / (1 << level) || height > m_height / (1 << level)) {
+        throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, m_width / (1 << level), m_height / (1 << level), level));
+    }
 
     // Upload texture data to GPU memory
     //
@@ -183,14 +182,37 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint level) {
     //
     // Key insight:  glTexImage2D  = "allocate + upload" (once at texture creation)
     //               glTexSubImage2D = "upload only" (update existing texture, e.g., video, dynamic UI)
-    glTextureSubImage2D(m_id, level, 0, 0, m_width, m_height, img->getFormat(), img->getDataType(), img->getData());
+    glTextureSubImage2D(m_id, level, 0, 0, width, height, img->getFormat(), img->getDataType(), img->getData());
+
+    // Generate mipmaps if required
+    if (level == 0 && m_mipLevel > 1) {
+        glGenerateMipmap(m_id);
+    }
 }
 
 void Texture::upload(const std::shared_ptr<Image>& img, GLint pos, GLint level) {
     // std::cout << "Uploading texture data from image [" << img->getWidth() << ' ' << img->getHeight() << ' ' << img->getChannels() << ' ' << std::showbase << std::hex << img->getFormat() << ' ' << img->getDataType() << std::dec << "] to level" << level << " GPU memory\n";
 
+    // Check if image data is valid
+    if (img == nullptr || img->getData() == nullptr) {
+        throw std::runtime_error("Texture::upload: image data is null");
+    }
+    if (level < 0 || level >= m_mipLevel) {
+        throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevel));
+    }
+    uint32_t width  = img->getWidth();
+    uint32_t height = img->getHeight();
+    if (width > m_width / (1 << level) || height > m_height / (1 << level)) {
+        throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, m_width / (1 << level), m_height / (1 << level), level));
+    }
+
     // Upload texture data to GPU memory
-    glTextureSubImage3D(m_id, level, 0, 0, pos, m_width, m_height, 1, img->getFormat(), img->getDataType(), img->getData());
+    glTextureSubImage3D(m_id, level, 0, 0, pos, width, height, 1, img->getFormat(), img->getDataType(), img->getData());
+
+    // Generate mipmaps if required
+    if (level == 0 && m_mipLevel > 1) {
+        glGenerateMipmap(m_id);
+    }
 }
 
 }  // namespace tinyrenderer
