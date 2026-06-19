@@ -62,7 +62,6 @@ std::shared_ptr<Image> Image::create(const std::filesystem::path& path, int desi
         // std::cerr << "[STBI ERROR] Invalid image or format not supported: " << path.string()
         //           << "\n  Reason: " << (reason ? reason : "Unknown") << std::endl;
         throw std::runtime_error("Image::create: stbi load failed " + path.string() + " (" + (reason ? reason : "unknown") + ")");
-        return nullptr;
     }
 
     if (stbi_is_hdr(path.c_str())) {
@@ -81,7 +80,6 @@ std::shared_ptr<Image> Image::create(const std::filesystem::path& path, int desi
         // std::cerr << "[STBI ERROR] Failed to load image: " << path.string()
         //           << "\n  Reason: " << (reason ? reason : "Unknown stbi error") << std::endl;
         throw std::runtime_error("Image::create: stbi load failed " + path.string() + " (" + (reason ? reason : "unknown") + ")");
-        return nullptr;
     }
 
     // Convert to desired channels when desired channels is not 0. Otherwise, use image original channels.
@@ -90,15 +88,15 @@ std::shared_ptr<Image> Image::create(const std::filesystem::path& path, int desi
 
 std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& images, int channels) {
     if (images.empty() || images[0] == nullptr) {
-        return nullptr;
+        throw std::runtime_error("Image::merge: Empty image list or null image");
     }
 
     std::vector<std::shared_ptr<Image>> resizedImages;
     int width = images[0]->getWidth(), height = images[0]->getHeight(), totChannels = 0;
     GLenum type = GL_UNSIGNED_BYTE;
     for (auto& image : images) {
-        if (image == nullptr || channels < image->getChannels()) {
-            return nullptr;
+        if (image == nullptr) {
+            throw std::runtime_error("Image::merge: Null image");
         }
         if (width != image->getWidth() || height != image->getHeight()) {
             resizedImages.push_back(resize(image, width, height));
@@ -114,7 +112,7 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
         totChannels += image->getChannels();
     }
     if (totChannels > channels) {
-        return nullptr;
+        throw std::runtime_error("Image::merge: Total channels must be less than or equal to desired channels");
     }
 
     int bytes = type == GL_FLOAT ? 4 : (type == GL_UNSIGNED_SHORT ? 2 : 1);
@@ -122,7 +120,7 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
     // #define STBI_MALLOC malloc
     void* data = malloc(width * height * channels * bytes);
     if (data == nullptr) {
-        return nullptr;
+        throw std::runtime_error("Image::merge: Failed to allocate memory for merged image");
     }
 
     int dstChannel  = 0;  // current channel index of destination image

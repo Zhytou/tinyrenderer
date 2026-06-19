@@ -46,7 +46,7 @@ class Image {
     // @param desiredChannels The desired channels of the image.
     // @param flip Whether to flip the image vertically.
     // @return The created image.
-    static std::shared_ptr<Image> create(const std::filesystem::path& path, int desiredChannels = 0, bool flip = true);
+    static std::shared_ptr<Image> create(const std::filesystem::path& path, int desiredChannels = 0, bool flip = false);
     // Merge multiple image objects into a single image object by channel packing
     // @param images The image objects to merge.
     // @param channels The desired channels of the merged image.
