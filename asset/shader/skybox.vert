@@ -12,7 +12,7 @@ layout(std140, binding = 0) uniform CameraBlock {
 layout(location = 0) out vec3 oFragDir; // for cube map sampling
 
 void main() {
-    oFragDir = iVertPos;
+    oFragDir = normalize(iVertPos);
     mat4 viewMatrixWithoutTranslation = mat4(mat3(uViewMatrix)); // remove translation from view matrix
     vec4 fragPos = uProjMatrix * viewMatrixWithoutTranslation * vec4(iVertPos, 1.0);
     gl_Position = fragPos.xyww; // set w component to depth for proper perspective correction

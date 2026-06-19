@@ -10,8 +10,7 @@ layout(binding = 20) uniform samplerCube tSkyboxMap;
 out vec4 oFragColor;
 
 void main() {
-    const int numSamples = 32;
-    const int numRings = 4;
+    const int numSamples = 1024;
 
     vec3 N = normalize(iFragDir);
     vec3 V = N; // assume N is the view direction for less calculation
@@ -20,7 +19,7 @@ void main() {
     vec3 prefilteredColor = vec3(0.0);
     float weight = 0.0;
     for (int i = 0; i < numSamples; i++) {
-        vec2 X = PoissonSample(i, N.xy, numSamples, numRings);
+        vec2 X = HammersleySample(i, numSamples);
         vec3 H = GGXSample(X, N, uRoughness);
         vec3 L = normalize(2.0 * dot(V, H) * H - V);
 

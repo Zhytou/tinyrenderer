@@ -16,7 +16,7 @@ void main() {
     vec3 right = normalize(cross(front, up));
     up         = normalize(cross(right, front));
 
-    float numSamples = 0.0; 
+    int numSamples = 0; 
     vec3 irradiance = vec3(0.0);
     for(float phi = 0.0; phi < 2.0 * PI; phi += Delta) {
         for(float theta = 0.0; theta < 0.5 * PI; theta += Delta) {
@@ -31,5 +31,5 @@ void main() {
             numSamples++;
         }
     }
-    oFragColor = vec4(PI * irradiance * (1.0 / numSamples), 1.0);
+    oFragColor = vec4(PI * irradiance / float(numSamples), 1.0);
 }
