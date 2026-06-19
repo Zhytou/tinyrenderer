@@ -75,7 +75,7 @@ class Renderer {
 
     bool m_enableIBL = true, m_enableShadow = false;
     uint32_t m_width = 800, m_height = 600;
-    uint32_t m_skyboxSize     = 512;
+    uint32_t m_skyboxSize = 512, m_brdfLUTSize = 512;
     uint32_t m_shadowMapWidth = 4096, m_shadowMapHeight = 4096;
     uint32_t m_drawCall = 0;
 };
