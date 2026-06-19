@@ -140,9 +140,9 @@ void Scene::initialize(const std::string& json) {
         if (doc["skybox"].HasMember("equirect")) {
             fs::path baseDir      = doc["skybox"]["equirect"]["baseDir"].GetString();
             fs::path equirectName = doc["skybox"]["equirect"]["name"].GetString();
-            auto image            = Image::create(baseDir / equirectName);
+            auto image            = Image::create(baseDir / equirectName, 0, true);
             m_skyboxEquirect      = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA32F, 1);
-            m_skyboxEquirect->upload(image, 0, 0);
+            m_skyboxEquirect->upload(image);
         }
     }
 }

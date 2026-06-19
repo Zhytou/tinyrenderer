@@ -11,13 +11,14 @@ namespace fs = std::filesystem;
 Material::Material(const fs::path& baseDir, const tinyobj::material_t& material) {
     std::cout << "Loading material [" << material.name << "]\n";
 
-    const GLsizei mipLevel = 3;
+    // TODO: fix mip level(when miplevel is more than 1, the render result is wrong, blocking artifacts appear)
+    const GLsizei mipLevel = 1;
     m_name                 = material.name;
     m_opacity              = material.dissolve;
 
     if (!material.diffuse_texname.empty()) {
         std::cout << "Loading diffuse texture from file [" << material.diffuse_texname << "]\n";
-        auto image           = Image::create(baseDir / material.diffuse_texname);
+        auto image           = Image::create(baseDir / material.diffuse_texname, 0, true);
         m_textures["albedo"] = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA8, mipLevel);
         m_textures["albedo"]->upload(image);
     } else {
@@ -29,7 +30,7 @@ Material::Material(const fs::path& baseDir, const tinyobj::material_t& material)
 
     if (!material.normal_texname.empty()) {
         std::cout << "Loading normal texture from file [" << material.normal_texname << "]\n";
-        auto image           = Image::create(baseDir / material.normal_texname);
+        auto image           = Image::create(baseDir / material.normal_texname, 0, true);
         m_textures["normal"] = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA8, mipLevel);
         m_textures["normal"]->upload(image);
     } else {
@@ -49,7 +50,7 @@ Material::Material(const fs::path& baseDir, const tinyobj::material_t& material)
 
         std::cout << "Loading mrao texture from files [";
         for (auto path : paths) {
-            images.push_back(Image::create(path));
+            images.push_back(Image::create(path, 0, true));
             std::cout << path << ' ';
         }
         std::cout << "]\n";

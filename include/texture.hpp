@@ -62,7 +62,7 @@ class Texture {
     //             4: GL_TEXTURE_CUBE_MAP_POSITIVE_Z (Back)
     //             5: GL_TEXTURE_CUBE_MAP_NEGATIVE_Z (Front)
     // @param level The mip level to upload.
-    void upload(const std::shared_ptr<Image>& img, GLint pos, GLint level = 0);
+    void upload(const std::shared_ptr<Image>& img, GLint pos, GLint level);
 
    private:
     uint32_t m_size         = 0;
