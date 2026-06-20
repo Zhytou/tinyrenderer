@@ -39,16 +39,24 @@ class Renderer {
     // Render scene
     void render(const Scene& scene);
 
-    bool isShadowMapEnabled() const { return m_enableShadow; }
-    bool isIBLEnabled() const { return m_enableIBL; }
+    void enableIBL(bool enable) { m_ibl = enable; }
+    void enableShadow(bool enable) { m_shadow = enable; }
+    void enableBloom(bool enable) { m_bloom = enable; }
+    void enableSSAO(bool enable) { m_ssao = enable; }
+    void enableTAA(bool enable) { m_taa = enable; }
+    bool isIBLEnabled() const { return m_ibl; }
+    bool isShadowEnabled() const { return m_shadow; }
+    bool isBloomEnabled() const { return m_bloom; }
+    bool isSSAOEnabled() const { return m_ssao; }
+    bool isTAAEnabled() const { return m_taa; }
+
     uint32_t getDrawCall() const { return m_drawCall; }
-    void setShadowMap(bool enable) { m_enableShadow = enable; }
-    void setIBL(bool enable) { m_enableIBL = enable; }
-    void setShadowMapSize(uint32_t width, uint32_t height) {
-        m_shadowMapWidth  = width;
-        m_shadowMapHeight = height;
-    }
+    uint32_t getShadowMapSize() const { return m_shadowMapSize; }
+    uint32_t getSkyboxSize() const { return m_skyboxSize; }
+    uint32_t getBRDFLUTSize() const { return m_brdfLUTSize; }
+    void setShadowMapSize(uint32_t size) { m_shadowMapSize = size; }
     void setSkyboxSize(uint32_t size) { m_skyboxSize = size; }
+    void setBRDFLUTSize(uint32_t size) { m_brdfLUTSize = size; }
 
    private:
     // draw mesh
@@ -56,28 +64,38 @@ class Renderer {
     // draw quad or skybox
     void draw(const std::shared_ptr<VertexLayout>& layout, const std::vector<std::string>& textures, GLsizei count);
 
-    /// fixed-function states
     // input and output attachments
     std::unordered_map<std::string, RenderPass> m_passes;
     // fixed-function states
     std::unordered_map<std::string, PipelineState> m_states;
 
-    /// assets and resources
+    // assets and resources
     std::unordered_map<uint32_t, std::shared_ptr<Sampler>> m_samplers;
     std::unordered_map<std::string, std::shared_ptr<Shader>> m_shaders;
     std::unordered_map<std::string, std::shared_ptr<Texture>> m_textures;
     std::unordered_map<std::string, std::shared_ptr<FrameBuffer>> m_frames;
     std::unordered_map<std::string, std::shared_ptr<BindableBuffer>> m_buffers;
 
-    // name mappings
-    std::unordered_map<std::string, std::string> m_pass2FrameNames;
+    /// name mappings
+    std::unordered_multimap<std::string, std::string> m_pass2FrameNames;
     std::unordered_map<std::string, uint32_t> m_texture2SlotIndexs;
 
-    bool m_enableIBL = true, m_enableShadow = false;
-    uint32_t m_width = 800, m_height = 600;
-    uint32_t m_skyboxSize = 512, m_brdfLUTSize = 512;
-    uint32_t m_shadowMapWidth = 4096, m_shadowMapHeight = 4096;
-    uint32_t m_drawCall = 0;
+    /// renderer settings
+    bool m_ibl    = false;  // image based light enabled or not
+    bool m_shadow = false;  // shadow mapping enabled or not
+    bool m_bloom  = true;   // bloom blur enabled or not
+    bool m_ssao   = false;  // screen space ambient occlusion enabled or not
+    bool m_taa    = false;  // temporal anti aliasing enabled or not
+
+    uint32_t m_width            = 800;
+    uint32_t m_height           = 600;
+    uint32_t m_skyboxSize       = 512;
+    uint32_t m_brdfLUTSize      = 256;
+    uint32_t m_shadowMapSize    = 4096;
+    uint32_t m_bloomBlurMapSize = 512;
+    uint32_t m_bloomBlurTimes   = 3;
+    float m_bloomIntensity      = 1.5f;
+    uint32_t m_drawCall         = 0;
 };
 
 }  // namespace tinyrenderer
