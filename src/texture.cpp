@@ -10,23 +10,23 @@ namespace tinyrenderer {
 
 namespace fs = std::filesystem;
 
-Texture::Texture(uint32_t size, GLenum type, GLenum internalFormat, GLsizei mipLevel) : m_type(type), m_internalFormat(internalFormat), m_mipLevel(mipLevel) {
-    if (size == 0 || mipLevel > 10 || size < (1 << mipLevel)) {
-        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {} for mip level {}", size, mipLevel));
+Texture::Texture(uint32_t size, GLenum type, GLenum internalFormat, GLsizei mipLevels) : m_type(type), m_internalFormat(internalFormat), m_mipLevels(mipLevels) {
+    if (size == 0 || mipLevels > 10 || size < (1 << mipLevels)) {
+        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {} for mip level {}", size, mipLevels));
     }
 
     glCreateTextures(m_type, 1, &m_id);
 
     if (m_type == GL_TEXTURE_1D) {
-        glTextureStorage1D(m_id, m_mipLevel, m_internalFormat, size);
+        glTextureStorage1D(m_id, m_mipLevels, m_internalFormat, size);
     } else {
         throw std::runtime_error("Texture::Texture: Texture type is not 1D");
     }
 }
 
-Texture::Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFormat, GLsizei mipLevel) : m_width(width), m_height(height), m_type(type), m_internalFormat(internalFormat), m_mipLevel(mipLevel) {
-    if (width == 0 || height == 0 || mipLevel > 10 || width < (1 << mipLevel) || height < (1 << mipLevel)) {
-        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{} for mip level {}", width, height, mipLevel));
+Texture::Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFormat, GLsizei mipLevels) : m_width(width), m_height(height), m_type(type), m_internalFormat(internalFormat), m_mipLevels(mipLevels) {
+    if (width == 0 || height == 0 || mipLevels > 10 || width < (1 << mipLevels) || height < (1 << mipLevels)) {
+        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{} for mip level {}", width, height, mipLevels));
     }
 
     // Create texture handle
@@ -72,21 +72,21 @@ Texture::Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFo
     // Key insight: glTextureStorage2D = "allocate once, use forever" (best practice)
     //              glTexImage2D       = "flexible but slower" (legacy path)
     if (m_type == GL_TEXTURE_2D || m_type == GL_TEXTURE_CUBE_MAP) {
-        glTextureStorage2D(m_id, m_mipLevel, m_internalFormat, m_width, m_height);
+        glTextureStorage2D(m_id, m_mipLevels, m_internalFormat, m_width, m_height);
     } else {
         throw std::runtime_error("Texture::Texture: Texture type is not 2D or cube map");
     }
 }
 
-Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum type, GLenum internalFormat, GLsizei mipLevel) : m_type(type), m_width(width), m_height(height), m_depth(depth), m_mipLevel(mipLevel), m_internalFormat(internalFormat) {
-    if (width == 0 || height == 0 || depth == 0 || mipLevel > 10 || width < (1 << mipLevel) || height < (1 << mipLevel)) {
-        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{}x{} for mip level {}", width, height, depth, mipLevel));
+Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum type, GLenum internalFormat, GLsizei mipLevels) : m_type(type), m_width(width), m_height(height), m_depth(depth), m_mipLevels(mipLevels), m_internalFormat(internalFormat) {
+    if (width == 0 || height == 0 || depth == 0 || mipLevels > 10 || width < (1 << mipLevels) || height < (1 << mipLevels)) {
+        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{}x{} for mip level {}", width, height, depth, mipLevels));
     }
 
     glCreateTextures(m_type, 1, &m_id);
 
     if (m_type == GL_TEXTURE_3D) {
-        glTextureStorage3D(m_id, m_mipLevel, m_internalFormat, m_width, m_height, m_depth);
+        glTextureStorage3D(m_id, m_mipLevels, m_internalFormat, m_width, m_height, m_depth);
     } else {
         throw std::runtime_error("Texture::Texture: Texture type is not 3D");
     }
@@ -156,13 +156,15 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint level) {
     if (img == nullptr || img->getData() == nullptr) {
         throw std::runtime_error("Texture::upload: image data is null");
     }
-    if (level < 0 || level >= m_mipLevel) {
-        throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevel));
+    if (level < 0 || level >= m_mipLevels) {
+        throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevels));
     }
-    uint32_t width  = img->getWidth();
-    uint32_t height = img->getHeight();
-    if (width > m_width / (1 << level) || height > m_height / (1 << level)) {
-        throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, m_width / (1 << level), m_height / (1 << level), level));
+    uint32_t width     = img->getWidth();
+    uint32_t height    = img->getHeight();
+    uint32_t texWidth  = getWidth(level);
+    uint32_t texHeight = getHeight(level);
+    if (width > texWidth || height > texHeight) {
+        throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, texWidth, texHeight, level));
     }
 
     // Upload texture data to GPU memory
@@ -185,7 +187,7 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint level) {
     glTextureSubImage2D(m_id, level, 0, 0, width, height, img->getFormat(), img->getDataType(), img->getData());
 
     // Generate mipmaps if required
-    if (level == 0 && m_mipLevel > 1) {
+    if (level == 0 && m_mipLevels > 1) {
         glGenerateMipmap(m_id);
     }
 }
@@ -197,20 +199,22 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint pos, GLint level) 
     if (img == nullptr || img->getData() == nullptr) {
         throw std::runtime_error("Texture::upload: image data is null");
     }
-    if (level < 0 || level >= m_mipLevel) {
-        throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevel));
+    if (level < 0 || level >= m_mipLevels) {
+        throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevels));
     }
-    uint32_t width  = img->getWidth();
-    uint32_t height = img->getHeight();
-    if (width > m_width / (1 << level) || height > m_height / (1 << level)) {
-        throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, m_width / (1 << level), m_height / (1 << level), level));
+    uint32_t width     = img->getWidth();
+    uint32_t height    = img->getHeight();
+    uint32_t texWidth  = getWidth(level);
+    uint32_t texHeight = getHeight(level);
+    if (width > texWidth || height > texHeight) {
+        throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, texWidth, texHeight, level));
     }
 
     // Upload texture data to GPU memory
     glTextureSubImage3D(m_id, level, 0, 0, pos, width, height, 1, img->getFormat(), img->getDataType(), img->getData());
 
     // Generate mipmaps if required
-    if (level == 0 && m_mipLevel > 1) {
+    if (level == 0 && m_mipLevels > 1) {
         glGenerateMipmap(m_id);
     }
 }
