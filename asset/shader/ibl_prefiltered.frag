@@ -5,7 +5,7 @@
 layout(location = 0) in vec3 iFragDir;
 
 uniform float uRoughness;
-layout(binding = 20) uniform samplerCube tSkyboxMap;
+layout(binding = 16) uniform samplerCube tSkyboxMap;
 
 out vec4 oFragColor;
 

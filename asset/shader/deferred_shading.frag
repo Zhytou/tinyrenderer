@@ -30,9 +30,10 @@ layout(binding = 8) uniform sampler2D tAlbedoMap;
 layout(binding = 9) uniform sampler2D tNormalMap;
 layout(binding = 10) uniform sampler2D tMRAOMap;
 layout(binding = 11) uniform sampler2D tDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
-layout(binding = 16) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
-layout(binding = 22) uniform samplerCube tIBLDiffuseMap;
-layout(binding = 23) uniform samplerCube tIBLSpecularMap;
+layout(binding = 12) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
+layout(binding = 18) uniform samplerCube tIBLDiffuseMap;
+layout(binding = 19) uniform samplerCube tIBLSpecularMap;
+layout(binding = 20) uniform samplerCube tIBLBRDFLUTMap;
 
 out vec4 oFragColor;
 
