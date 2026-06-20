@@ -61,10 +61,13 @@ class FrameBuffer {
     // @param stencil The clear stencil value.
     void clear(GLenum target, float depth, int stencil);
     // Copy the framebuffer content to the default framebuffer for presentation.
+    // @note For GL_COLOR_BUFFER_BIT copy, the attachment slot must be set explicitly to GL_COLOR_ATTACHMENT0/GL_COLOR_ATTACHMENT31 for non-screen framebuffer and GL_BACK/GL_FRONT for screen framebuffer. Also, glFramebufferReadbuffer will be called in copy() for source attachment.
     // @param other The source framebuffer to copy from.
     // @param mask The bitfield of buffers to copy (e.g., GL_COLOR_BUFFER_BIT/GL_DEPTH_BUFFER_BIT/GL_STENCIL_BUFFER_BIT).
     // @param filter The interpolation method to apply if the image is stretched (e.g., GL_NEAREST/GL_LINEAR).
-    void copy(const FrameBuffer& other, GLenum mask, GLenum filter = GL_NEAREST);
+    // @param srcAttachment The source attachment slot to copy from.
+    // @param dstAttachment The destination attachment slot to copy to.
+    void copy(const FrameBuffer& other, GLenum mask, GLenum filter = GL_NEAREST, GLenum srcAttachment = GL_COLOR_ATTACHMENT0, GLenum dstAttachment = GL_COLOR_ATTACHMENT0);
     // Read the framebuffer attachment.
     // @note Must be called after bind().
     // @param target The attachment target to read(GL_COLOR/GL_DEPTH/GL_STENCIL/GL_DEPTH_STENCIL).

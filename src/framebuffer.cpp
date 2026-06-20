@@ -224,7 +224,12 @@ void FrameBuffer::clear(GLenum target, float depth, int stencil) {
     }
 }
 
-void FrameBuffer::copy(const FrameBuffer& other, GLenum mask, GLenum filter) {
+void FrameBuffer::copy(const FrameBuffer& other, GLenum mask, GLenum filter, GLenum srcAttachment, GLenum dstAttachment) {
+    if (mask & GL_COLOR_BUFFER_BIT) {
+        glNamedFramebufferReadBuffer(other.m_id, srcAttachment);
+        glNamedFramebufferDrawBuffer(m_id, dstAttachment);
+    }
+
     // Blit framebuffer region
     //
     // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
