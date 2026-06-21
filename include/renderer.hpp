@@ -81,21 +81,22 @@ class Renderer {
     std::unordered_map<std::string, uint32_t> m_texture2SlotIndexs;
 
     /// renderer settings
-    bool m_ibl    = false;  // image based light enabled or not
-    bool m_shadow = false;  // shadow mapping enabled or not
-    bool m_bloom  = true;   // bloom blur enabled or not
-    bool m_ssao   = false;  // screen space ambient occlusion enabled or not
-    bool m_taa    = false;  // temporal anti aliasing enabled or not
+    bool m_ibl       = false;  // image based light enabled or not
+    bool m_shadow    = false;  // shadow mapping enabled or not
+    bool m_bloom     = true;   // bloom blur enabled or not
+    bool m_lensflare = false;  // lensflare enabled or not
+    bool m_ssao      = false;  // screen space ambient occlusion enabled or not
+    bool m_taa       = false;  // temporal anti aliasing enabled or not
 
-    uint32_t m_width            = 800;
-    uint32_t m_height           = 600;
-    uint32_t m_skyboxSize       = 512;
-    uint32_t m_brdfLUTSize      = 256;
-    uint32_t m_shadowMapSize    = 4096;
-    uint32_t m_bloomBlurMapSize = 512;
-    uint32_t m_bloomBlurTimes   = 3;
-    float m_bloomIntensity      = 1.5f;
-    uint32_t m_drawCall         = 0;
+    uint32_t m_width         = 800;
+    uint32_t m_height        = 600;
+    uint32_t m_skyboxSize    = 512;
+    uint32_t m_brdfLUTSize   = 256;
+    uint32_t m_shadowMapSize = 4096;
+    uint32_t m_blurMapSize   = 512;
+    uint32_t m_blurTimes     = 3;
+    float m_bloomIntensity   = 1.5f;
+    uint32_t m_drawCall      = 0;
 };
 
 }  // namespace tinyrenderer
