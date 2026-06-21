@@ -52,7 +52,7 @@ class Texture {
     void upload(const std::shared_ptr<Image>& img, GLint level = 0);
 
     // Upload texutre data to existed cubemap texture object
-    // @note The input data size must match up with the texture object.
+    // @note The input image data size must match up with the texture object.
     // @param img   The image data to upload.
     // @param pos   The cubemap face to upload to.
     //             0: GL_TEXTURE_CUBE_MAP_POSITIVE_X (Right)
@@ -63,6 +63,22 @@ class Texture {
     //             5: GL_TEXTURE_CUBE_MAP_NEGATIVE_Z (Front)
     // @param level The mip level to upload.
     void upload(const std::shared_ptr<Image>& img, GLint pos, GLint level);
+
+    // Copy the texture data from one texture object to another.
+    // @param other The source texture object to copy from.
+    // @param level The mip level to copy from.
+    void copy(const Texture& other, GLint level = 0);
+
+    // Clamp the hardware visibility of the texture's mipmap chain to a single discrete level.
+    // @param level The mip level to clamp to
+    // @note Crucial for Multi-pass Post-processing (e.g., Bloom Pyramids) to prevent OpenGL Rendering Feedback Loops (Spec 9.3). By physically forcing GL_TEXTURE_BASE_LEVEL and GL_TEXTURE_MAX_LEVEL to the same discrete integer, the GPU driver isolates this specific mip-slice, allowing other slices of the SAME texture to be safely attached as FBO targets without triggering undefined data race/corruption.
+    // @warning Unlike GL_SAMPLER_MIN/MAX_LOD which are continuous float parameters managed by Sampler Objects, these parameters belong to the core Texture Object and alter its global memory-view bounds. Ensure to reset or manage wisely if this texture is reused in general sampling.
+    void clamp(GLint level);
+    // Reset the hardware visibility of the texture's mipmap chain to the default state.
+    void unclamp();
+
+    // Generate mipmaps for the texture object.
+    void generate();
 
    private:
     uint32_t m_size         = 0;

@@ -185,11 +185,6 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint level) {
     // Key insight:  glTexImage2D  = "allocate + upload" (once at texture creation)
     //               glTexSubImage2D = "upload only" (update existing texture, e.g., video, dynamic UI)
     glTextureSubImage2D(m_id, level, 0, 0, width, height, img->getFormat(), img->getDataType(), img->getData());
-
-    // Generate mipmaps if required
-    if (level == 0 && m_mipLevels > 1) {
-        glGenerateMipmap(m_id);
-    }
 }
 
 void Texture::upload(const std::shared_ptr<Image>& img, GLint pos, GLint level) {
@@ -212,9 +207,45 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint pos, GLint level) 
 
     // Upload texture data to GPU memory
     glTextureSubImage3D(m_id, level, 0, 0, pos, width, height, 1, img->getFormat(), img->getDataType(), img->getData());
+}
 
-    // Generate mipmaps if required
-    if (level == 0 && m_mipLevels > 1) {
+void Texture::copy(const Texture& other, GLint level) {
+    if (m_id == 0 || other.m_id == 0) {
+        throw std::runtime_error("Texture::copy: texture ID is null");
+    }
+    if (level < 0 || level >= m_mipLevels || level >= other.m_mipLevels) {
+        throw std::runtime_error(std::format("Texture::copy: mip level {} out of range [0 - {}] or [0 - {}]", level, m_mipLevels - 1, other.m_mipLevels - 1));
+    }
+    auto srcW = other.getWidth(level);
+    auto srcH = other.getHeight(level);
+    auto dstW = getWidth(level);
+    auto dstH = getHeight(level);
+    if (srcW > dstW || srcH > dstH) {
+        throw std::runtime_error(std::format("Texture::copy: source texture size {}x{} does not match destination texture size {}x{} at level {}", srcW, srcH, dstW, dstH, level));
+    }
+
+    // TODO: gl texture copy api
+    // glCopyTextureSubImage2D(m_id, level, 0, 0, srcW, srcH, 0, other.m_id);
+}
+
+void Texture::clamp(GLint level) {
+    if (m_id == 0) {
+        return;
+    }
+    glTextureParameteri(m_id, GL_TEXTURE_BASE_LEVEL, level);
+    glTextureParameteri(m_id, GL_TEXTURE_MAX_LEVEL, level);
+}
+
+void Texture::unclamp() {
+    if (m_id == 0) {
+        return;
+    }
+    glTextureParameteri(m_id, GL_TEXTURE_BASE_LEVEL, 0);
+    glTextureParameteri(m_id, GL_TEXTURE_MAX_LEVEL, m_mipLevels - 1);
+}
+
+void Texture::generate() {
+    if (m_mipLevels > 1) {
         glGenerateMipmap(m_id);
     }
 }
