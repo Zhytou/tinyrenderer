@@ -16,7 +16,7 @@ namespace tinyrenderer {
  */
 struct PipelineState {
     // viewport
-    GLboolean viewPortDynamic = GL_FALSE;
+    GLboolean viewportDynamic = GL_FALSE;
     GLint viewX               = 0;
     GLint viewY               = 0;
     GLsizei viewW             = 1;
@@ -54,14 +54,14 @@ struct PipelineState {
 
     inline void apply();
     inline void view(GLint x, GLint y, GLsizei w, GLsizei h) {
-        if (viewPortDynamic) {
+        if (viewportDynamic) {
             glViewport(x, y, w, h);
         }
     }
 };
 
 inline void PipelineState::apply() {
-    if (!viewPortDynamic) {
+    if (!viewportDynamic) {
         glViewport(viewX, viewY, viewW, viewH);
     }
 
