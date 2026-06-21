@@ -54,6 +54,7 @@ class Renderer {
     uint32_t getShadowMapSize() const { return m_shadowMapSize; }
     uint32_t getSkyboxSize() const { return m_skyboxSize; }
     uint32_t getBRDFLUTSize() const { return m_brdfLUTSize; }
+    const std::string& getBlurMode() const { return m_blurMode; }
     void setShadowMapSize(uint32_t size) { m_shadowMapSize = size; }
     void setSkyboxSize(uint32_t size) { m_skyboxSize = size; }
     void setBRDFLUTSize(uint32_t size) { m_brdfLUTSize = size; }
@@ -70,7 +71,7 @@ class Renderer {
     std::unordered_map<std::string, PipelineState> m_states;
 
     // assets and resources
-    std::unordered_map<uint32_t, std::shared_ptr<Sampler>> m_samplers;
+    std::unordered_map<std::string, std::shared_ptr<Sampler>> m_samplers;
     std::unordered_map<std::string, std::shared_ptr<Shader>> m_shaders;
     std::unordered_map<std::string, std::shared_ptr<Texture>> m_textures;
     std::unordered_map<std::string, std::shared_ptr<FrameBuffer>> m_frames;
@@ -83,7 +84,7 @@ class Renderer {
     /// renderer settings
     bool m_ibl       = false;  // image based light enabled or not
     bool m_shadow    = false;  // shadow mapping enabled or not
-    bool m_bloom     = true;   // bloom blur enabled or not
+    bool m_bloom     = false;  // bloom blur enabled or not
     bool m_lensflare = false;  // lensflare enabled or not
     bool m_ssao      = false;  // screen space ambient occlusion enabled or not
     bool m_taa       = false;  // temporal anti aliasing enabled or not
@@ -94,7 +95,9 @@ class Renderer {
     uint32_t m_brdfLUTSize   = 256;
     uint32_t m_shadowMapSize = 4096;
     uint32_t m_blurMapSize   = 512;
-    uint32_t m_blurTimes     = 3;
+    uint32_t m_blurTimes     = 3;  // blur times for gaussian blur
+    uint32_t m_blurMipLevels = 4;  // mip levels for dual kawase blur
+    std::string m_blurMode   = "dual kawase";
     float m_bloomIntensity   = 1.5f;
     uint32_t m_drawCall      = 0;
 };
