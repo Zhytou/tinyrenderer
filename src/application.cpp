@@ -50,10 +50,10 @@ void Application::setup(const std::string& title) {
     // set opengl version
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-
-    // set z-buffer bits, otherwise glenbale(GL_DEPTH_TEST) will not work
-    glfwWindowHint(GLFW_DEPTH_BITS, 24);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);  // allocate at least 24 depth bits for glfw swapbuffers, otherwise glenbale(GL_DEPTH_TEST) may not work
+    glfwWindowHint(GLFW_STENCIL_BITS, 8);
 
     // glfw window creation
     m_window = glfwCreateWindow(m_width, m_height, title.c_str(), nullptr, nullptr);
@@ -78,6 +78,16 @@ void Application::setup(const std::string& title) {
     if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) {
         throw std::runtime_error("Application::setup: Failed to initialize OpenGL extensions loader");
     }
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(
+        [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
+            if (severity == GL_DEBUG_SEVERITY_HIGH || severity == GL_DEBUG_SEVERITY_MEDIUM) {
+                std::cerr << "[OpenGL Error] " << message << std::endl;
+            }
+        },
+        nullptr
+    );
 
     // imgui initialization
     IMGUI_CHECKVERSION();
@@ -108,7 +118,9 @@ void Application::load(const std::string& scenePath) {
     buffer << file.rdbuf();
 
     m_scene.initialize(buffer.str());
+    glDebug(-3);
     m_renderer.prepare(m_scene);
+    glDebug(-4);
 }
 
 void Application::run() {
@@ -122,7 +134,9 @@ void Application::run() {
         processInput(deltaTime);
 
         // Update and render scene
+        glDebug(-11);
         m_renderer.update(m_scene);
+        glDebug(-10);
         m_renderer.render(m_scene);
 
         // Draw head-up display
@@ -199,8 +213,11 @@ void Application::drawHUD(float deltaTime) {
             glm::vec3 front    = glm::normalize(target - pos);
             ImGui::Text("Camera Position : (%.2f, %.2f, %.2f)", pos.x, pos.y, pos.z);
             ImGui::Text("Camera FrontVec : (%.2f, %.2f, %.2f)", front.x, front.y, front.z);
-            ImGui::Text("Shadow Mapping : %s", m_renderer.isShadowMapEnabled() ? "On" : "Off");
+            ImGui::Text("Shadow Mapping : %s", m_renderer.isShadowEnabled() ? "On" : "Off");
             ImGui::Text("Environment IBL : %s", m_renderer.isIBLEnabled() ? "On" : "Off");
+            ImGui::Text("Bloom Blur : %s", m_renderer.isBloomEnabled() ? ("On(" + m_renderer.getBlurMode() + " blur)").c_str() : "Off");
+            ImGui::Text("Sreen Space Ambient Occlusion : %s", m_renderer.isSSAOEnabled() ? "On" : "Off");
+            ImGui::Text("Temporal Anti-Aliasing : %s", m_renderer.isTAAEnabled() ? "On" : "Off");
         }
         ImGui::End();
 
