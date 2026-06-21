@@ -38,10 +38,29 @@ void Sampler::bind(uint32_t slot) const {
 }
 
 void Sampler::set(const SamplerDesc& sampler) {
-    // glSamplerParameterfv(m_id, GL_TEXTURE_BORDER_COLOR, sampler.borderColor);
-    // glSamplerParameterf(m_id, GL_TEXTURE_MAX_ANISOTROPY, sampler.maxAnisotropy);
-    // glSamplerParameteri(m_id, GL_TEXTURE_COMPARE_MODE, sampler.compareMode);
-    // glSamplerParameteri(m_id, GL_TEXTURE_COMPARE_FUNC, sampler.compareFunc);
+    if (m_id == 0) return;
+
+    // filtering
+    glSamplerParameteri(m_id, GL_TEXTURE_MIN_FILTER, sampler.minFilter);
+    glSamplerParameteri(m_id, GL_TEXTURE_MAG_FILTER, sampler.magFilter);
+
+    // wrapping
+    glSamplerParameteri(m_id, GL_TEXTURE_WRAP_S, sampler.wrapS);
+    glSamplerParameteri(m_id, GL_TEXTURE_WRAP_T, sampler.wrapT);
+    glSamplerParameteri(m_id, GL_TEXTURE_WRAP_R, sampler.wrapR);
+
+    // border color
+    glSamplerParameterfv(m_id, GL_TEXTURE_BORDER_COLOR, sampler.borderColor);
+
+    // level of detail (LOD)
+    glSamplerParameterf(m_id, GL_TEXTURE_LOD_BIAS, sampler.lodBias);
+    glSamplerParameterf(m_id, GL_TEXTURE_MIN_LOD, sampler.minLod);
+    glSamplerParameterf(m_id, GL_TEXTURE_MAX_LOD, sampler.maxLod);
+
+    if (sampler.compareMode != GL_NONE) {
+        glSamplerParameteri(m_id, GL_TEXTURE_COMPARE_MODE, sampler.compareMode);
+        glSamplerParameteri(m_id, GL_TEXTURE_COMPARE_FUNC, sampler.compareFunc);
+    }
 }
 
 }  // namespace tinyrenderer

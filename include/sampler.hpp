@@ -32,8 +32,10 @@ struct SamplerDesc {
     // Border Color
     float borderColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};  // border color for GL_CLAMP_TO_BORDER mode
 
-    // LOD Bias
+    // Level of Detail (LOD)
     GLfloat lodBias = 0.0f;  // LOD bias for mipmap sampling
+    GLfloat minLod  = -1000.0f;
+    GLfloat maxLod  = 1000.0f;
 
     /// Depth texture
     GLenum compareMode = GL_NONE;  // depth compare mode (for shadow depth texture)
