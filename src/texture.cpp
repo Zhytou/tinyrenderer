@@ -145,8 +145,9 @@ void Texture::clear(const void* value, GLenum format, GLenum type, GLint level) 
     if (m_id == 0) {
         return;
     }
-
-    glClearTexSubImage(m_id, level, 0, 0, 0, m_width, m_height, 1, format, type, value);
+    GLsizei w = getWidth(level);
+    GLsizei h = getHeight(level);
+    glClearTexSubImage(m_id, level, 0, 0, 0, w, h, 1, format, type, value);
 }
 
 void Texture::upload(const std::shared_ptr<Image>& img, GLint level) {
@@ -159,10 +160,10 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint level) {
     if (level < 0 || level >= m_mipLevels) {
         throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevels));
     }
-    uint32_t width     = img->getWidth();
-    uint32_t height    = img->getHeight();
-    uint32_t texWidth  = getWidth(level);
-    uint32_t texHeight = getHeight(level);
+    GLsizei width     = img->getWidth();
+    GLsizei height    = img->getHeight();
+    GLsizei texWidth  = getWidth(level);
+    GLsizei texHeight = getHeight(level);
     if (width > texWidth || height > texHeight) {
         throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, texWidth, texHeight, level));
     }
@@ -197,10 +198,10 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint pos, GLint level) 
     if (level < 0 || level >= m_mipLevels) {
         throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevels));
     }
-    uint32_t width     = img->getWidth();
-    uint32_t height    = img->getHeight();
-    uint32_t texWidth  = getWidth(level);
-    uint32_t texHeight = getHeight(level);
+    GLsizei width     = img->getWidth();
+    GLsizei height    = img->getHeight();
+    GLsizei texWidth  = getWidth(level);
+    GLsizei texHeight = getHeight(level);
     if (width > texWidth || height > texHeight) {
         throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, texWidth, texHeight, level));
     }
