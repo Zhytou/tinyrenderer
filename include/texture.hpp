@@ -18,25 +18,31 @@ namespace tinyrenderer {
  */
 class Texture {
    public:
-    Texture(uint32_t size, GLenum type, GLenum internalFormat, GLsizei mipLevels);
-    Texture(uint32_t width, uint32_t height, GLenum type, GLenum internalFormat, GLsizei mipLevels);
-    Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum type, GLenum internalFormat, GLsizei mipLevels);
+    Texture(uint32_t size, GLenum target, GLenum internalFormat, GLsizei mipLevels);
+    Texture(uint32_t width, uint32_t height, GLenum target, GLenum internalFormat, GLsizei mipLevels);
+    Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum target, GLenum internalFormat, GLsizei mipLevels);
     Texture(const Texture&)            = delete;
     Texture& operator=(const Texture&) = delete;
     Texture(Texture&& other);
     Texture& operator=(Texture&& other);
     ~Texture();
 
+    uint32_t getWidth(GLint level) const;
+    uint32_t getHeight(GLint level) const;
+    uint32_t getDepth(GLint level) const;
     GLuint getId() const { return m_id; }
-    GLenum getType() const { return m_type; }
-    uint32_t getWidth(GLsizei level = 0) const { return m_width / (1 << level); }
-    uint32_t getHeight(GLsizei level = 0) const { return m_height / (1 << level); }
+    GLenum getTarget() const { return m_target; }
     GLenum getInternalFormat() const { return m_internalFormat; }
     GLsizei getMipLevels() const { return m_mipLevels; }
 
     // Bind texture to a specific texture slot, namely the glsl binding index
     // @param slot The texture slot to bind to.
     void bind(uint32_t slot) const;
+    // Unbind texture from a specific texture slot.
+    // @param slot The texture slot to unbind from.
+    void unbind(uint32_t slot) const;
+    // Unbind texture from all slots.
+    static void unbind();
 
     // Clear the entire texture image storage to a constant value.
     // @param value Pointer to a single texel data containing the clear value. Pass 'nullptr' to clear the entire texture to black / zero natively.
@@ -65,9 +71,16 @@ class Texture {
     void upload(const std::shared_ptr<Image>& img, GLint pos, GLint level);
 
     // Copy the texture data from one texture object to another.
-    // @param other The source texture object to copy from.
-    // @param level The mip level to copy from.
-    void copy(const Texture& other, GLint level = 0);
+    // @param src The source texture object to copy from.
+    // @param srcLevel  The source mip level to copy from.
+    // @param srcX      The source X coordinate to copy from.
+    // @param srcY      The source Y coordinate to copy from.
+    // @param srcZ      The source Z coordinate to copy from.
+    // @param dstLevel  The destination mip level to copy to.
+    // @param dstX      The destination X coordinate to copy to.
+    // @param dstY      The destination Y coordinate to copy to.
+    // @param dstZ      The destination Z coordinate to copy to.
+    void copy(const Texture& src, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ);
 
     // Clamp the hardware visibility of the texture's mipmap chain to a single discrete level.
     // @param level The mip level to clamp to
@@ -81,12 +94,11 @@ class Texture {
     void generate();
 
    private:
-    uint32_t m_size         = 0;
     uint32_t m_width        = 0;
     uint32_t m_height       = 0;
     uint32_t m_depth        = 0;
     GLuint m_id             = 0;
-    GLenum m_type           = GL_TEXTURE_2D;  // texture type indicates the target to bind and upload texture data to, and also how the texture storage is organized in GPU memory (e.g., 2D array for GL_TEXTURE_2D, or 6-face cube for GL_TEXTURE_CUBE_MAP)
+    GLenum m_target         = GL_TEXTURE_2D;  // texture target indicates the target to bind and upload texture data to, and also how the texture storage is organized in GPU memory (e.g., 2D array for GL_TEXTURE_2D, or 6-face cube for GL_TEXTURE_CUBE_MAP)
     GLenum m_internalFormat = GL_RGBA8;       // texture gpu format indicates both the channel ORDER and the data TYPE (e.g., GL_RGBA8 for 8-bit RGBA format, GL_RGB16F for 16-bit float RGB format, GL_R32F for 32-bit float R format, etc.)
     GLsizei m_mipLevels     = 1;
 };
