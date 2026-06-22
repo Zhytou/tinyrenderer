@@ -135,10 +135,10 @@ void Shader::introspect() {
         glGetProgramResourceName(m_id, GL_UNIFORM, i, nameLength, nullptr, nameBuffer.data());
         std::string uniformName(nameBuffer.data(), nameLength - 1);
 
-        GLenum type    = results[1];
+        GLenum target  = results[1];
         GLint location = results[2];
 
-        if (type == GL_SAMPLER_2D || type == GL_SAMPLER_CUBE) {
+        if (target == GL_SAMPLER_2D || target == GL_SAMPLER_CUBE) {
             GLint bindingSlot = -1;
             glGetUniformiv(m_id, location, &bindingSlot);
 

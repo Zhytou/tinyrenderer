@@ -120,10 +120,10 @@ void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture, G
     }
     m_attachments[slot] = texture;
 
-    if (texture->getType() != GL_TEXTURE_CUBE_MAP &&
-        texture->getType() != GL_TEXTURE_2D_ARRAY &&
-        texture->getType() != GL_TEXTURE_3D) {
-        throw std::runtime_error("FrameBuffer::attach: attachment type not supported");
+    if (texture->getTarget() != GL_TEXTURE_CUBE_MAP &&
+        texture->getTarget() != GL_TEXTURE_2D_ARRAY &&
+        texture->getTarget() != GL_TEXTURE_3D) {
+        throw std::runtime_error("FrameBuffer::attach: attachment target not supported");
     }
 
     // Attach a 2D texture level to a framebuffer

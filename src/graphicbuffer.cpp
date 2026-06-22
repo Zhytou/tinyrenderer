@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 namespace tinyrenderer {
-GraphicBuffer::GraphicBuffer(GLenum type, GLsizeiptr size, const void* data) : m_type(type), m_size(size) {
+GraphicBuffer::GraphicBuffer(GLenum target, GLsizeiptr size, const void* data) : m_target(target), m_size(size) {
     // Create graphic buffer handle
     //
     // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
