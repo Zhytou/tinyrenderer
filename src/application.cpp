@@ -15,7 +15,7 @@
 #include "utils.hpp"
 
 namespace tinyrenderer {
-Application::Application(uint32_t width, uint32_t height, const std::string& title) : m_width(width), m_height(height), m_renderer(width, height) {
+Application::Application(uint32_t width, uint32_t height, const std::string& title) : m_width(width), m_height(height) {
     // initialize glfw and glad
     std::cout << "Initializing GLFW & GLAD for [" << title << "]\n";
     setup(title);
@@ -118,9 +118,7 @@ void Application::load(const std::string& scenePath) {
     buffer << file.rdbuf();
 
     m_scene.initialize(buffer.str());
-    glDebug(-3);
     m_renderer.prepare(m_scene);
-    glDebug(-4);
 }
 
 void Application::run() {
@@ -134,9 +132,7 @@ void Application::run() {
         processInput(deltaTime);
 
         // Update and render scene
-        glDebug(-11);
         m_renderer.update(m_scene);
-        glDebug(-10);
         m_renderer.render(m_scene);
 
         // Draw head-up display
@@ -215,7 +211,7 @@ void Application::drawHUD(float deltaTime) {
             ImGui::Text("Camera FrontVec : (%.2f, %.2f, %.2f)", front.x, front.y, front.z);
             ImGui::Text("Shadow Mapping : %s", m_renderer.isShadowEnabled() ? "On" : "Off");
             ImGui::Text("Environment IBL : %s", m_renderer.isIBLEnabled() ? "On" : "Off");
-            ImGui::Text("Bloom Blur : %s", m_renderer.isBloomEnabled() ? ("On(" + m_renderer.getBlurMode() + " blur)").c_str() : "Off");
+            ImGui::Text("Bloom Blur : %s", m_renderer.isBloomEnabled() ? "On" : "Off");
             ImGui::Text("Sreen Space Ambient Occlusion : %s", m_renderer.isSSAOEnabled() ? "On" : "Off");
             ImGui::Text("Temporal Anti-Aliasing : %s", m_renderer.isTAAEnabled() ? "On" : "Off");
         }
@@ -268,14 +264,25 @@ void Application::mouseButtonCallback(GLFWwindow* window, int button, int action
 
     if (button == GLFW_MOUSE_BUTTON_RIGHT) {
         if (action == GLFW_PRESS) {
-            app->m_isMouseDragging = true;
+            app->m_mouseRightDragging = true;
 
             double xpos, ypos;
             glfwGetCursorPos(window, &xpos, &ypos);
             app->m_lastX = static_cast<float>(xpos);
             app->m_lastY = static_cast<float>(ypos);
         } else if (action == GLFW_RELEASE) {
-            app->m_isMouseDragging = false;
+            app->m_mouseRightDragging = false;
+        }
+    } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+            app->m_mouseLeftDragging = true;
+
+            double xpos, ypos;
+            glfwGetCursorPos(window, &xpos, &ypos);
+            app->m_lastX = static_cast<float>(xpos);
+            app->m_lastY = static_cast<float>(ypos);
+        } else if (action == GLFW_RELEASE) {
+            app->m_mouseLeftDragging = false;
         }
     }
 }
@@ -283,25 +290,36 @@ void Application::mouseButtonCallback(GLFWwindow* window, int button, int action
 void Application::cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
     auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
     if (!app) return;
-    if (!app->m_isMouseDragging) return;
+    if (!app->m_mouseRightDragging && !app->m_mouseLeftDragging) return;
 
     float currX   = static_cast<float>(xpos);
     float currY   = static_cast<float>(ypos);
-    float offsetX = currX - app->m_lastX;
-    float offsetY = app->m_lastY - currY;
-    app->m_lastX  = currX;
-    app->m_lastY  = currY;
+    float lastX   = app->m_lastX;
+    float lastY   = app->m_lastY;
+    float offsetX = currX - lastX;
+    float offsetY = lastY - currY;
 
     auto& camera = app->m_scene.getCamera();
     if (camera) {
-        camera->rotate(offsetX, offsetY);
+        if (app->m_mouseRightDragging) {
+            camera->rotate(offsetX, offsetY);
+        } else if (app->m_mouseLeftDragging) {
+            // camera->move(offsetX > 0 ? CameraMovement::RIGHT : CameraMovement::LEFT, offsetX / camera->getSpeed());
+            // camera->move(offsetY > 0 ? CameraMovement::UPWARD : CameraMovement::DOWNWARD, offsetY / camera->getSpeed());
+        }
     }
+
+    app->m_lastX = currX;
+    app->m_lastY = currY;
 }
 
 void Application::frameSizeCallback(GLFWwindow* window, int width, int height) {
     auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
     if (!app) return;
-    // TODO: resize renderer
+
+    app->m_width  = width;
+    app->m_height = height;
+    app->m_renderer.setSize(width, height);
 }
 
 }  // namespace tinyrenderer

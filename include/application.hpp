@@ -41,7 +41,8 @@ class Application {
     Scene m_scene;
     uint32_t m_width, m_height;
 
-    bool m_isMouseDragging = false;
+    bool m_mouseRightDragging = false;
+    bool m_mouseLeftDragging  = false;
     double m_lastX, m_lastY;
 };
 
