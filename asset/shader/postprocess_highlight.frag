@@ -2,6 +2,8 @@
 
 layout(location = 0) in vec2 iFragUV;
 
+uniform float uHighlightBrightness = 1.0;
+
 layout(binding = 24) uniform sampler2D tScreenMap;
 
 out vec4 oFragColor;
@@ -13,5 +15,5 @@ void main() {
     
     // if brightness is high, keep the color, otherwise set to black
     // so that later can use bloom blur to enhance the bloom effect
-    oFragColor = vec4(brightness > 1.0 ? color : vec3(0.0), 1.0);
+    oFragColor = vec4(brightness > uHighlightBrightness ? color : vec3(0.0), 1.0);
 }

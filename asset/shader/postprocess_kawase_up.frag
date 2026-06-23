@@ -27,5 +27,5 @@ void main() {
     vec4 upColor = color * 0.0833333; // 1.0 / 12.0
     vec4 downColor = textureLod(tBlurDownMap, iFragUV, uDstLevel);
 
-    oFragColor = vec4(upColor.rgb + downColor.rgb, 1.0);
+    oFragColor = vec4(upColor.rgb * 0.3 + downColor.rgb * 0.7, 1.0);
 }

@@ -5,8 +5,8 @@ layout(location = 0) in vec2 iFragUV;
 uniform bool uXFilter;
 uniform float uTexelSizeX;
 uniform float uTexelSizeY;
-layout(binding = 26) uniform sampler2D tBlurXMap;
-layout(binding = 27) uniform sampler2D tBlurYMap;
+layout(binding = 29) uniform sampler2D tBlurXMap;
+layout(binding = 30) uniform sampler2D tBlurYMap;
 
 out vec4 oFragColor;
 

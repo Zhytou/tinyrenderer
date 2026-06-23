@@ -2,10 +2,15 @@
 
 layout(location = 0) in vec2 iFragUV;
 
-layout(binding = 24) uniform sampler2D tScreenMap;
-layout(binding = 27) uniform sampler2D tBloomBlurMap;
+uniform float uBloomIntensity = 1.0;
+uniform float uFlareIntensity = 0.5;
 
-uniform float uBloomIntensity;
+layout(binding = 24) uniform sampler2D tScreenMap;
+layout(binding = 25) uniform sampler2D tHighlightMap; // debug check highlight distribution
+layout(binding = 26) uniform sampler2D tBloomblurDownMap; // debug check downsampling result
+layout(binding = 27) uniform sampler2D tBloomblurMap;
+layout(binding = 28) uniform sampler2D tLensflareMap;
+layout(binding = 31) uniform sampler2D tDirtmaskMap;
 
 out vec4 oFragColor;
 
@@ -22,8 +27,13 @@ void main() {
     vec3 hdrColor = texture(tScreenMap, iFragUV).rgb;
     
     // Bloom blur
-    vec3 bloomColor = texture(tBloomBlurMap, iFragUV).rgb;
+    vec3 bloomColor = texture(tBloomblurMap, iFragUV).rgb;
     hdrColor = hdrColor + bloomColor * uBloomIntensity;
+    
+    // Lens flare
+    vec3 flareColor = texture(tLensflareMap, iFragUV).rgb;
+    vec3 dirtColor = texture(tDirtmaskMap, iFragUV).rgb;
+    hdrColor = hdrColor + flareColor * dirtColor * uFlareIntensity;
     
     // Tone mapping(convert hdr color into sdr color)
     vec3 sdrColor = ACESFilm(hdrColor);
