@@ -10,7 +10,7 @@
 #include "renderitem.hpp"
 #include "texture.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 class Scene {
    public:
@@ -42,4 +42,4 @@ class Scene {
     std::pair<glm::vec3, glm::vec3> m_bounds = {glm::vec3(0.0f), glm::vec3(0.0f)};
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

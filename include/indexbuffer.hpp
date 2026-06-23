@@ -2,7 +2,7 @@
 
 #include "graphicbuffer.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 /**
  * @brief Linear topology index stream allocator (Element/Index Buffer Object).
@@ -17,4 +17,4 @@ class IndexBuffer : public GraphicBuffer {
     ~IndexBuffer() = default;
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

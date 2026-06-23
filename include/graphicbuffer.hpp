@@ -2,7 +2,7 @@
 
 #include <glad/glad.h>
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 class GraphicBuffer {
    public:
     GraphicBuffer(GLenum target, GLsizeiptr size, const void* data = nullptr);
@@ -27,4 +27,4 @@ class GraphicBuffer {
     GLsizeiptr m_size = 0;
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

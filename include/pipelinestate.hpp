@@ -6,7 +6,7 @@
 
 #include "shader.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 /**
  * @brief Data block containing the fixed-function states of the graphics pipeline.
@@ -105,4 +105,4 @@ inline void PipelineState::apply() {
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

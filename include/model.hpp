@@ -11,7 +11,7 @@
 #include "mesh.hpp"
 #include "renderitem.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 struct alignas(16) ModelBlock {
     glm::mat4 transformMatrix;  // translate, rotate, scale
@@ -30,6 +30,7 @@ class Model {
     Model(const std::filesystem::path& baseDir, const std::filesystem::path& modelName, const glm::mat4& transform);
     ~Model();
 
+    const std::string& getName() const { return m_name; }
     const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_bounds; }
     const ModelBlock& getModelBlock() const { return m_modelBlock; }
     void getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const;
@@ -46,6 +47,7 @@ class Model {
     }
 
    private:
+    std::string m_name;
     std::vector<std::shared_ptr<Material>> m_materials;
     std::unique_ptr<Mesh> m_mesh;
 
@@ -59,4 +61,4 @@ class Model {
     };
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

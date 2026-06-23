@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 std::ostream& operator<<(std::ostream& stream, const glm::vec3& vec) {
     stream << vec.x << ' ' << vec.y << ' ' << vec.z;
@@ -35,4 +35,4 @@ void glDebug(const char* msg) {
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

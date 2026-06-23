@@ -1,6 +1,6 @@
 #include "camera.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 void Camera::rotate(float yaw, float pitch, float sensitivity) {
     float angleX = glm::radians(-yaw * sensitivity);
@@ -50,4 +50,4 @@ void Camera::zoom(float offset, float sensitivity) {
     move(direction, deltaTime);
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

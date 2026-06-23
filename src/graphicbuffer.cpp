@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 GraphicBuffer::GraphicBuffer(GLenum target, GLsizeiptr size, const void* data) : m_target(target), m_size(size) {
     // Create graphic buffer handle
     //
@@ -93,4 +93,4 @@ void GraphicBuffer::upload(GLintptr offset, GLsizeiptr length, const void* data)
     glNamedBufferSubData(m_id, offset, length, data);
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

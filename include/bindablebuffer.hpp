@@ -2,7 +2,7 @@
 
 #include "graphicbuffer.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 class BindableBuffer : public GraphicBuffer {
    public:
@@ -21,4 +21,4 @@ class BindableBuffer : public GraphicBuffer {
     }
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

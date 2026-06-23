@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(tinyrenderer)
+project(tinyglrenderer)
 
 set(CMAKE_CXX_STANDARD 20)
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -35,6 +35,6 @@ set(IMGUI_LIBRARY imgui)
 file(GLOB SRC_FILES CONFIGURE_DEPENDS
     "src/*.cpp"
 )
-add_executable(main ${SRC_FILES})
+add_executable(app ${SRC_FILES})
 
-target_link_libraries(main ${GLFW3_LIBRARY} ${GLAD_LIBRARY} ${OBJ_LOADER_LIBRARY} ${STBI_LIBRARY} ${IMGUI_LIBRARY})
+target_link_libraries(app ${GLFW3_LIBRARY} ${GLAD_LIBRARY} ${OBJ_LOADER_LIBRARY} ${STBI_LIBRARY} ${IMGUI_LIBRARY})

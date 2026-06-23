@@ -17,7 +17,7 @@
 #include "uniformbuffer.hpp"
 #include "utils.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 void Renderer::setup() {
     // 0. Define name mappings
@@ -515,7 +515,7 @@ void Renderer::setup() {
     {
         std::cout << "Creating textures [dirtmask,";
         if (m_dirtmask) {
-            auto image             = Image::create("/home/zhytou/tinyrenderer/asset/static/dirtmask.png");
+            auto image             = Image::create("/home/zhytou/tinyglrenderer/asset/static/dirtmask.png");
             m_textures["dirtmask"] = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA32F, 1);
             m_textures["dirtmask"]->upload(image, 0);
         } else {
@@ -989,4 +989,4 @@ void Renderer::draw(const std::shared_ptr<VertexLayout>& layout, const std::vect
     return;
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

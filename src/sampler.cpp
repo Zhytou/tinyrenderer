@@ -1,6 +1,6 @@
 #include "sampler.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 Sampler::Sampler() {
     glGenSamplers(1, &m_id);
 }
@@ -63,4 +63,4 @@ void Sampler::set(const SamplerDesc& sampler) {
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

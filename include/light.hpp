@@ -6,7 +6,7 @@
 
 #include "utils.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 struct alignas(16) LightBlock {
     glm::mat4 viewProjMatrix;
@@ -99,4 +99,4 @@ inline void DirectionalLight::setLightSpaceMatrix(const std::pair<glm::vec3, glm
     return;
 }
 
-};  // namespace tinyrenderer
+};  // namespace tinyglrenderer

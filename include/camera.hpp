@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 struct alignas(16) CameraBlock {
     glm::mat4 viewMatrix;
@@ -143,4 +143,4 @@ class OrthographicCamera : public Camera {
     }
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

@@ -9,7 +9,7 @@
 #include "indexbuffer.hpp"
 #include "vertexbuffer.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 struct VertexAttribute {
     GLuint location      = 0;         // attribute index (e.g., layout location = 0)
@@ -128,4 +128,4 @@ class VertexLayout {
     GLuint m_id = 0;
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

@@ -1,6 +1,6 @@
 #include "vertexlayout.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 VertexLayout::VertexLayout() {
     // Create vertex array object
@@ -64,4 +64,4 @@ void VertexLayout::bind() const {
     glBindVertexArray(m_id);
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

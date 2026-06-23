@@ -17,7 +17,7 @@
 #include "vertexbuffer.hpp"
 #include "vertexlayout.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 /**
  * @brief Renderer class
@@ -43,11 +43,13 @@ class Renderer {
     void enableIBL(bool enable) { m_ibl = enable; }
     void enableShadow(bool enable) { m_shadow = enable; }
     void enableBloom(bool enable) { m_bloom = enable; }
+    void enableLensflare(bool enable) { m_lensflare = enable; }
     void enableSSAO(bool enable) { m_ssao = enable; }
     void enableTAA(bool enable) { m_taa = enable; }
     bool isIBLEnabled() const { return m_ibl; }
     bool isShadowEnabled() const { return m_shadow; }
     bool isBloomEnabled() const { return m_bloom; }
+    bool isLensflareEnabled() const { return m_lensflare; }
     bool isSSAOEnabled() const { return m_ssao; }
     bool isTAAEnabled() const { return m_taa; }
 
@@ -109,4 +111,4 @@ class Renderer {
     uint32_t m_drawCall           = 0;
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

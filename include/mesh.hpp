@@ -11,7 +11,7 @@
 #include "vertexbuffer.hpp"
 #include "vertexlayout.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 struct Vertex {
     glm::vec3 position;  // position
@@ -48,4 +48,4 @@ class Mesh {
     std::pair<glm::vec3, glm::vec3> m_bounds = {glm::vec3(FLT_MAX), glm::vec3(-FLT_MAX)};
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

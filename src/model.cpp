@@ -9,7 +9,7 @@
 
 #include "utils.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 namespace fs = std::filesystem;
 
@@ -30,6 +30,7 @@ Model& Model::operator=(Model&& other) {
 Model::Model(const fs::path& baseDir, const fs::path& modelName, const glm::mat4& transform) {
     std::cout << "Loading model [" << baseDir / modelName << "]\n";
 
+    m_name = modelName.filename().string();
     // 1. Load obj model with tinyobj loader
     fs::path modelPath = baseDir / modelName;
     tinyobj::attrib_t attributes;
@@ -74,4 +75,4 @@ void Model::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

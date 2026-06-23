@@ -6,7 +6,7 @@
 
 #include "utils.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 namespace fs = std::filesystem;
 
@@ -68,8 +68,6 @@ void Scene::initialize(const std::string& json) {
             transform           = glm::rotate(transform, glm::radians(rotate.z), glm::vec3(0.0f, 0.0f, 1.0f));
             transform           = glm::scale(transform, scale);
             m_models.emplace_back(std::make_shared<Model>(baseDir, modelName, transform));
-            // std::cout << "Transform:\n"
-            //           << transform << '\n';
 
             auto [xyzi1, xyzi2] = m_models.back()->getBoundingBox();
             m_bounds.first      = glm::min(m_bounds.first, xyzi1);
@@ -112,6 +110,7 @@ void Scene::initialize(const std::string& json) {
         m_camera->setUp(up);
     }
 
+    // skybox(environment map)
     if (doc.HasMember("skybox")) {
         if (doc["skybox"].HasMember("cubemap")) {
             std::vector<std::shared_ptr<Image>> images;
@@ -155,4 +154,4 @@ void Scene::destroy() {
     m_models.clear();
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

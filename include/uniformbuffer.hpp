@@ -2,7 +2,7 @@
 
 #include "bindablebuffer.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 /**
  * @brief Shared GPU data interface block mapped to std140 layout structures.
@@ -15,4 +15,4 @@ class UniformBuffer : public BindableBuffer {
     ~UniformBuffer() = default;
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

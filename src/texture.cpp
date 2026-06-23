@@ -6,12 +6,12 @@
 
 #include "utils.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 namespace fs = std::filesystem;
 
 Texture::Texture(uint32_t size, GLenum target, GLenum internalFormat, GLsizei mipLevels) : m_width(size), m_height(1), m_depth(1), m_target(target), m_internalFormat(internalFormat), m_mipLevels(mipLevels) {
-    if (size == 0 || mipLevels > 10 || size < (1 << mipLevels)) {
+    if (size == 0 || mipLevels > 10 || size < (1 << (mipLevels - 1))) {
         throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {} for mip level {}", size, mipLevels));
     }
 
@@ -25,7 +25,7 @@ Texture::Texture(uint32_t size, GLenum target, GLenum internalFormat, GLsizei mi
 }
 
 Texture::Texture(uint32_t width, uint32_t height, GLenum target, GLenum internalFormat, GLsizei mipLevels) : m_width(width), m_height(height), m_depth(1), m_target(target), m_internalFormat(internalFormat), m_mipLevels(mipLevels) {
-    if (width == 0 || height == 0 || mipLevels > 10 || width < (1 << mipLevels) || height < (1 << mipLevels)) {
+    if (width == 0 || height == 0 || mipLevels > 10 || width < (1 << (mipLevels - 1)) || height < (1 << (mipLevels - 1))) {
         throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{} for mip level {}", width, height, mipLevels));
     }
 
@@ -79,7 +79,7 @@ Texture::Texture(uint32_t width, uint32_t height, GLenum target, GLenum internal
 }
 
 Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum target, GLenum internalFormat, GLsizei mipLevels) : m_width(width), m_height(height), m_depth(depth), m_target(target), m_mipLevels(mipLevels), m_internalFormat(internalFormat) {
-    if (width == 0 || height == 0 || depth == 0 || mipLevels > 10 || width < (1 << mipLevels) || height < (1 << mipLevels)) {
+    if (width == 0 || height == 0 || depth == 0 || mipLevels > 10 || width < (1 << (mipLevels - 1)) || height < (1 << (mipLevels - 1)) || depth < (1 << (mipLevels - 1))) {
         throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{}x{} for mip level {}", width, height, depth, mipLevels));
     }
 
@@ -314,4 +314,4 @@ void Texture::generate() {
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

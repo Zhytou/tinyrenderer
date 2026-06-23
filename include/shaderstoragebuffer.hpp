@@ -2,7 +2,7 @@
 
 #include "bindablebuffer.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 /**
  * @brief Shared GPU storage interface block mapped to std430 layout structures.
@@ -15,4 +15,4 @@ class ShaderStorageBuffer : public BindableBuffer {
     ~ShaderStorageBuffer() {}
 };
 
-};  // namespace tinyrenderer
+};  // namespace tinyglrenderer

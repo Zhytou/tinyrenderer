@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 class Shader {
    public:
@@ -76,4 +76,4 @@ void Shader::setUniformValue(const std::string& name, const T& value) {
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

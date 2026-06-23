@@ -2,7 +2,7 @@
 
 #include <glad/glad.h>
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 struct SamplerDesc {
     // Texture Filtering
@@ -71,4 +71,4 @@ class Sampler {
     GLuint m_id = 0;
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

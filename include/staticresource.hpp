@@ -12,7 +12,7 @@
 #include "vertexbuffer.hpp"
 #include "vertexlayout.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 class StaticResource {
    private:
@@ -64,4 +64,4 @@ class StaticResource {
     std::unordered_map<std::string, std::unique_ptr<VertexBuffer>> m_buffers;
     std::array<glm::mat4, 6> m_matrixs;
 };
-};  // namespace tinyrenderer
+};  // namespace tinyglrenderer

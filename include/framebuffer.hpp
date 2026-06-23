@@ -7,7 +7,7 @@
 #include "texture.hpp"
 #include "utils.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 /**
  * @brief Explicit physical render target allocation block.
@@ -111,4 +111,4 @@ void FrameBuffer::read(std::vector<T>& data, GLenum target, GLenum slot, GLenum 
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

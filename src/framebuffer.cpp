@@ -6,7 +6,7 @@
 
 #include "utils.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 FrameBuffer::FrameBuffer(bool screen, uint32_t w, uint32_t h) : m_width(w), m_height(h) {
     if (!screen) {
@@ -304,4 +304,4 @@ void FrameBuffer::divide(std::vector<int>& rects, std::vector<float>& remaps, si
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

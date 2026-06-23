@@ -4,7 +4,7 @@
 
 #include "staticresource.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t numMaterials) {
     std::vector<Vertex> vertices;
@@ -74,4 +74,4 @@ Mesh::~Mesh() {
     if (m_bufferv) m_bufferv.reset();
     if (m_bufferi) m_bufferi.reset();
 }
-};  // namespace tinyrenderer
+};  // namespace tinyglrenderer

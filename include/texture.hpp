@@ -9,7 +9,7 @@
 
 #include "image.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 /**
  * @brief Encapsulates a GPU texture resource managing layout and multi-dimensional image storage.
@@ -103,4 +103,4 @@ class Texture {
     GLsizei m_mipLevels     = 1;
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

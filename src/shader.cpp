@@ -8,7 +8,7 @@
 
 #include "utils.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 namespace fs = std::filesystem;
 
@@ -147,4 +147,4 @@ void Shader::introspect() {
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

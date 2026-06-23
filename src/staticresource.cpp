@@ -4,7 +4,7 @@
 
 #include "mesh.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 void StaticResource::initialize() {
     // 1. Define vertex layouts
@@ -170,4 +170,4 @@ void StaticResource::destroy() {
     m_buffers.clear();
 }
 
-};  // namespace tinyrenderer
+};  // namespace tinyglrenderer

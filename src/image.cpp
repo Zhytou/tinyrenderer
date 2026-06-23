@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 Image::Image(void* data, GLenum type, int width, int height, int channels) {
     m_data     = data;
@@ -215,4 +215,4 @@ std::shared_ptr<Image> Image::resize(const std::shared_ptr<Image>& image, int wi
     return std::shared_ptr<Image>(new Image(data, type, width, height, channels));
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

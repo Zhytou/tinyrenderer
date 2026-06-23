@@ -4,7 +4,7 @@
 
 #include "utils.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 namespace fs = std::filesystem;
 
@@ -66,4 +66,4 @@ Material::Material(const fs::path& baseDir, const tinyobj::material_t& material)
     }
 }
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

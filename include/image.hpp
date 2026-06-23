@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 class Image {
    private:
@@ -95,4 +95,4 @@ class Image {
 //     std::unordered_map<std::string, std::weak_ptr<Image>> m_cache;
 // };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

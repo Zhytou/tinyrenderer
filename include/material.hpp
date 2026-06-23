@@ -11,7 +11,7 @@
 
 #include "texture.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 class Material {
    public:
     Material() = default;
@@ -37,4 +37,4 @@ class Material {
     std::unordered_map<std::string, std::shared_ptr<Texture>> m_textures;
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

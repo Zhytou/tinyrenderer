@@ -4,7 +4,7 @@
 
 #include "framebuffer.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 enum class LoadOp {
     LOAD_OP_LOAD,
@@ -62,4 +62,4 @@ struct RenderPass {
     }
 };
 
-};  // namespace tinyrenderer
+};  // namespace tinyglrenderer

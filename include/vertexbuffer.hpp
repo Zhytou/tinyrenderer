@@ -2,7 +2,7 @@
 
 #include "graphicbuffer.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 /**
  * @brief Passive vertex attribute data stream container (Vertex Buffer Object).
@@ -18,4 +18,4 @@ class VertexBuffer : public GraphicBuffer {
     ~VertexBuffer() = default;
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer

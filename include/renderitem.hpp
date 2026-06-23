@@ -8,7 +8,7 @@
 #include "material.hpp"
 #include "mesh.hpp"
 
-namespace tinyrenderer {
+namespace tinyglrenderer {
 
 /**
  * @brief Lightweight, self-contained draw command block.
@@ -25,4 +25,4 @@ struct RenderItem {
     uint32_t uoffset = 0;    // model block index of ubo in bytes
 };
 
-}  // namespace tinyrenderer
+}  // namespace tinyglrenderer
