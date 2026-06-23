@@ -16,6 +16,7 @@
 #include "shader.hpp"
 #include "vertexbuffer.hpp"
 #include "vertexlayout.hpp"
+#include "rendersetting.hpp"
 
 namespace tinyglrenderer {
 
@@ -27,9 +28,10 @@ namespace tinyglrenderer {
  */
 class Renderer {
    public:
-    Renderer(uint32_t width, uint32_t height) : m_width(width), m_height(height) {}
     Renderer()  = default;
     ~Renderer() = default;
+    Renderer(const Renderer& renderer) = delete;
+    Renderer& operator=(const Renderer& renderer) = delete;
 
     void setup();
     void shutdown();
@@ -39,32 +41,13 @@ class Renderer {
     void update(const Scene& scene);
     // Render scene
     void render(const Scene& scene);
-
-    void enableIBL(bool enable) { m_ibl = enable; }
-    void enableShadow(bool enable) { m_shadow = enable; }
-    void enableBloom(bool enable) { m_bloom = enable; }
-    void enableLensflare(bool enable) { m_lensflare = enable; }
-    void enableSSAO(bool enable) { m_ssao = enable; }
-    void enableTAA(bool enable) { m_taa = enable; }
-    bool isIBLEnabled() const { return m_ibl; }
-    bool isShadowEnabled() const { return m_shadow; }
-    bool isBloomEnabled() const { return m_bloom; }
-    bool isLensflareEnabled() const { return m_lensflare; }
-    bool isSSAOEnabled() const { return m_ssao; }
-    bool isTAAEnabled() const { return m_taa; }
+    // Config renderer settings
+    void config(const RenderSetting& setting) { m_setting = setting; }
+    // Resize renderer window
+    void resize(uint32_t width, uint32_t height) { m_setting.width = width; m_setting.height = height; }
 
     uint32_t getDrawCall() const { return m_drawCall; }
-    std::pair<uint32_t, uint32_t> getSize() const { return {m_width, m_height}; }
-    uint32_t getShadowMapSize() const { return m_shadowMapSize; }
-    uint32_t getSkyboxSize() const { return m_skyboxSize; }
-    uint32_t getBRDFLUTSize() const { return m_brdfLUTSize; }
-    void setSize(uint32_t width, uint32_t height) {
-        m_width  = width;
-        m_height = height;
-    }
-    void setShadowMapSize(uint32_t size) { m_shadowMapSize = size; }
-    void setSkyboxSize(uint32_t size) { m_skyboxSize = size; }
-    void setBRDFLUTSize(uint32_t size) { m_brdfLUTSize = size; }
+    RenderSetting getSetting() const { return m_setting; }
 
    private:
     // draw mesh
@@ -89,26 +72,8 @@ class Renderer {
     std::unordered_map<std::string, uint32_t> m_texture2SlotIndexs;
 
     /// renderer settings
-    bool m_deferred  = false;  // deferred rendering enabled or not
-    bool m_ibl       = false;  // image based light enabled or not
-    bool m_shadow    = false;  // shadow mapping enabled or not
-    bool m_bloom     = true;   // bloom blur enabled or not
-    bool m_lensflare = true;   // lensflare enabled or not
-    bool m_dirtmask  = true;   // dirtmask enabled or not
-    bool m_ssao      = false;  // screen space ambient occlusion enabled or not
-    bool m_taa       = false;  // temporal anti aliasing enabled or not
-
-    uint32_t m_width              = 4000;
-    uint32_t m_height             = 3000;
-    uint32_t m_skyboxSize         = 1024;
-    uint32_t m_brdfLUTSize        = 256;
-    uint32_t m_shadowMapSize      = 4096;
-    uint32_t m_highlightMapSize   = 1024;
-    uint32_t m_bloomMapSize       = 1024;  // size of bloom map using dual kawase blur algorithm
-    uint32_t m_bloomMipLevels     = 4;     // number of mip levels for bloom map
-    uint32_t m_lensflareMapSize   = 512;   // size of lensflare map using gaussian blur algorithm
-    uint32_t m_lensflareBlurTimes = 2;     // number of gaussian blur times for lensflare map
-    uint32_t m_drawCall           = 0;
+    RenderSetting m_setting;
+    uint32_t m_drawCall = 0;
 };
 
 }  // namespace tinyglrenderer

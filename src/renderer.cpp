@@ -268,7 +268,7 @@ void Renderer::setup() {
                     .type      = GL_TEXTURE_2D,
                     .format    = GL_RGBA32F,
                     .slot      = GL_COLOR_ATTACHMENT0,
-                    .mipLevels = (GLsizei)m_bloomMipLevels,
+                    .mipLevels = (GLsizei)m_setting.bloomMipLevels,
                     .loadOp    = LoadOp::LOAD_OP_DONT_CARE,  // never clear color for kawase_down pass, otherwise deadlock may occur in mipmap pyramid downsampling
                 },
             },
@@ -281,7 +281,7 @@ void Renderer::setup() {
                     .type      = GL_TEXTURE_2D,
                     .format    = GL_RGBA32F,
                     .slot      = GL_COLOR_ATTACHMENT0,
-                    .mipLevels = (GLsizei)m_bloomMipLevels,
+                    .mipLevels = (GLsizei)m_setting.bloomMipLevels,
                     .loadOp    = LoadOp::LOAD_OP_DONT_CARE,  // never clear color for kawase_up pass, otherwise deadlock may occur in mipmap pyramid upsampling
                 },
             },
@@ -335,32 +335,32 @@ void Renderer::setup() {
         m_states["equirect_to_cubemap"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_skyboxSize,
-            .viewH            = (GLsizei)m_skyboxSize,
+            .viewW            = (GLsizei)m_setting.skyboxSize,
+            .viewH            = (GLsizei)m_setting.skyboxSize,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
         m_states["ibl_irradiance"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_skyboxSize,
-            .viewH            = (GLsizei)m_skyboxSize,
+            .viewW            = (GLsizei)m_setting.skyboxSize,
+            .viewH            = (GLsizei)m_setting.skyboxSize,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
         m_states["ibl_prefiltered"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_skyboxSize,
-            .viewH            = (GLsizei)m_skyboxSize,
+            .viewW            = (GLsizei)m_setting.skyboxSize,
+            .viewH            = (GLsizei)m_setting.skyboxSize,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
         m_states["ibl_brdf_lut"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_brdfLUTSize,
-            .viewH            = (GLsizei)m_brdfLUTSize,
+            .viewW            = (GLsizei)m_setting.brdfLUTSize,
+            .viewH            = (GLsizei)m_setting.brdfLUTSize,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
@@ -373,8 +373,8 @@ void Renderer::setup() {
         m_states["deferred_geometry"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_width,
-            .viewH            = (GLsizei)m_height,
+            .viewW            = (GLsizei)m_setting.width,
+            .viewH            = (GLsizei)m_setting.height,
             .depthTestEnable  = GL_TRUE,
             .depthWriteEnable = GL_TRUE,
             .depthFunc        = GL_LESS,
@@ -382,16 +382,16 @@ void Renderer::setup() {
         m_states["deferred_shading"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_width,
-            .viewH            = (GLsizei)m_height,
+            .viewW            = (GLsizei)m_setting.width,
+            .viewH            = (GLsizei)m_setting.height,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
         m_states["forward_opaque"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_width,
-            .viewH            = (GLsizei)m_height,
+            .viewW            = (GLsizei)m_setting.width,
+            .viewH            = (GLsizei)m_setting.height,
             .depthTestEnable  = GL_TRUE,
             .depthWriteEnable = GL_TRUE,
             .depthFunc        = GL_LESS,
@@ -399,8 +399,8 @@ void Renderer::setup() {
         m_states["skybox"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_width,
-            .viewH            = (GLsizei)m_height,
+            .viewW            = (GLsizei)m_setting.width,
+            .viewH            = (GLsizei)m_setting.height,
             .depthTestEnable  = GL_TRUE,
             .depthWriteEnable = GL_FALSE,
             .depthFunc        = GL_LEQUAL,
@@ -408,8 +408,8 @@ void Renderer::setup() {
         m_states["postprocess_highlight"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_highlightMapSize,
-            .viewH            = (GLsizei)m_highlightMapSize,
+            .viewW            = (GLsizei)m_setting.highlightMapSize,
+            .viewH            = (GLsizei)m_setting.highlightMapSize,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
@@ -426,16 +426,16 @@ void Renderer::setup() {
         m_states["postprocess_lensflare"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_lensflareMapSize,
-            .viewH            = (GLsizei)m_lensflareMapSize,
+            .viewW            = (GLsizei)m_setting.lensflareMapSize,
+            .viewH            = (GLsizei)m_setting.lensflareMapSize,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
         m_states["postprocess_gaussian_blur"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_lensflareMapSize,
-            .viewH            = (GLsizei)m_lensflareMapSize,
+            .viewW            = (GLsizei)m_setting.lensflareMapSize,
+            .viewH            = (GLsizei)m_setting.lensflareMapSize,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
@@ -467,20 +467,20 @@ void Renderer::setup() {
 
     // 4. Create framebuffers
     {
-        m_frames["ibl_diffuse"]  = std::make_shared<FrameBuffer>(false, m_skyboxSize, m_skyboxSize);
-        m_frames["ibl_specular"] = std::make_shared<FrameBuffer>(false, m_skyboxSize, m_skyboxSize);
-        m_frames["ibl_brdf_lut"] = std::make_shared<FrameBuffer>(false, m_brdfLUTSize, m_brdfLUTSize);
-        m_frames["shadow"]       = std::make_shared<FrameBuffer>(false, m_shadowMapSize, m_shadowMapSize);
-        m_frames["gbuffer"]      = std::make_shared<FrameBuffer>(false, m_width, m_height);
-        m_frames["skybox"]       = std::make_shared<FrameBuffer>(false, m_skyboxSize, m_skyboxSize);
-        m_frames["hdr_screen"]   = std::make_shared<FrameBuffer>(false, m_width, m_height);  // hdr_screen is the temporary frame buffer for shading pass, so that later can use it for postprocess(convert hdr into sdr/ldr)
-        m_frames["highlight"]    = std::make_shared<FrameBuffer>(false, m_highlightMapSize, m_highlightMapSize);
-        m_frames["blur_down"]    = std::make_shared<FrameBuffer>(false, m_bloomMapSize, m_bloomMapSize);
-        m_frames["blur_up"]      = std::make_shared<FrameBuffer>(false, m_bloomMapSize, m_bloomMapSize);
-        m_frames["lensflare"]    = std::make_shared<FrameBuffer>(false, m_lensflareMapSize, m_lensflareMapSize);
-        m_frames["blur_x"]       = std::make_shared<FrameBuffer>(false, m_lensflareMapSize, m_lensflareMapSize);  // blur_x is the temporary frame buffer for horizontal gaussian blur
-        m_frames["blur_y"]       = std::make_shared<FrameBuffer>(false, m_lensflareMapSize, m_lensflareMapSize);  // blur_y is the temporary frame buffer for vertical gaussian blur
-        m_frames["screen"]       = std::make_shared<FrameBuffer>(true, m_width, m_height);
+        m_frames["ibl_diffuse"]  = std::make_shared<FrameBuffer>(false, m_setting.skyboxSize, m_setting.skyboxSize);
+        m_frames["ibl_specular"] = std::make_shared<FrameBuffer>(false, m_setting.skyboxSize, m_setting.skyboxSize);
+        m_frames["ibl_brdf_lut"] = std::make_shared<FrameBuffer>(false, m_setting.brdfLUTSize, m_setting.brdfLUTSize);
+        m_frames["shadow"]       = std::make_shared<FrameBuffer>(false, m_setting.shadowMapSize, m_setting.shadowMapSize);
+        m_frames["gbuffer"]      = std::make_shared<FrameBuffer>(false, m_setting.width, m_setting.height);
+        m_frames["skybox"]       = std::make_shared<FrameBuffer>(false, m_setting.skyboxSize, m_setting.skyboxSize);
+        m_frames["hdr_screen"]   = std::make_shared<FrameBuffer>(false, m_setting.width, m_setting.height);  // hdr_screen is the temporary frame buffer for shading pass, so that later can use it for postprocess(convert hdr into sdr/ldr)
+        m_frames["highlight"]    = std::make_shared<FrameBuffer>(false, m_setting.highlightMapSize, m_setting.highlightMapSize);
+        m_frames["blur_down"]    = std::make_shared<FrameBuffer>(false, m_setting.bloomMapSize, m_setting.bloomMapSize);
+        m_frames["blur_up"]      = std::make_shared<FrameBuffer>(false, m_setting.bloomMapSize, m_setting.bloomMapSize);
+        m_frames["lensflare"]    = std::make_shared<FrameBuffer>(false, m_setting.lensflareMapSize, m_setting.lensflareMapSize);
+        m_frames["blur_x"]       = std::make_shared<FrameBuffer>(false, m_setting.lensflareMapSize, m_setting.lensflareMapSize);  // blur_x is the temporary frame buffer for horizontal gaussian blur
+        m_frames["blur_y"]       = std::make_shared<FrameBuffer>(false, m_setting.lensflareMapSize, m_setting.lensflareMapSize);  // blur_y is the temporary frame buffer for vertical gaussian blur
+        m_frames["screen"]       = std::make_shared<FrameBuffer>(true, m_setting.width, m_setting.height);
     }
 
     // 5. Create textures and activate them as drawable attachments for framebuffers
@@ -514,7 +514,7 @@ void Renderer::setup() {
 
     {
         std::cout << "Creating textures [dirtmask,";
-        if (m_dirtmask) {
+        if (m_setting.dirtmask) {
             auto image             = Image::create("/home/zhytou/tinyglrenderer/asset/static/dirtmask.png");
             m_textures["dirtmask"] = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA32F, 1);
             m_textures["dirtmask"]->upload(image, 0);
@@ -612,7 +612,7 @@ void Renderer::prepare(const Scene& scene) {
     }
 
     // 2. Precalculate environment map
-    if (m_ibl) {
+    if (m_setting.ibl) {
         // 2.1 Precalculate irradiance map
         {
             m_states["ibl_irradiance"].apply();
@@ -704,7 +704,7 @@ void Renderer::update(const Scene& scene) {
     scene.getRenderQueue(transparentQueue, false);
 
     // 3. Render shadow map and update the light shader storage buffer if needed
-    if (m_shadow) {
+    if (m_setting.shadow) {
         std::vector<std::shared_ptr<Light>> lights = scene.getLights();
         std::vector<int> rects;
         std::vector<float> remaps;
@@ -741,7 +741,7 @@ void Renderer::render(const Scene& scene) {
     // std::cout << "OpaqueQueue size: " << opaqueQueue.size() << std::endl;
     // std::cout << "TransparentQueue size: " << transparentQueue.size() << std::endl;
 
-    if (m_deferred) {
+    if (m_setting.deferred) {
         {
             m_states["deferred_geometry"].apply();
             m_shaders["deferred_geometry"]->use();
@@ -790,7 +790,7 @@ void Renderer::render(const Scene& scene) {
         m_passes["skybox"].end();
     }
 
-    if (m_bloom || m_lensflare) {
+    if (m_setting.bloom || m_setting.lensflare) {
         GLsizei count = instance.getCounts("quad");
         auto& layout  = instance.getLayout("quad");
 
@@ -809,7 +809,7 @@ void Renderer::render(const Scene& scene) {
 
         m_states["postprocess_kawase_down"].apply();
         m_shaders["postprocess_kawase_down"]->use();
-        for (int level = 0; level + 1 < m_bloomMipLevels; level++) {
+        for (int level = 0; level + 1 < m_setting.bloomMipLevels; level++) {
             int srcLevel        = level;
             int dstLevel        = level + 1;
             float srcTexelSizeX = 1.0f / (float)m_textures["blur_down"]->getWidth(srcLevel);
@@ -830,14 +830,14 @@ void Renderer::render(const Scene& scene) {
         }
 
         {
-            m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], m_bloomMipLevels - 1);
-            m_frames["blur_up"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_up"], m_bloomMipLevels - 1);
+            m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], m_setting.bloomMipLevels - 1);
+            m_frames["blur_up"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_up"], m_setting.bloomMipLevels - 1);
             m_frames["blur_up"]->copy(*m_frames["blur_down"], GL_COLOR_BUFFER_BIT);  // both framebuffers are needed to be explicitly attached to the final mip level before copying
         }
 
         m_states["postprocess_kawase_up"].apply();
         m_shaders["postprocess_kawase_up"]->use();
-        for (int level = m_bloomMipLevels - 1; level - 1 >= 0; level--) {
+        for (int level = m_setting.bloomMipLevels - 1; level - 1 >= 0; level--) {
             int srcLevel        = level;
             int dstLevel        = level - 1;
             float srcTexelSizeX = 1.0f / (float)m_textures["blur_down"]->getWidth(srcLevel);
@@ -861,7 +861,7 @@ void Renderer::render(const Scene& scene) {
         m_textures["bloom"] = m_textures["blur_up"];
     }
 
-    if (m_lensflare) {
+    if (m_setting.lensflare) {
         GLsizei count = instance.getCounts("quad");
         auto& layout  = instance.getLayout("quad");
 
@@ -888,7 +888,7 @@ void Renderer::render(const Scene& scene) {
             m_shaders["postprocess_gaussian_blur"]->use();
             m_shaders["postprocess_gaussian_blur"]->setUniformValue("uTexelSizeX", texelSizeX);
             m_shaders["postprocess_gaussian_blur"]->setUniformValue("uTexelSizeY", texelSizeY);
-            for (int i = 0; i < m_lensflareBlurTimes * 2; i++) {
+            for (int i = 0; i < m_setting.lensflareBlurTimes * 2; i++) {
                 m_shaders["postprocess_gaussian_blur"]->setUniformValue("uXFilter", xFilter);
                 if (xFilter) {
                     m_passes["postprocess_gaussian_blur"].begin(m_frames["blur_x"]);
@@ -910,11 +910,11 @@ void Renderer::render(const Scene& scene) {
     }
 
     // TODO: screen space ambient occlusion
-    if (m_ssao) {
+    if (m_setting.ssao) {
     }
 
     // TODO: temporal anti aliasing
-    if (m_taa) {
+    if (m_setting.taa) {
     }
 
     {
@@ -922,7 +922,7 @@ void Renderer::render(const Scene& scene) {
         auto& layout  = instance.getLayout("quad");
 
         m_states["postprocess_final"].apply();
-        m_states["postprocess_final"].view(0, 0, m_width, m_height);
+        m_states["postprocess_final"].view(0, 0, m_setting.width, m_setting.height);
         m_shaders["postprocess_final"]->use();
         m_passes["postprocess_final"].begin(m_frames["screen"]);
         draw(layout, {"hdr_screen.color", "highlight", "blur_up", "blur_down", "lensflare", "dirtmask"}, count);
