@@ -7,7 +7,7 @@ std::string scene = "../asset/scene/gun.json";
 
 int main(int argc, char** argv) {
     try {
-        tinyglrenderer::Application app(1500, 1200, "TinyRenderer");
+        tinyglrenderer::Application app(1500, 1200, "TinyGLRenderer");
         app.load(scene);
         app.run();
     } catch (const std::exception& e) {
