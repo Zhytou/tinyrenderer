@@ -33,12 +33,11 @@ void Renderer::setup() {
             {"forward_opaque", "hdr_screen"},
             {"skybox", "hdr_screen"},
             {"postprocess_highlight", "highlight"},
-            {"postprocess_gaussian_blur", "blur_x"},
-            {"postprocess_gaussian_blur", "blur_y"},
             {"postprocess_kawase_down", "blur_down"},
             {"postprocess_kawase_up", "blur_up"},
             {"postprocess_lensflare", "lensflare"},
-            {"postprocess_ssao", "ssao"},
+            {"postprocess_gaussian_blur", "blur_x"},
+            {"postprocess_gaussian_blur", "blur_y"},
             {"postprocess_final", "screen"},
         };
         m_texture2SlotIndexs = {
@@ -67,13 +66,13 @@ void Renderer::setup() {
             {"hdr_screen.color", 24},
             {"hdr_screen.depth", -1},  // only used as output, no need to bind
             {"highlight", 25},
-            {"blur_x", 26},
-            {"blur_y", 27},  // even though ping-pong buffering technique is used in blur pass, blur_x and blur_y can not share the same slot(write/read access may cause conflict)
             {"blur_down", 26},
             {"blur_up", 27},
-            {"bloom", 27},  // bloom is the alias of blur_y, which is the output of blur pass
+            {"bloom", 27},  // bloom is the output of bloom blur pass
             {"lensflare", 28},
-            {"ssao", 29},
+            {"blur_x", 29},
+            {"blur_y", 30},  // even though ping-pong buffering technique is used in blur pass, blur_x and blur_y can not share the same slot(write/read access may cause conflict)
+            {"dirtmask", 31},
         };
     }
 
@@ -261,18 +260,6 @@ void Renderer::setup() {
                 },
             },
         };
-        m_passes["postprocess_gaussian_blur"] = RenderPass{
-            .attachments = {
-                AttachmentDesc{
-                    .name   = "",  // use frame buffer name as ouput attachment name
-                    .target = GL_COLOR,
-                    .type   = GL_TEXTURE_2D,
-                    .format = GL_RGBA32F,
-                    .slot   = GL_COLOR_ATTACHMENT0,
-                    .loadOp = LoadOp::LOAD_OP_DONT_CARE,
-                },
-            },
-        };
         m_passes["postprocess_kawase_down"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
@@ -281,7 +268,7 @@ void Renderer::setup() {
                     .type      = GL_TEXTURE_2D,
                     .format    = GL_RGBA32F,
                     .slot      = GL_COLOR_ATTACHMENT0,
-                    .mipLevels = (GLsizei)m_blurMipLevels,
+                    .mipLevels = (GLsizei)m_bloomMipLevels,
                     .loadOp    = LoadOp::LOAD_OP_DONT_CARE,  // never clear color for kawase_down pass, otherwise deadlock may occur in mipmap pyramid downsampling
                 },
             },
@@ -294,8 +281,33 @@ void Renderer::setup() {
                     .type      = GL_TEXTURE_2D,
                     .format    = GL_RGBA32F,
                     .slot      = GL_COLOR_ATTACHMENT0,
-                    .mipLevels = (GLsizei)m_blurMipLevels,
+                    .mipLevels = (GLsizei)m_bloomMipLevels,
                     .loadOp    = LoadOp::LOAD_OP_DONT_CARE,  // never clear color for kawase_up pass, otherwise deadlock may occur in mipmap pyramid upsampling
+                },
+            },
+        };
+        m_passes["postprocess_lensflare"] = RenderPass{
+            .attachments = {
+                AttachmentDesc{
+                    .name   = "",  // use frame buffer name as ouput attachment name
+                    .target = GL_COLOR,
+                    .type   = GL_TEXTURE_2D,
+                    .format = GL_RGBA32F,
+                    .slot   = GL_COLOR_ATTACHMENT0,
+                    .loadOp = LoadOp::LOAD_OP_CLEAR,
+                    .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+                },
+            },
+        };
+        m_passes["postprocess_gaussian_blur"] = RenderPass{
+            .attachments = {
+                AttachmentDesc{
+                    .name   = "",  // use frame buffer name as ouput attachment name
+                    .target = GL_COLOR,
+                    .type   = GL_TEXTURE_2D,
+                    .format = GL_RGBA32F,
+                    .slot   = GL_COLOR_ATTACHMENT0,
+                    .loadOp = LoadOp::LOAD_OP_DONT_CARE,
                 },
             },
         };
@@ -396,16 +408,8 @@ void Renderer::setup() {
         m_states["postprocess_highlight"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_width,
-            .viewH            = (GLsizei)m_height,
-            .depthTestEnable  = GL_FALSE,
-            .depthWriteEnable = GL_FALSE,
-        };
-        m_states["postprocess_gaussian_blur"] = PipelineState{
-            .viewX            = 0,
-            .viewY            = 0,
-            .viewW            = (GLsizei)m_blurMapSize,
-            .viewH            = (GLsizei)m_blurMapSize,
+            .viewW            = (GLsizei)m_highlightMapSize,
+            .viewH            = (GLsizei)m_highlightMapSize,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
@@ -419,19 +423,24 @@ void Renderer::setup() {
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
-        m_states["postprocess_ssao"] = PipelineState{
+        m_states["postprocess_lensflare"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_width,
-            .viewH            = (GLsizei)m_height,
+            .viewW            = (GLsizei)m_lensflareMapSize,
+            .viewH            = (GLsizei)m_lensflareMapSize,
+            .depthTestEnable  = GL_FALSE,
+            .depthWriteEnable = GL_FALSE,
+        };
+        m_states["postprocess_gaussian_blur"] = PipelineState{
+            .viewX            = 0,
+            .viewY            = 0,
+            .viewW            = (GLsizei)m_lensflareMapSize,
+            .viewH            = (GLsizei)m_lensflareMapSize,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
         m_states["postprocess_final"] = PipelineState{
-            .viewX            = 0,
-            .viewY            = 0,
-            .viewW            = (GLsizei)m_width,
-            .viewH            = (GLsizei)m_height,
+            .viewportDynamic  = GL_TRUE,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
@@ -449,13 +458,11 @@ void Renderer::setup() {
         m_shaders["forward_opaque"]            = std::make_shared<Shader>("../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
         m_shaders["skybox"]                    = std::make_shared<Shader>("../asset/shader/skybox.vert", "../asset/shader/skybox.frag");
         m_shaders["postprocess_highlight"]     = std::make_shared<Shader>("../asset/shader/postprocess_highlight.vert", "../asset/shader/postprocess_highlight.frag");
-        m_shaders["postprocess_gaussian_blur"] = std::make_shared<Shader>("../asset/shader/postprocess_gaussian_blur.vert", "../asset/shader/postprocess_gaussian_blur.frag");
         m_shaders["postprocess_kawase_down"]   = std::make_shared<Shader>("../asset/shader/postprocess_kawase_down.vert", "../asset/shader/postprocess_kawase_down.frag");
         m_shaders["postprocess_kawase_up"]     = std::make_shared<Shader>("../asset/shader/postprocess_kawase_up.vert", "../asset/shader/postprocess_kawase_up.frag");
         m_shaders["postprocess_lensflare"]     = std::make_shared<Shader>("../asset/shader/postprocess_lensflare.vert", "../asset/shader/postprocess_lensflare.frag");
-        // m_shaders["postprocess_ssao"]     = std::make_shared<Shader>("../asset/shader/postprocess_ssao.vert", "../asset/shader/postprocess_ssao.frag");
-        // m_shaders["postprocess_taa"]   = std::make_shared<Shader>("../asset/shader/postprocess_taa.vert", "../asset/shader/postprocess_taa.frag");
-        m_shaders["postprocess_final"] = std::make_shared<Shader>("../asset/shader/postprocess.vert", "../asset/shader/postprocess.frag");
+        m_shaders["postprocess_gaussian_blur"] = std::make_shared<Shader>("../asset/shader/postprocess_gaussian_blur.vert", "../asset/shader/postprocess_gaussian_blur.frag");
+        m_shaders["postprocess_final"]         = std::make_shared<Shader>("../asset/shader/postprocess.vert", "../asset/shader/postprocess.frag");
     }
 
     // 4. Create framebuffers
@@ -467,13 +474,12 @@ void Renderer::setup() {
         m_frames["gbuffer"]      = std::make_shared<FrameBuffer>(false, m_width, m_height);
         m_frames["skybox"]       = std::make_shared<FrameBuffer>(false, m_skyboxSize, m_skyboxSize);
         m_frames["hdr_screen"]   = std::make_shared<FrameBuffer>(false, m_width, m_height);  // hdr_screen is the temporary frame buffer for shading pass, so that later can use it for postprocess(convert hdr into sdr/ldr)
-        m_frames["highlight"]    = std::make_shared<FrameBuffer>(false, m_width, m_height);
-        m_frames["blur_x"]       = std::make_shared<FrameBuffer>(false, m_blurMapSize, m_blurMapSize);  // blur_x is the temporary frame buffer for horizontal gaussian blur
-        m_frames["blur_y"]       = std::make_shared<FrameBuffer>(false, m_blurMapSize, m_blurMapSize);  // blur_y is the temporary frame buffer for vertical gaussian blur
-        m_frames["blur_down"]    = std::make_shared<FrameBuffer>(false, m_blurMapSize, m_blurMapSize);  // kawase_blur is the temporary frame buffer for kawase blur
-        m_frames["blur_up"]      = std::make_shared<FrameBuffer>(false, m_blurMapSize, m_blurMapSize);  // kawase_blur is the temporary frame buffer for kawase blur
-        m_frames["lensflare"]    = std::make_shared<FrameBuffer>(false, m_width, m_height);
-        m_frames["ssao"]         = std::make_shared<FrameBuffer>(false, m_width, m_height);
+        m_frames["highlight"]    = std::make_shared<FrameBuffer>(false, m_highlightMapSize, m_highlightMapSize);
+        m_frames["blur_down"]    = std::make_shared<FrameBuffer>(false, m_bloomMapSize, m_bloomMapSize);
+        m_frames["blur_up"]      = std::make_shared<FrameBuffer>(false, m_bloomMapSize, m_bloomMapSize);
+        m_frames["lensflare"]    = std::make_shared<FrameBuffer>(false, m_lensflareMapSize, m_lensflareMapSize);
+        m_frames["blur_x"]       = std::make_shared<FrameBuffer>(false, m_lensflareMapSize, m_lensflareMapSize);  // blur_x is the temporary frame buffer for horizontal gaussian blur
+        m_frames["blur_y"]       = std::make_shared<FrameBuffer>(false, m_lensflareMapSize, m_lensflareMapSize);  // blur_y is the temporary frame buffer for vertical gaussian blur
         m_frames["screen"]       = std::make_shared<FrameBuffer>(true, m_width, m_height);
     }
 
@@ -504,6 +510,18 @@ void Renderer::setup() {
             m_frames[frameName]->finalize();
             m_frames[frameName]->validate();
         }
+    }
+
+    {
+        std::cout << "Creating textures [dirtmask,";
+        if (m_dirtmask) {
+            auto image             = Image::create("/home/zhytou/tinyrenderer/asset/static/dirtmask.png");
+            m_textures["dirtmask"] = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA32F, 1);
+            m_textures["dirtmask"]->upload(image, 0);
+        } else {
+            m_textures["dirtmask"] = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, GL_RGBA32F, 1);
+        }
+        std::cout << "]\n";
     }
 
     // 6. Create samplers for corresponding slots
@@ -723,33 +741,33 @@ void Renderer::render(const Scene& scene) {
     // std::cout << "OpaqueQueue size: " << opaqueQueue.size() << std::endl;
     // std::cout << "TransparentQueue size: " << transparentQueue.size() << std::endl;
 
-    // {
-    //     m_states["deferred_geometry"].apply();
-    //     m_shaders["deferred_geometry"]->use();
-    //     m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
-    //     for (const auto& item : opaqueQueue) {
-    //         m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-    //         draw(item, {"albedo", "normal", "mrao"});
-    //     }
-    //     m_passes["deferred_geometry"].end();
-    // }
+    if (m_deferred) {
+        {
+            m_states["deferred_geometry"].apply();
+            m_shaders["deferred_geometry"]->use();
+            m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
+            for (const auto& item : opaqueQueue) {
+                m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
+                draw(item, {"albedo", "normal", "mrao"});
+            }
+            m_passes["deferred_geometry"].end();
+        }
 
-    // // ! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
-    // m_frames["hdr_screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
+        // ! WARNING: Copy depth buffer to screen framebuffer, otherwise depth test will fail for subsequent passes that bind screen framebuffer, since gbuffer's depth buffer is not shared with screen framebuffer.(e.g., skybox will fail if copy is commented) This is a workaround for the fact that OpenGL does not support framebuffer inheritance and subpasses like Vulkan, which allow multiple passes to share the same depth attachment without copying.
+        m_frames["hdr_screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
 
-    // {
-    //     GLsizei count = instance.getCounts("quad");
-    //     auto& layout  = instance.getLayout("quad");
+        {
+            GLsizei count = instance.getCounts("quad");
+            auto& layout  = instance.getLayout("quad");
 
-    //     m_states["deferred_shading"].apply();
-    //     m_shaders["deferred_shading"]->use();
-    //     m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
-    //     m_passes["deferred_shading"].begin(m_frames["screen"]);
-    //     draw(layout, {"gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow", "ibl_diffuse", "ibl_specular"}, count);
-    //     m_passes["deferred_shading"].end();
-    // }
-
-    {
+            m_states["deferred_shading"].apply();
+            m_shaders["deferred_shading"]->use();
+            m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
+            m_passes["deferred_shading"].begin(m_frames["hdr_screen"]);
+            draw(layout, {"gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut"}, count);
+            m_passes["deferred_shading"].end();
+        }
+    } else {
         m_states["forward_opaque"].apply();
         m_shaders["forward_opaque"]->use();
         m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
@@ -772,32 +790,105 @@ void Renderer::render(const Scene& scene) {
         m_passes["skybox"].end();
     }
 
-    {
-        GLsizei count = instance.getCounts("quad");
-        auto& layout  = instance.getLayout("quad");
-
-        m_states["postprocess_highlight"].apply();
-        m_shaders["postprocess_highlight"]->use();
-        m_passes["postprocess_highlight"].begin(m_frames["highlight"]);
-        draw(layout, {"hdr_screen.color"}, count);
-        m_passes["postprocess_highlight"].end();
-    }
-
     if (m_bloom || m_lensflare) {
         GLsizei count = instance.getCounts("quad");
         auto& layout  = instance.getLayout("quad");
 
-        if (m_blurMode == "gaussian") {
+        {
+            m_states["postprocess_highlight"].apply();
+            m_shaders["postprocess_highlight"]->use();
+            m_passes["postprocess_highlight"].begin(m_frames["highlight"]);
+            draw(layout, {"hdr_screen.color"}, count);
+            m_passes["postprocess_highlight"].end();
+        }
+
+        {
+            m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], 0);      // reset blur_down to mip level 0 before copying, as the previous frame's loop leaves it attached to the smallest mip level, while highlight only has one level, no adjustment is needed for it.
+            m_frames["blur_down"]->copy(*m_frames["highlight"], GL_COLOR_BUFFER_BIT, GL_LINEAR);  // GL_LINEAR is used to handle bilinear interpolation since their dimensions may differ.
+        }
+
+        m_states["postprocess_kawase_down"].apply();
+        m_shaders["postprocess_kawase_down"]->use();
+        for (int level = 0; level + 1 < m_bloomMipLevels; level++) {
+            int srcLevel        = level;
+            int dstLevel        = level + 1;
+            float srcTexelSizeX = 1.0f / (float)m_textures["blur_down"]->getWidth(srcLevel);
+            float srcTexelSizeY = 1.0f / (float)m_textures["blur_down"]->getHeight(srcLevel);
+            uint32_t width      = m_textures["blur_down"]->getWidth(dstLevel);
+            uint32_t height     = m_textures["blur_down"]->getHeight(dstLevel);
+
+            m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], dstLevel);
+            m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcTexelSizeX", srcTexelSizeX);
+            m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcTexelSizeY", srcTexelSizeY);
+            m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcLevel", srcLevel);
+            m_states["postprocess_kawase_down"].view(0, 0, width, height);
+            m_passes["postprocess_kawase_down"].begin(m_frames["blur_down"]);
+            m_textures["blur_down"]->clamp(srcLevel);  // avoid feedback loop
+            draw(layout, {"blur_down"}, count);
+            m_textures["blur_down"]->unclamp();
+            m_passes["postprocess_kawase_down"].end();
+        }
+
+        {
+            m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], m_bloomMipLevels - 1);
+            m_frames["blur_up"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_up"], m_bloomMipLevels - 1);
+            m_frames["blur_up"]->copy(*m_frames["blur_down"], GL_COLOR_BUFFER_BIT);  // both framebuffers are needed to be explicitly attached to the final mip level before copying
+        }
+
+        m_states["postprocess_kawase_up"].apply();
+        m_shaders["postprocess_kawase_up"]->use();
+        for (int level = m_bloomMipLevels - 1; level - 1 >= 0; level--) {
+            int srcLevel        = level;
+            int dstLevel        = level - 1;
+            float srcTexelSizeX = 1.0f / (float)m_textures["blur_down"]->getWidth(srcLevel);
+            float srcTexelSizeY = 1.0f / (float)m_textures["blur_down"]->getHeight(srcLevel);
+            GLsizei dstWidth    = m_textures["blur_up"]->getWidth(dstLevel);
+            GLsizei dstHeight   = m_textures["blur_up"]->getHeight(dstLevel);
+
+            m_frames["blur_up"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_up"], dstLevel);
+            m_shaders["postprocess_kawase_up"]->setUniformValue("uSrcTexelSizeX", srcTexelSizeX);
+            m_shaders["postprocess_kawase_up"]->setUniformValue("uSrcTexelSizeY", srcTexelSizeY);
+            m_shaders["postprocess_kawase_up"]->setUniformValue("uSrcLevel", srcLevel);
+            m_shaders["postprocess_kawase_up"]->setUniformValue("uDstLevel", dstLevel);
+            m_states["postprocess_kawase_up"].view(0, 0, dstWidth, dstHeight);
+            m_passes["postprocess_kawase_up"].begin(m_frames["blur_up"]);
+            m_textures["blur_up"]->clamp(srcLevel);  // avoid feedback loop(if commented out, dstLevel will be read inadvertently, causing the blur radius to expand continuously and amplify endlessly across frames.)
+            draw(layout, {"blur_up", "blur_down"}, count);
+            m_textures["blur_up"]->unclamp();
+            m_passes["postprocess_kawase_up"].end();
+        }
+
+        m_textures["bloom"] = m_textures["blur_up"];
+    }
+
+    if (m_lensflare) {
+        GLsizei count = instance.getCounts("quad");
+        auto& layout  = instance.getLayout("quad");
+
+        {
+            m_states["postprocess_lensflare"].apply();
+            m_shaders["postprocess_lensflare"]->use();
+            m_passes["postprocess_lensflare"].begin(m_frames["lensflare"]);
+            draw(layout, {"bloom"}, count);  // use blurred highlight(namely bloom) as input to generate raw lensflare(ghost/halo/distortion).
+            m_passes["postprocess_lensflare"].end();
+        }
+
+        {
+            m_frames["blur_y"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_y"], 0);
+            m_frames["lensflare"]->attach(GL_COLOR_ATTACHMENT0, m_textures["lensflare"], 0);
+            m_frames["blur_y"]->copy(*m_frames["lensflare"], GL_COLOR_BUFFER_BIT, GL_LINEAR);  // blur raw lensflare in y direction first to generate final lensflare effect.
+        }
+
+        {
             bool xFilter     = true;
             float texelSizeX = 1.0f / (float)m_frames["blur_y"]->getWidth();
             float texelSizeY = 1.0f / (float)m_frames["blur_y"]->getHeight();
-            m_frames["blur_y"]->copy(*m_frames["highlight"], GL_COLOR_BUFFER_BIT, GL_LINEAR);  // first blur in x direction, so that blur_y has to copy highlight first.
 
             m_states["postprocess_gaussian_blur"].apply();
             m_shaders["postprocess_gaussian_blur"]->use();
             m_shaders["postprocess_gaussian_blur"]->setUniformValue("uTexelSizeX", texelSizeX);
             m_shaders["postprocess_gaussian_blur"]->setUniformValue("uTexelSizeY", texelSizeY);
-            for (int i = 0; i < m_blurTimes * 2; i++) {
+            for (int i = 0; i < m_lensflareBlurTimes * 2; i++) {
                 m_shaders["postprocess_gaussian_blur"]->setUniformValue("uXFilter", xFilter);
                 if (xFilter) {
                     m_passes["postprocess_gaussian_blur"].begin(m_frames["blur_x"]);
@@ -809,74 +900,20 @@ void Renderer::render(const Scene& scene) {
                 m_passes["postprocess_gaussian_blur"].end();
                 xFilter = !xFilter;
             }
-        } else {  // m_blurMode == "dual_kawase"
-            {
-                m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], 0);      // reset blur_down to mip level 0 before copying, as the previous frame's loop leaves it attached to the smallest mip level, while highlight only has one level, no adjustment is needed for it.
-                m_frames["blur_down"]->copy(*m_frames["highlight"], GL_COLOR_BUFFER_BIT, GL_LINEAR);  // GL_LINEAR is used to handle bilinear interpolation since their dimensions may differ.
-            }
+        }
 
-            m_states["postprocess_kawase_down"].apply();
-            m_shaders["postprocess_kawase_down"]->use();
-            for (int level = 0; level + 1 < m_blurMipLevels; level++) {
-                int srcLevel        = level;
-                int dstLevel        = level + 1;
-                float srcTexelSizeX = 1.0f / (float)m_textures["blur_down"]->getWidth(srcLevel);
-                float srcTexelSizeY = 1.0f / (float)m_textures["blur_down"]->getHeight(srcLevel);
-                uint32_t width      = m_textures["blur_down"]->getWidth(dstLevel);
-                uint32_t height     = m_textures["blur_down"]->getHeight(dstLevel);
-
-                m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], dstLevel);
-                m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcTexelSizeX", srcTexelSizeX);
-                m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcTexelSizeY", srcTexelSizeY);
-                m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcLevel", srcLevel);
-                m_states["postprocess_kawase_down"].view(0, 0, width, height);
-                m_passes["postprocess_kawase_down"].begin(m_frames["blur_down"]);
-                m_textures["blur_down"]->clamp(srcLevel);  // avoid feedback loop
-                draw(layout, {"blur_down"}, count);
-                m_textures["blur_down"]->unclamp();
-                m_passes["postprocess_kawase_down"].end();
-            }
-
-            {
-                m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], m_blurMipLevels - 1);
-                m_frames["blur_up"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_up"], m_blurMipLevels - 1);
-                m_frames["blur_up"]->copy(*m_frames["blur_down"], GL_COLOR_BUFFER_BIT);  // both framebuffers are needed to be explicitly attached to the final mip level before copying
-            }
-
-            m_states["postprocess_kawase_up"].apply();
-            m_shaders["postprocess_kawase_up"]->use();
-            for (int level = m_blurMipLevels - 1; level - 1 >= 0; level--) {
-                int srcLevel        = level;
-                int dstLevel        = level - 1;
-                float srcTexelSizeX = 1.0f / (float)m_textures["blur_down"]->getWidth(srcLevel);
-                float srcTexelSizeY = 1.0f / (float)m_textures["blur_down"]->getHeight(srcLevel);
-                uint32_t width      = m_textures["blur_up"]->getWidth(dstLevel);
-                uint32_t height     = m_textures["blur_up"]->getHeight(dstLevel);
-
-                m_frames["blur_up"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_up"], dstLevel);
-                m_shaders["postprocess_kawase_up"]->setUniformValue("uSrcTexelSizeX", srcTexelSizeX);
-                m_shaders["postprocess_kawase_up"]->setUniformValue("uSrcTexelSizeY", srcTexelSizeY);
-                m_shaders["postprocess_kawase_up"]->setUniformValue("uSrcLevel", srcLevel);
-                m_shaders["postprocess_kawase_up"]->setUniformValue("uDstLevel", dstLevel);
-                m_states["postprocess_kawase_up"].view(0, 0, width, height);
-                m_passes["postprocess_kawase_up"].begin(m_frames["blur_up"]);
-                m_textures["blur_up"]->clamp(srcLevel);  // avoid feedback loop(if commented out, dstLevel will be read inadvertently, causing the blur radius to expand continuously and amplify endlessly across frames.)
-                draw(layout, {"blur_up", "blur_down"}, count);
-                m_textures["blur_up"]->unclamp();
-                m_passes["postprocess_kawase_up"].end();
-            }
+        {
+            m_frames["blur_y"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_y"], 0);
+            m_frames["lensflare"]->attach(GL_COLOR_ATTACHMENT0, m_textures["lensflare"], 0);
+            m_frames["lensflare"]->copy(*m_frames["blur_y"], GL_COLOR_BUFFER_BIT, GL_LINEAR);  // replace the lensflare texture with the blurred one.
         }
     }
 
-    if (m_blurMode == "gaussian") {
-        m_textures["bloom"] = m_textures["blur_y"];  // rename the final blur result as bloom regardless of whether the bloom pipeline is enabled.
-    } else {
-        m_textures["bloom"] = m_textures["blur_up"];  // rename the final blur result as bloom regardless of whether the bloom pipeline is enabled.
-    }
-
+    // TODO: screen space ambient occlusion
     if (m_ssao) {
     }
 
+    // TODO: temporal anti aliasing
     if (m_taa) {
     }
 
@@ -885,10 +922,10 @@ void Renderer::render(const Scene& scene) {
         auto& layout  = instance.getLayout("quad");
 
         m_states["postprocess_final"].apply();
+        m_states["postprocess_final"].view(0, 0, m_width, m_height);
         m_shaders["postprocess_final"]->use();
-        m_shaders["postprocess_final"]->setUniformValue("uBloomIntensity", m_bloomIntensity);
         m_passes["postprocess_final"].begin(m_frames["screen"]);
-        draw(layout, {"hdr_screen.color", "blur_up", "blur_down", "highlight"}, count);
+        draw(layout, {"hdr_screen.color", "highlight", "blur_up", "blur_down", "lensflare", "dirtmask"}, count);
         m_passes["postprocess_final"].end();
     }
 }
@@ -923,6 +960,10 @@ void Renderer::draw(const RenderItem& item, const std::vector<std::string>& text
         glDrawArrays(GL_TRIANGLES, item.ioffset, item.length);
     }
 
+    for (auto name : textures) {
+        m_textures[name]->unbind(m_texture2SlotIndexs[name]);
+    }
+
     m_drawCall++;
     return;
 }
@@ -940,6 +981,9 @@ void Renderer::draw(const std::shared_ptr<VertexLayout>& layout, const std::vect
     }
     // std::cout << "Quad/Skybox VBO Draw: vertex count " << count << std::endl;
     glDrawArrays(GL_TRIANGLES, 0, count);
+    for (auto name : textures) {
+        m_textures[name]->unbind(m_texture2SlotIndexs[name]);
+    }
 
     m_drawCall++;
     return;
