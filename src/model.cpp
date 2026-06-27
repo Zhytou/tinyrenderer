@@ -27,7 +27,7 @@ Model& Model::operator=(Model&& other) {
     return *this;
 }
 
-Model::Model(const fs::path& baseDir, const fs::path& modelName, const glm::mat4& transform) {
+Model::Model(const fs::path& baseDir, const fs::path& modelName, const std::shared_ptr<Material>& defaultMat) {
     std::cout << "Loading model [" << baseDir / modelName << "]\n";
 
     m_name = modelName.filename().string();
@@ -42,15 +42,24 @@ Model::Model(const fs::path& baseDir, const fs::path& modelName, const glm::mat4
     }
 
     // 2. Create mesh from tinyobj shapes
-    m_mesh = std::make_unique<Mesh>(attributes, shapes, materials.size());
+    auto numMat = materials.size() + (defaultMat ? 1 : 0);
+    m_mesh      = std::make_unique<Mesh>(attributes, shapes, numMat, defaultMat != nullptr);
 
     // 3. Convert tinyobj material into m_materials map
     for (auto& material : materials) {
         m_materials.push_back(std::make_shared<Material>(baseDir, material));
     }
 
-    // 4. Initialize model transform matrix and normal matrix
-    setTransformMatrix(transform);
+    // 4. Add default material if specified
+    if (defaultMat) {
+        m_materials.push_back(defaultMat);
+    }
+
+    // 5. Update bounding box of model
+    auto [xyz1, xyz2] = m_mesh->getBoundingBox();
+    xyz1              = glm::vec3(m_modelBlock.transformMatrix * glm::vec4(xyz1, 1.f));
+    xyz2              = glm::vec3(m_modelBlock.transformMatrix * glm::vec4(xyz2, 1.f));
+    m_bounds          = {xyz1, xyz2};
 }
 
 Model::~Model() {
@@ -70,9 +79,8 @@ void Model::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
                 .material = m_materials[sm.matid],
                 .ioffset  = sm.offset,
                 .length   = sm.length,
-            }
-        );
+            });
     }
 }
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer

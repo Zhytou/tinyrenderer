@@ -6,12 +6,12 @@
 
 namespace tinyglrenderer {
 
-Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t numMaterials) {
+Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t numMats, bool defaultMat) {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
     // 1. Traverse tinyobj loading data and initialize vertices
-    std::vector<std::vector<uint32_t>> submeshes(numMaterials);
+    std::vector<std::vector<uint32_t>> submeshes(numMats);
     for (auto& shape : shapes) {
         for (int i = 0; i < shape.mesh.material_ids.size(); i++) {
             glm::vec3 vertex[3], normal[3], tangent;
@@ -37,7 +37,7 @@ Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape
                 glm::vec2 deltaUV1 = uv[1] - uv[0], deltaUV2 = uv[2] - uv[1];
 
                 float divide = deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y;
-                if (std::abs(divide) < 1e-6f) divide = (divide >= 0 ? 1e-6f : -1e-6f);
+                if (std::abs(divide) < 1e-6f) { divide = (divide >= 0 ? 1e-6f : -1e-6f); }
                 float df  = 1.0f / divide;
                 tangent.x = df * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
                 tangent.y = df * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
@@ -45,11 +45,16 @@ Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape
                 tangent   = glm::normalize(tangent);
             }
 
-            int mat_id = shape.mesh.material_ids[i];
+            int matID = shape.mesh.material_ids[i];
             for (int j = 0; j < 3; ++j) {
                 vertices.emplace_back(vertex[j], normal[j], tangent, uv[j]);
-                if (mat_id >= 0) {
-                    submeshes[mat_id].push_back(static_cast<unsigned int>(vertices.size() - 1));
+                if (matID >= 0) {
+                    submeshes[matID].push_back(static_cast<unsigned int>(vertices.size() - 1));
+                }
+                if (matID == -1 && defaultMat) {
+                    // matID == -1 means no material assigned. Retain these vertices into the trailing
+                    // default submesh only if defaultMat is initialized; otherwise, they are excluded from the mesh.
+                    submeshes[numMats - 1].push_back(static_cast<unsigned int>(vertices.size() - 1));
                 }
             }
         }
@@ -70,8 +75,9 @@ Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape
 }
 
 Mesh::~Mesh() {
-    if (m_layout) m_layout.reset();
-    if (m_bufferv) m_bufferv.reset();
-    if (m_bufferi) m_bufferi.reset();
+    if (m_layout) { m_layout.reset(); }
+    if (m_bufferv) { m_bufferv.reset(); }
+    if (m_bufferi) { m_bufferi.reset(); }
 }
-};  // namespace tinyglrenderer
+
+}; // namespace tinyglrenderer

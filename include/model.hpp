@@ -2,6 +2,8 @@
 
 #include <filesystem>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <map>
 #include <memory>
 #include <string>
@@ -14,8 +16,8 @@
 namespace tinyglrenderer {
 
 struct alignas(16) ModelBlock {
-    glm::mat4 transformMatrix;  // translate, rotate, scale
-    glm::mat4 normalMatrix;     // transpose of inverse (roate * scale) matrix
+    glm::mat4 transformMatrix; // translate, rotate, scale
+    glm::mat4 normalMatrix;    // transpose of inverse (roate * scale) matrix
     // glm::mat4 padding1;
     // glm::mat4 padding2;
 };
@@ -27,14 +29,27 @@ class Model {
     Model& operator=(const Model&) = delete;
     Model(Model&& other);
     Model& operator=(Model&& other);
-    Model(const std::filesystem::path& baseDir, const std::filesystem::path& modelName, const glm::mat4& transform);
+    Model(const std::filesystem::path& baseDir, const std::filesystem::path& modelName, const std::shared_ptr<Material>& defaultMat);
     ~Model();
 
     const std::string& getName() const { return m_name; }
     const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_bounds; }
     const ModelBlock& getModelBlock() const { return m_modelBlock; }
     void getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const;
-    void setTransformMatrix(const glm::mat4& transform) {
+    void setTransform(const glm::vec3& translate, const glm::vec3& rotate, const glm::vec3& scale) {
+        glm::mat4 transform = glm::mat4(1.0f);
+
+        transform = glm::translate(transform, translate);
+        transform = glm::rotate(transform, glm::radians(rotate.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        transform = glm::rotate(transform, glm::radians(rotate.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        transform = glm::rotate(transform, glm::radians(rotate.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        transform = glm::scale(transform, scale);
+
+        // update transforms
+        m_transforms["translate"] = translate;
+        m_transforms["rotate"]    = rotate;
+        m_transforms["scale"]     = scale;
+
         // update transform matrix
         m_modelBlock.transformMatrix = transform;
         m_modelBlock.normalMatrix    = glm::mat4(glm::transpose(glm::inverse(glm::mat3(transform))));
@@ -55,10 +70,15 @@ class Model {
         glm::vec3(FLT_MAX),
         glm::vec3(-FLT_MAX),
     };
+    std::unordered_map<std::string, glm::vec3> m_transforms = {
+        {"translate", glm::vec3(0.0f)},
+        {"rotate",    glm::vec3(0.0f)},
+        {"scale",     glm::vec3(1.0f)},
+    };
     ModelBlock m_modelBlock = {
         .transformMatrix = glm::mat4(1.f),
         .normalMatrix    = glm::mat4(1.f),
     };
 };
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer

@@ -55,46 +55,87 @@ void Scene::initialize(const std::string& json) {
     // models
     if (doc.HasMember("models")) {
         for (int i = 0; i < doc["models"].Size(); i++) {
-            fs::path baseDir    = doc["models"][i]["baseDir"].GetString();
-            fs::path modelName  = doc["models"][i]["name"].GetString();
-            glm::vec3 translate = doc["models"][i]["transform"].HasMember("translate") ? getVec3(doc["models"][i]["transform"]["translate"]) : glm::vec3(0.0f);
-            glm::vec3 rotate    = doc["models"][i]["transform"].HasMember("rotate") ? getVec3(doc["models"][i]["transform"]["rotate"]) : glm::vec3(0.0f);
-            glm::vec3 scale     = doc["models"][i]["transform"].HasMember("scale") ? getVec3(doc["models"][i]["transform"]["scale"]) : glm::vec3(1.0f);
+            auto& modelDoc = doc["models"][i];
+            // model base dir and name required
+            fs::path baseDir   = modelDoc["base_dir"].GetString();
+            fs::path modelName = modelDoc["name"].GetString();
 
-            glm::mat4 transform = glm::mat4(1.0f);
-            transform           = glm::translate(transform, translate);
-            transform           = glm::rotate(transform, glm::radians(rotate.x), glm::vec3(1.0f, 0.0f, 0.0f));
-            transform           = glm::rotate(transform, glm::radians(rotate.y), glm::vec3(0.0f, 1.0f, 0.0f));
-            transform           = glm::rotate(transform, glm::radians(rotate.z), glm::vec3(0.0f, 0.0f, 1.0f));
-            transform           = glm::scale(transform, scale);
-            m_models.emplace_back(std::make_shared<Model>(baseDir, modelName, transform));
+            // default material optional
+            std::map<std::vector<const char*>, const char*> mat2Type = {
+                {{"albedo"},                                       "vec3"  },
+                {{"normal"},                                       "vec3"  },
+                {{"metallic", "roughness", "ambient"},             "float" },
+                {{"albedo_map"},                                   "string"},
+                {{"normal_map"},                                   "string"},
+                {{"metallic_map", "roughness_map", "ambient_map"}, "string"},
+            };
+            std::shared_ptr<Material> material = nullptr;
+            if (modelDoc.HasMember("default_mat")) {
+                material = std::make_shared<Material>();
+                for (auto& [names, type] : mat2Type) {
+                    glm::vec4 value = glm::vec4(std::nanf(""));
+                    std::vector<fs::path> paths;
+                    for (int i = 0; i < names.size(); i++) {
+                        if (!modelDoc["default_mat"].HasMember(names[i])) { continue; }
+                        if (type == "vec3") {
+                            value = glm::vec4(getVec3(modelDoc["default_mat"][names[i]]), 0.0f);
+                        } else if (type == "float") {
+                            value[i] = modelDoc["default_mat"][names[i]].GetFloat();
+                        } else {
+                            paths.push_back(modelDoc["default_mat"][names[i]].GetString());
+                        }
+                    }
+                    if ((std::isnan(value.x) || std::isnan(value.y) || std::isnan(value.z)) && paths.empty()) { continue; }
+                    if (type == "vec3" || type == "float") {
+                        material->setTexture(names[i], value);
+                    } else if (paths.size() == 1) {
+                        std::string name = names[i];
+                        name.erase(name.find("_map")); // remove "_map" suffix
+                        material->setTexture(name, paths[0]);
+                    } else { // only maro texture need multiple paths
+                        material->setTexture("mrao", paths);
+                    }
+                }
+            }
+            m_models.emplace_back(std::make_shared<Model>(baseDir, modelName, material));
+
+            glm::vec3 translate = glm::vec3(0.0f);
+            glm::vec3 rotate    = glm::vec3(0.0f);
+            glm::vec3 scale     = glm::vec3(1.0f);
+            if (doc["models"][i].HasMember("transform")) {
+                translate = modelDoc["transform"].HasMember("translate") ? getVec3(modelDoc["transform"]["translate"]) : glm::vec3(0.0f);
+                rotate    = modelDoc["transform"].HasMember("rotate") ? getVec3(modelDoc["transform"]["rotate"]) : glm::vec3(0.0f);
+                scale     = modelDoc["transform"].HasMember("scale") ? getVec3(modelDoc["transform"]["scale"]) : glm::vec3(1.0f);
+            }
+            m_models.back()->setTransform(translate, rotate, scale);
 
             auto [xyzi1, xyzi2] = m_models.back()->getBoundingBox();
             m_bounds.first      = glm::min(m_bounds.first, xyzi1);
             m_bounds.second     = glm::max(m_bounds.second, xyzi2);
-            // std::cout << "Model BoundingBox: [" << xyzi1 << ", " << xyzi2 << "]\n";
         }
     }
 
     // lights
     if (doc.HasMember("lights")) {
-        for (int i = 0; i < doc["lights"]["directionallight"].Size(); i++) {
-            m_lights.emplace_back(std::make_shared<DirectionalLight>(getVec3(doc["lights"]["directionallight"][i]["color"]), doc["lights"]["directionallight"][i]["intensity"].GetFloat(), getVec3(doc["lights"]["directionallight"][i]["direction"])));
-            m_lights.back()->setLightSpaceMatrix(m_bounds);  // set light space matrix
+        for (int i = 0; i < doc["lights"]["directional"].Size(); i++) {
+            auto& lightDoc = doc["lights"]["directional"][i];
+            m_lights.emplace_back(std::make_shared<DirectionalLight>(getVec3(lightDoc["color"]), lightDoc["intensity"].GetFloat(), getVec3(lightDoc["direction"])));
+            m_lights.back()->setLightSpaceMatrix(m_bounds); // set light space matrix
         }
     }
 
     // camera
     if (doc.HasMember("camera")) {
-        m_camera = std::make_shared<PerspectiveCamera>();
-        m_camera->setEye(getVec3(doc["camera"]["eye"]));
-        m_camera->setTarget(getVec3(doc["camera"]["target"]));
-        m_camera->setUp(getVec3(doc["camera"]["up"]));
-        m_camera->setFov(doc["camera"]["fov"].GetFloat());
-        m_camera->setNear(doc["camera"]["near"].GetFloat());
-        m_camera->setFar(doc["camera"]["far"].GetFloat());
-        m_camera->setViewport(doc["camera"]["width"].GetInt(), doc["camera"]["height"].GetInt());
-        m_camera->setSpeed(doc["camera"]["speed"].GetFloat());
+        auto& cameraDoc = doc["camera"];
+        m_camera        = std::make_shared<PerspectiveCamera>();
+        m_camera->setEye(getVec3(cameraDoc["eye"]));
+        m_camera->setTarget(getVec3(cameraDoc["target"]));
+        m_camera->setUp(getVec3(cameraDoc["up"]));
+        m_camera->setFov(cameraDoc["fov"].GetFloat());
+        m_camera->setNear(cameraDoc["near"].GetFloat());
+        m_camera->setFar(cameraDoc["far"].GetFloat());
+        m_camera->setAspect(cameraDoc["width"].GetInt(), cameraDoc["height"].GetInt());
+        m_camera->setSpeed(cameraDoc["speed"].GetFloat());
     } else {
         const glm::vec3 xyz1 = m_bounds.first, xyz2 = m_bounds.second;
         glm::vec3 target    = 0.5f * (xyz2 + xyz1);
@@ -114,7 +155,7 @@ void Scene::initialize(const std::string& json) {
     if (doc.HasMember("skybox")) {
         if (doc["skybox"].HasMember("cubemap")) {
             std::vector<std::shared_ptr<Image>> images;
-            fs::path baseDir = doc["skybox"]["cubemap"]["baseDir"].GetString();
+            fs::path baseDir = doc["skybox"]["cubemap"]["base_dir"].GetString();
             uint32_t width = 0, height = 0;
             //! WARNING: Face order must be: right, left, top, bottom, front, back.
             //! This sequence perfectly aligns with OpenGL DSA texture array layer mapping (0 to 5).
@@ -137,7 +178,7 @@ void Scene::initialize(const std::string& json) {
             }
         }
         if (doc["skybox"].HasMember("equirect")) {
-            fs::path baseDir      = doc["skybox"]["equirect"]["baseDir"].GetString();
+            fs::path baseDir      = doc["skybox"]["equirect"]["base_dir"].GetString();
             fs::path equirectName = doc["skybox"]["equirect"]["name"].GetString();
             auto image            = Image::create(baseDir / equirectName, 0, true);
             m_skyboxEquirect      = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA32F, 1);
@@ -154,4 +195,4 @@ void Scene::destroy() {
     m_models.clear();
 }
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer
