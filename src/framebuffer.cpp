@@ -8,7 +8,9 @@
 
 namespace tinyglrenderer {
 
-FrameBuffer::FrameBuffer(bool screen, uint32_t w, uint32_t h) : m_width(w), m_height(h) {
+FrameBuffer::FrameBuffer(bool screen, GLsizei w, GLsizei h)
+    : m_width(w),
+      m_height(h) {
     if (!screen) {
         // Create framebuffer object
         //
@@ -33,9 +35,7 @@ FrameBuffer::FrameBuffer(bool screen, uint32_t w, uint32_t h) : m_width(w), m_he
 }
 
 FrameBuffer::~FrameBuffer() {
-    if (m_id) {
-        glDeleteFramebuffers(1, &m_id);
-    }
+    if (m_id) { glDeleteFramebuffers(1, &m_id); }
     m_attachments.clear();
 }
 
@@ -77,20 +77,14 @@ FrameBuffer& FrameBuffer::operator=(FrameBuffer&& other) {
 bool FrameBuffer::validate() const {
     // Default framebuffer is always complete.
     GLenum status = glCheckNamedFramebufferStatus(m_id, GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "FrameBuffer[" << m_id << "]::validate: framebuffer not complete" << std::endl;
-    }
+    if (status != GL_FRAMEBUFFER_COMPLETE) { std::cerr << "FrameBuffer[" << m_id << "]::validate: framebuffer not complete" << std::endl; }
     return status == GL_FRAMEBUFFER_COMPLETE;
 }
 
-void FrameBuffer::bind() const {
-    glBindFramebuffer(GL_FRAMEBUFFER, m_id);
-}
+void FrameBuffer::bind() const { glBindFramebuffer(GL_FRAMEBUFFER, m_id); }
 
 void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture, GLint level) {
-    if (m_id == 0) {
-        throw std::runtime_error("FrameBuffer::attach: framebuffer not created");
-    }
+    if (m_id == 0) { throw std::runtime_error("FrameBuffer::attach: framebuffer not created"); }
     m_attachments[slot] = texture;
 
     // Attach a 2D texture level to a framebuffer
@@ -115,36 +109,26 @@ void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture, G
 }
 
 void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture, GLint level, GLint layer) {
-    if (m_id == 0) {
-        throw std::runtime_error("FrameBuffer::attach: framebuffer not created");
-    }
+    if (m_id == 0) { throw std::runtime_error("FrameBuffer::attach: framebuffer not created"); }
     m_attachments[slot] = texture;
 
-    if (texture->getTarget() != GL_TEXTURE_CUBE_MAP &&
-        texture->getTarget() != GL_TEXTURE_2D_ARRAY &&
-        texture->getTarget() != GL_TEXTURE_3D) {
-        throw std::runtime_error("FrameBuffer::attach: attachment target not supported");
-    }
+    if (texture->getTarget() != GL_TEXTURE_CUBE_MAP && texture->getTarget() != GL_TEXTURE_2D_ARRAY && texture->getTarget() != GL_TEXTURE_3D) { throw std::runtime_error("FrameBuffer::attach: attachment target not supported"); }
 
     // Attach a 2D texture level to a framebuffer
     glNamedFramebufferTextureLayer(m_id, slot, texture->getId(), level, layer);
 }
 
 void FrameBuffer::finalize() {
-    if (m_id == 0) {
-        return;
-    }
+    if (m_id == 0) { return; }
 
     // Get the attached color slots
     std::vector<GLenum> slots;
     for (auto [slot, _] : m_attachments) {
-        if (slot >= GL_COLOR_ATTACHMENT0 && slot <= GL_COLOR_ATTACHMENT31) {
-            slots.push_back(slot);
-        }
+        if (slot >= GL_COLOR_ATTACHMENT0 && slot <= GL_COLOR_ATTACHMENT31) { slots.push_back(slot); }
     }
 
     if (slots.empty()) {
-        slots = {GL_NONE};
+        slots = { GL_NONE };
     } else {
         // !Warning: Attachment order in glDrawBuffers/glNamedFramebufferDrawBuffers must match fragment shader's layout(location = N) order.
         std::sort(slots.begin(), slots.end());
@@ -249,39 +233,39 @@ void FrameBuffer::copy(const FrameBuffer& other, GLenum mask, GLenum filter, GLe
     //               glBlitNamedFramebuffer   = "specify read/draw FBO ID directly" (stateless, explicit)
     // Note: Both APIs support passing 0 for framebuffer ID, 0 means the default screen framebuffer.
     //       Depth/stencil blit only accepts GL_NEAREST filter mode, GL_LINEAR is invalid.
-    glBlitNamedFramebuffer(
-        other.m_id,                     // srcFramebuffer
-        m_id,                           // dstFramebuffer
-        0, 0,                           // srcX0, srcY0
-        other.m_width, other.m_height,  // srcX1, srcY1
-        0, 0,                           // dstX0, dstY0
-        m_width, m_height,              // dstX1, dstY1
-        mask, filter
-    );
+    glBlitNamedFramebuffer(other.m_id, // srcFramebuffer
+        m_id,                          // dstFramebuffer
+        0,
+        0, // srcX0, srcY0
+        other.m_width,
+        other.m_height, // srcX1, srcY1
+        0,
+        0, // dstX0, dstY0
+        m_width,
+        m_height, // dstX1, dstY1
+        mask,
+        filter);
 }
 
 void FrameBuffer::divide(std::vector<int>& rects, std::vector<float>& remaps, size_t count, int tileX, int tileY, int padding) {
-    if (count == 0) {
-        return;
-    }
+    if (count == 0) { return; }
 
-    int n     = static_cast<int>(std::ceil(std::sqrt(count)));               // number of grid columns
-    int m     = static_cast<int>(std::ceil(static_cast<float>(count) / n));  // number of grid rows
+    int n     = static_cast<int>(std::ceil(std::sqrt(count)));              // number of grid columns
+    int m     = static_cast<int>(std::ceil(static_cast<float>(count) / n)); // number of grid rows
     int cellX = tileX + padding;
     int cellY = tileY + padding;
-    if (m_width < cellX * n || m_height < cellY * m) {
-        return;
-    }
+    if (m_width < cellX * n || m_height < cellY * m) { return; }
 
     rects.clear();
     remaps.clear();
-    rects.reserve(count * 4);   // [viewportX, viewportY, viewportW, viewportH]
-    remaps.reserve(count * 4);  // [offsetX, offsetY, scaleX, scaleY]
+    rects.reserve(count * 4);  // [viewportX, viewportY, viewportW, viewportH]
+    remaps.reserve(count * 4); // [offsetX, offsetY, scaleX, scaleY]
 
     size_t lightIdx = 0;
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
-            if (lightIdx >= count) break;
+            if (lightIdx >= count)
+                break;
 
             int x = j * cellX;
             int y = i * cellY;
@@ -304,4 +288,4 @@ void FrameBuffer::divide(std::vector<int>& rects, std::vector<float>& remaps, si
     }
 }
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer

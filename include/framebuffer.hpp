@@ -16,7 +16,7 @@ namespace tinyglrenderer {
  */
 class FrameBuffer {
    public:
-    FrameBuffer(bool screen, uint32_t w, uint32_t h);
+    FrameBuffer(bool screen, GLsizei w, GLsizei h);
     ~FrameBuffer();
     FrameBuffer(const FrameBuffer&)            = delete;
     FrameBuffer& operator=(const FrameBuffer&) = delete;
@@ -25,8 +25,8 @@ class FrameBuffer {
 
     int getWidth() const { return m_width; }
     int getHeight() const { return m_height; }
-    void setWidth(uint32_t w) { m_width = w; }
-    void setHeight(uint32_t h) { m_height = h; }
+    void setWidth(GLsizei w) { m_width = w; }
+    void setHeight(GLsizei h) { m_height = h; }
 
     // Validate the framebuffer completeness.
     // @return True if the framebuffer is complete, False otherwise.
@@ -73,8 +73,7 @@ class FrameBuffer {
     // @param slot The attachment slot to read.
     // @param data The vector to store the read data.
     // @param format The format of the read data(GL_RGB/GL_RED/GL_DEPTH_COMPONENT).
-    template <typename T>
-    void read(std::vector<T>& data, GLenum target, GLenum slot, GLenum format);
+    template <typename T> void read(std::vector<T>& data, GLenum target, GLenum slot, GLenum format);
     // Divides the total framebuffer canvas into a compact, asymmetric grid of sub-tiles.
     // @param[out] rects Contains viewport rectangles parsed as 4-element groups [X, Y, Width, Height] in absolute pixel coordinates, ready for direct engine glViewport injection.
     // @param[out] remaps Contains texture coordinate remapping scales and offsets parsed as 4-element groups [offsetX, offsetY, scaleX, scaleY].
@@ -82,17 +81,14 @@ class FrameBuffer {
     void divide(std::vector<int>& rects, std::vector<float>& remaps, size_t count, int tileX = 1000, int tileY = 1000, int padding = 12);
 
    private:
-    GLuint m_id       = 0;
-    uint32_t m_width  = 0;
-    uint32_t m_height = 0;
+    GLuint m_id      = 0;
+    GLsizei m_width  = 0;
+    GLsizei m_height = 0;
     std::unordered_map<GLenum, std::shared_ptr<Texture>> m_attachments;
 };
 
-template <typename T>
-void FrameBuffer::read(std::vector<T>& data, GLenum target, GLenum slot, GLenum format) {
-    if (m_id != 0 && m_attachments.count(slot) == 0) {
-        return;
-    }
+template <typename T> void FrameBuffer::read(std::vector<T>& data, GLenum target, GLenum slot, GLenum format) {
+    if (m_id != 0 && m_attachments.count(slot) == 0) { return; }
 
     if (target == GL_COLOR) {
         if (m_id == 0) {
@@ -106,9 +102,9 @@ void FrameBuffer::read(std::vector<T>& data, GLenum target, GLenum slot, GLenum 
         glReadPixels(0, 0, m_width, m_height, format, GL_FLOAT, data.data());
     } else if constexpr (std::is_same_v<T, uint16_t>) {
         glReadPixels(0, 0, m_width, m_height, format, GL_UNSIGNED_SHORT, data.data());
-    } else {  // std::is_same_v<T, uint8_t>
+    } else { // std::is_same_v<T, uint8_t>
         glReadPixels(0, 0, m_width, m_height, format, GL_UNSIGNED_BYTE, data.data());
     }
 }
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer
