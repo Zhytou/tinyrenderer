@@ -4,6 +4,10 @@
 
 namespace tinyglrenderer {
 GraphicBuffer::GraphicBuffer(GLenum target, GLsizeiptr size, const void* data) : m_target(target), m_size(size) {
+    if (size <= 0) {
+        throw std::invalid_argument("GraphicBuffer::GraphicBuffer: size must be greater than 0");
+    }
+
     // Create graphic buffer handle
     //
     // ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -93,4 +97,4 @@ void GraphicBuffer::upload(GLintptr offset, GLsizeiptr length, const void* data)
     glNamedBufferSubData(m_id, offset, length, data);
 }
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer
