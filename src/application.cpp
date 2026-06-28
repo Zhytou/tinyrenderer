@@ -15,21 +15,23 @@
 #include "utils.hpp"
 
 namespace tinyglrenderer {
-Application::Application(uint32_t width, uint32_t height, const std::string& title) : m_width(width), m_height(height) {
+Application::Application(int width, int height, const std::string& title) : m_window(nullptr), m_editor(m_editorSetting, m_rendererSetting), m_renderer(m_rendererSetting) {
     if (width < 800 || height < 600) {
         throw std::runtime_error("Application::Application: Window size must be at least 800x600");
     }
 
     // initialize glfw and glad
     std::cout << "Initializing GLFW & GLAD for [" << title << "]\n";
-    setup(title);
+    setup(width, height, title);
+    resize(width, height);
+
+    // initialize editor
+    std::cout << "Running ImGui Editor [" << ImGui::GetVersion() << "]\n";
+    m_editor.setup();
 
     // initialize renderer
     std::cout << "Running OpenGL Renderer [" << glGetString(GL_RENDERER) << "]\n";
     m_renderer.setup();
-
-    // initialize editor
-    m_editor.setup();
 
     // initialize static resources
     StaticResource::getInstance().initialize();
@@ -49,7 +51,7 @@ Application::~Application() {
     shutdown();
 }
 
-void Application::setup(const std::string& title) {
+void Application::setup(int width, int height, const std::string& title) {
     // glfw initialization
     if (!glfwInit()) {
         throw std::runtime_error("Application::setup: Failed to initialize GLFW library");
@@ -59,11 +61,12 @@ void Application::setup(const std::string& title) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
-    glfwWindowHint(GLFW_DEPTH_BITS, 24); // allocate at least 24 depth bits for glfw swapbuffers, otherwise glenbale(GL_DEPTH_TEST) may not work
+    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE); // no window decoration
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);        // allocate at least 24 depth bits for glfw swapbuffers, otherwise glenbale(GL_DEPTH_TEST) may not work
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
 
     // glfw window creation
-    m_window = glfwCreateWindow(m_width, m_height, title.c_str(), nullptr, nullptr);
+    m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
     if (!m_window) {
         throw std::runtime_error("Application::setup: Failed to create OpenGL context");
     }
@@ -78,8 +81,13 @@ void Application::setup(const std::string& title) {
     // set callback function
     glfwSetScrollCallback(m_window, Application::scrollCallback);
     glfwSetMouseButtonCallback(m_window, Application::mouseButtonCallback);
-    glfwSetFramebufferSizeCallback(m_window, Application::frameSizeCallback);
+    glfwSetWindowSizeCallback(m_window, Application::windowSizeCallback);
+    glfwSetWindowPosCallback(m_window, Application::windowPosCallback);
     glfwSetCursorPosCallback(m_window, Application::cursorPosCallback);
+
+    // glfw window size and position initialization
+    glfwGetWindowSize(m_window, &m_restoredWinSize.first, &m_restoredWinSize.second);
+    glfwGetWindowPos(m_window, &m_restoredWinPos.first, &m_restoredWinPos.second);
 
     // glad initialization(load all OpenGL function pointers)
     if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) {
@@ -100,6 +108,24 @@ void Application::setup(const std::string& title) {
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init("#version 410");
+
+    // initialize editor callback
+    m_editor.setCallback("titlebar_minimize", [this]() { glfwIconifyWindow(m_window); return true; });
+    m_editor.setCallback("titlebar_is_maximized", [this]() { return m_maximized; });
+    m_editor.setCallback("titlebar_maximize_restore", [this]() {
+        if (!m_maximized) {
+            // glfwMaximizeWindow(m_window);
+            glfwSetWindowPos(m_window, 0, 0);
+            glfwSetWindowSize(m_window, m_maximizedWinSize.first, m_maximizedWinSize.second);
+        } else {
+            // glfwRestoreWindow(m_window);
+            glfwSetWindowPos(m_window, m_restoredWinPos.first, m_restoredWinPos.second);
+            glfwSetWindowSize(m_window, m_restoredWinSize.first, m_restoredWinSize.second);
+        }
+        m_maximized = !m_maximized;
+        return true;
+    });
+    m_editor.setCallback("titlebar_close", [this]() { glfwSetWindowShouldClose(m_window, GLFW_TRUE); return true; });
 }
 
 void Application::shutdown() {
@@ -128,9 +154,8 @@ void Application::load(const std::string& scenePath) {
 }
 
 void Application::run() {
-    static float lastFrame       = static_cast<float>(glfwGetTime()); // in seconds
-    static RenderSetting setting = m_renderer.getSetting();
-    static DisplayInfo info      = getDisplayInfo(0);
+    static float lastFrame  = static_cast<float>(glfwGetTime()); // in seconds
+    static DisplayInfo info = getDisplayInfo(0);
 
     while (!glfwWindowShouldClose(m_window)) {
         float currFrame = static_cast<float>(glfwGetTime()); // in seconds
@@ -145,12 +170,20 @@ void Application::run() {
         m_renderer.render(m_scene);
 
         // Draw user interface
-        m_editor.draw(m_scene, setting, info);
+        m_editor.draw(m_scene, info);
 
         // Swap buffers and poll events
         glfwSwapBuffers(m_window);
         glfwPollEvents();
     }
+}
+
+void Application::resize(int width, int height) {
+    m_editorSetting.width  = float(width);
+    m_editorSetting.height = float(height);
+
+    m_rendererSetting.width  = float(width);
+    m_rendererSetting.height = float(height);
 }
 
 void Application::processInput(float deltaTime) {
@@ -209,83 +242,117 @@ float Application::calculateFPS(float deltaTime) {
     return fps;
 }
 
-void Application::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+void Application::scrollCallback(GLFWwindow* window, double scrollX, double scrollY) {
     auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-    if (!app)
-        return;
+    if (!app) { return; }
 
     auto& camera = app->m_scene.getCamera();
     if (camera) {
-        camera->zoom(static_cast<float>(yoffset));
+        camera->zoom(static_cast<float>(scrollY));
     }
 }
 
 void Application::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-    if (!app)
-        return;
+    if (!app) { return; }
+    if (button != GLFW_MOUSE_BUTTON_RIGHT && button != GLFW_MOUSE_BUTTON_LEFT) { return; }
+
+    double cursorX, cursorY;
+    glfwGetCursorPos(window, &cursorX, &cursorY);
+    int winX, winY;
+    glfwGetWindowPos(window, &winX, &winY);
 
     if (button == GLFW_MOUSE_BUTTON_RIGHT) {
         if (action == GLFW_PRESS) {
-            app->m_mouseRightDragging = true;
-
-            double xpos, ypos;
-            glfwGetCursorPos(window, &xpos, &ypos);
-            app->m_lastX = static_cast<float>(xpos);
-            app->m_lastY = static_cast<float>(ypos);
+            app->m_mouseRightDragging    = true;
+            app->m_rotatedCursorLocalPos = {cursorX, cursorY};
         } else if (action == GLFW_RELEASE) {
             app->m_mouseRightDragging = false;
         }
-    } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    } else { // button == GLFW_MOUSE_BUTTON_LEFT
         if (action == GLFW_PRESS) {
-            app->m_mouseLeftDragging = true;
+            // if (app->m_editor.hover(cursorX, cursorY) != "titlebar") { return; }
+            app->m_mouseLeftDragging      = true;
+            app->m_draggedCursorGlobalPos = {winX + cursorX, winY + cursorY};
+            app->m_draggedWinPos          = {winX, winY};
 
-            double xpos, ypos;
-            glfwGetCursorPos(window, &xpos, &ypos);
-            app->m_lastX = static_cast<float>(xpos);
-            app->m_lastY = static_cast<float>(ypos);
+            if (app->m_maximized) { // before dragging the window, restore the window if needed
+                app->m_maximized = false;
+                glfwSetWindowPos(window, app->m_restoredWinPos.first, app->m_restoredWinPos.second);
+                glfwSetWindowSize(window, app->m_restoredWinSize.first, app->m_restoredWinSize.second);
+            }
         } else if (action == GLFW_RELEASE) {
             app->m_mouseLeftDragging = false;
         }
     }
 }
 
-void Application::cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+void Application::cursorPosCallback(GLFWwindow* window, double cursorX, double cursorY) {
     auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-    if (!app)
-        return;
-    if (!app->m_mouseRightDragging && !app->m_mouseLeftDragging)
-        return;
+    if (!app) { return; }
+    if (!app->m_mouseRightDragging && !app->m_mouseLeftDragging) { return; }
+    if (ImGui::GetIO().WantCaptureMouse) { return; }
 
-    float currX   = static_cast<float>(xpos);
-    float currY   = static_cast<float>(ypos);
-    float lastX   = app->m_lastX;
-    float lastY   = app->m_lastY;
-    float offsetX = currX - lastX;
-    float offsetY = lastY - currY;
+    //================================================
+    // Local cursor positions in window coordinates
+    //================================================
+    double lastX = app->m_rotatedCursorLocalPos.first;
+    double lastY = app->m_rotatedCursorLocalPos.second;
+    double currX = cursorX;
+    double currY = cursorY;
 
-    auto& camera = app->m_scene.getCamera();
-    if (camera) {
-        if (app->m_mouseRightDragging) {
+    //================================================
+    // Global cursor positions in screen coordinates
+    //================================================
+    double lastScreenX = app->m_draggedCursorGlobalPos.first;
+    double lastScreenY = app->m_draggedCursorGlobalPos.second;
+    double currScreenX = currX + app->m_draggedWinPos.first;
+    double currScreenY = currY + app->m_draggedWinPos.second;
+
+    if (app->m_mouseRightDragging) {
+        auto& camera = app->m_scene.getCamera();
+        if (camera) {
+            float offsetX = static_cast<float>(currX - lastX);
+            float offsetY = static_cast<float>(lastY - currY);
             camera->rotate(offsetX, offsetY);
-        } else if (app->m_mouseLeftDragging) {
-            // camera->move(offsetX > 0 ? CameraMovement::RIGHT : CameraMovement::LEFT, offsetX / camera->getSpeed());
-            // camera->move(offsetY > 0 ? CameraMovement::UPWARD : CameraMovement::DOWNWARD, offsetY / camera->getSpeed());
         }
+        app->m_rotatedCursorLocalPos = {currX, currY};
     }
 
-    app->m_lastX = currX;
-    app->m_lastY = currY;
+    if (app->m_mouseLeftDragging) {
+        int offsetX = static_cast<int>(currScreenX - lastScreenX);
+        int offsetY = static_cast<int>(currScreenY - lastScreenY);
+        glfwSetWindowPos(window, app->m_draggedWinPos.first + offsetX, app->m_draggedWinPos.second + offsetY);
+    }
 }
 
-void Application::frameSizeCallback(GLFWwindow* window, int width, int height) {
+void Application::windowSizeCallback(GLFWwindow* window, int w, int h) {
     auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
-    if (!app)
-        return;
+    if (!app) { return; }
 
-    app->m_width  = width;
-    app->m_height = height;
-    app->m_renderer.resize(width, height);
+    //=======================================
+    // Update application window size
+    //======================================
+    if (!app->m_maximized) {
+        app->m_restoredWinSize = {w, h}; // update the restored window size if not maximized
+    };
+
+    //=======================================
+    // Update editor layout and renderer viewport
+    //======================================
+    app->resize(w, h);
+}
+
+void Application::windowPosCallback(GLFWwindow* window, int x, int y) {
+    auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    if (!app) { return; }
+
+    //=======================================
+    // Update application window position
+    //======================================
+    if (!app->m_maximized) {
+        app->m_restoredWinPos = {x, y}; // update the restored window position if not maximized
+    };
 }
 
 } // namespace tinyglrenderer

@@ -23,63 +23,63 @@ void Renderer::setup() {
     // 0. Define name mappings
     {
         m_pass2FrameNames = {
-            {"equirect_to_cubemap", "skybox"},
-            {"ibl_irradiance", "ibl_diffuse"},
-            {"ibl_prefiltered", "ibl_specular"},
-            {"ibl_brdf_lut", "ibl_brdf_lut"},
-            {"shadow_mapping", "shadow"},
-            {"deferred_geometry", "gbuffer"},
-            {"deferred_shading", "hdr_screen"},
-            {"forward_opaque", "hdr_screen"},
-            {"skybox", "hdr_screen"},
-            {"postprocess_highlight", "highlight"},
-            {"postprocess_kawase_down", "blur_down"},
-            {"postprocess_kawase_up", "blur_up"},
-            {"postprocess_lensflare", "lensflare"},
-            {"postprocess_gaussian_blur", "blur_x"},
-            {"postprocess_gaussian_blur", "blur_y"},
-            {"postprocess_final", "screen"},
+            { "equirect_to_cubemap",       "skybox"       },
+            { "ibl_irradiance",            "ibl_diffuse"  },
+            { "ibl_prefiltered",           "ibl_specular" },
+            { "ibl_brdf_lut",              "ibl_brdf_lut" },
+            { "shadow_mapping",            "shadow"       },
+            { "deferred_geometry",         "gbuffer"      },
+            { "deferred_shading",          "hdr_screen"   },
+            { "forward_opaque",            "hdr_screen"   },
+            { "skybox",                    "hdr_screen"   },
+            { "postprocess_highlight",     "highlight"    },
+            { "postprocess_kawase_down",   "blur_down"    },
+            { "postprocess_kawase_up",     "blur_up"      },
+            { "postprocess_lensflare",     "lensflare"    },
+            { "postprocess_gaussian_blur", "blur_x"       },
+            { "postprocess_gaussian_blur", "blur_y"       },
+            { "postprocess_final",         "screen"       },
         };
         m_texture2SlotIndexs = {
             // 0~7: material textures
-            {"albedo", 0},
-            {"normal", 1},
-            {"mrao", 2},
+            { "albedo",           0  },
+            { "normal",           1  },
+            { "mrao",             2  },
 
             // 8~11: gbuffer textures
-            {"gbuffer.albedo", 8},
-            {"gbuffer.normal", 9},
-            {"gbuffer.mrao", 10},
-            {"gbuffer.depth", 11},
+            { "gbuffer.albedo",   8  },
+            { "gbuffer.normal",   9  },
+            { "gbuffer.mrao",     10 },
+            { "gbuffer.depth",    11 },
 
             // 12~15: shadow textures
-            {"shadow", 12},
+            { "shadow",           12 },
 
             // 16~23: environment/ibl textures
-            {"skybox.cubemap", 16},
-            {"skybox.equirect", 17},  // skybox.equirect is registered in m_textures by scene.m_skyboxEquirect when prepare() is called
-            {"ibl_diffuse", 18},
-            {"ibl_specular", 19},
-            {"ibl_brdf_lut", 20},
+            { "skybox.cubemap",   16 },
+            { "skybox.equirect",  17 }, // skybox.equirect is registered in m_textures by scene.m_skyboxEquirect when prepare() is called
+            { "ibl_diffuse",      18 },
+            { "ibl_specular",     19 },
+            { "ibl_brdf_lut",     20 },
 
             // 24~31: postprocess textures
-            {"hdr_screen.color", 24},
-            {"hdr_screen.depth", -1},  // only used as output, no need to bind
-            {"highlight", 25},
-            {"blur_down", 26},
-            {"blur_up", 27},
-            {"bloom", 27},  // bloom is the output of bloom blur pass
-            {"lensflare", 28},
-            {"blur_x", 29},
-            {"blur_y", 30},  // even though ping-pong buffering technique is used in blur pass, blur_x and blur_y can not share the same slot(write/read access may cause conflict)
-            {"dirtmask", 31},
+            { "hdr_screen.color", 24 },
+            { "hdr_screen.depth", -1 }, // only used as output, no need to bind
+            { "highlight",        25 },
+            { "blur_down",        26 },
+            { "blur_up",          27 },
+            { "bloom",            27 }, // bloom is the output of bloom blur pass
+            { "lensflare",        28 },
+            { "blur_x",           29 },
+            { "blur_y",           30 }, // even though ping-pong buffering technique is used in blur pass, blur_x and blur_y can not share the same slot(write/read access may cause conflict)
+            { "dirtmask",         31 },
         };
     }
 
     // 1. Initialize renderpasses, namely define the input and output attachments of each pipeline
     {
         m_passes["equirect_to_cubemap"] = RenderPass{
-            .attachments = {
+            .attachments = { 
                 AttachmentDesc{
                     .name   = "cubemap",
                     .target = GL_COLOR,
@@ -87,14 +87,14 @@ void Renderer::setup() {
                     .format = GL_RGBA32F,
                     .slot   = GL_COLOR_ATTACHMENT0,
                     .loadOp = LoadOp::LOAD_OP_CLEAR,
-                    .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+                    .value  = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } },
                 },
             },
         };
         m_passes["ibl_irradiance"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
-                    .name   = "",  // use frame buffer name as ouput attachment name
+                    .name   = "", // use frame buffer name as ouput attachment name
                     .target = GL_COLOR,
                     .type   = GL_TEXTURE_CUBE_MAP,
                     .format = GL_RGBA32F,
@@ -107,7 +107,7 @@ void Renderer::setup() {
         m_passes["ibl_prefiltered"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
-                    .name      = "",  // use frame buffer name as ouput attachment name
+                    .name      = "", // use frame buffer name as ouput attachment name
                     .target    = GL_COLOR,
                     .type      = GL_TEXTURE_CUBE_MAP,
                     .format    = GL_RGBA32F,
@@ -119,28 +119,28 @@ void Renderer::setup() {
             },
         };
         m_passes["ibl_brdf_lut"] = RenderPass{
-            .attachments = {
+            .attachments = { 
                 AttachmentDesc{
-                    .name   = "",  // use frame buffer name as ouput attachment name
+                    .name   = "", // use frame buffer name as ouput attachment name
                     .target = GL_COLOR,
                     .type   = GL_TEXTURE_2D,
                     .format = GL_RGBA32F,
                     .slot   = GL_COLOR_ATTACHMENT0,
                     .loadOp = LoadOp::LOAD_OP_CLEAR,
-                    .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
-                },
+                    .value  = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } },
+                }, 
             },
         };
         m_passes["shadow_mapping"] = RenderPass{
-            .attachments = {
+            .attachments = { 
                 AttachmentDesc{
-                    .name   = "",  // use frame buffer name as ouput attachment name
+                    .name   = "", // use frame buffer name as ouput attachment name
                     .target = GL_DEPTH,
                     .type   = GL_TEXTURE_2D,
                     .format = GL_DEPTH_COMPONENT24,
                     .slot   = GL_DEPTH_ATTACHMENT,
                     .loadOp = LoadOp::LOAD_OP_CLEAR,
-                    .value  = {.depthStencil = {1.0f, 0}},
+                    .value  = { .depthStencil = {1.0f, 0.0f} },
                 },
             },
         };
@@ -201,7 +201,7 @@ void Renderer::setup() {
                     .type   = GL_TEXTURE_2D,
                     .format = GL_DEPTH_COMPONENT24,
                     .slot   = GL_DEPTH_ATTACHMENT,
-                    .loadOp = LoadOp::LOAD_OP_DONT_CARE  // manually copy depth from deferred_geometry pass
+                    .loadOp = LoadOp::LOAD_OP_DONT_CARE // manually copy depth from deferred_geometry pass
                 },
             },
         };
@@ -243,14 +243,14 @@ void Renderer::setup() {
                     .type   = GL_TEXTURE_2D,
                     .format = GL_DEPTH_COMPONENT24,
                     .slot   = GL_DEPTH_ATTACHMENT,
-                    .loadOp = LoadOp::LOAD_OP_DONT_CARE,  // never clear depth for skybox pass
+                    .loadOp = LoadOp::LOAD_OP_DONT_CARE, // never clear depth for skybox pass
                 },
             },
         };
         m_passes["postprocess_highlight"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
-                    .name   = "",  // use frame buffer name as ouput attachment name
+                    .name   = "", // use frame buffer name as ouput attachment name
                     .target = GL_COLOR,
                     .type   = GL_TEXTURE_2D,
                     .format = GL_RGBA32F,
@@ -263,33 +263,33 @@ void Renderer::setup() {
         m_passes["postprocess_kawase_down"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
-                    .name      = "",  // use frame buffer name as ouput attachment name
+                    .name      = "", // use frame buffer name as ouput attachment name
                     .target    = GL_COLOR,
                     .type      = GL_TEXTURE_2D,
                     .format    = GL_RGBA32F,
                     .slot      = GL_COLOR_ATTACHMENT0,
                     .mipLevels = (GLsizei)m_setting.bloomMipLevels,
-                    .loadOp    = LoadOp::LOAD_OP_DONT_CARE,  // never clear color for kawase_down pass, otherwise deadlock may occur in mipmap pyramid downsampling
+                    .loadOp    = LoadOp::LOAD_OP_DONT_CARE, // never clear color for kawase_down pass, otherwise deadlock may occur in mipmap pyramid downsampling
                 },
             },
         };
         m_passes["postprocess_kawase_up"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
-                    .name      = "",  // use frame buffer name as ouput attachment name
+                    .name      = "", // use frame buffer name as ouput attachment name
                     .target    = GL_COLOR,
                     .type      = GL_TEXTURE_2D,
                     .format    = GL_RGBA32F,
                     .slot      = GL_COLOR_ATTACHMENT0,
                     .mipLevels = (GLsizei)m_setting.bloomMipLevels,
-                    .loadOp    = LoadOp::LOAD_OP_DONT_CARE,  // never clear color for kawase_up pass, otherwise deadlock may occur in mipmap pyramid upsampling
+                    .loadOp    = LoadOp::LOAD_OP_DONT_CARE, // never clear color for kawase_up pass, otherwise deadlock may occur in mipmap pyramid upsampling
                 },
             },
         };
         m_passes["postprocess_lensflare"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
-                    .name   = "",  // use frame buffer name as ouput attachment name
+                    .name   = "", // use frame buffer name as ouput attachment name
                     .target = GL_COLOR,
                     .type   = GL_TEXTURE_2D,
                     .format = GL_RGBA32F,
@@ -302,7 +302,7 @@ void Renderer::setup() {
         m_passes["postprocess_gaussian_blur"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
-                    .name   = "",  // use frame buffer name as ouput attachment name
+                    .name   = "", // use frame buffer name as ouput attachment name
                     .target = GL_COLOR,
                     .type   = GL_TEXTURE_2D,
                     .format = GL_RGBA32F,
@@ -314,14 +314,14 @@ void Renderer::setup() {
         m_passes["postprocess_final"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
-                    .name   = "default_color",  // screen color
+                    .name   = "default_color", // screen color
                     .target = GL_COLOR,
                     .slot   = GL_BACK,
                     .loadOp = LoadOp::LOAD_OP_CLEAR,
                     .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
                 },
                 AttachmentDesc{
-                    .name   = "default_depth",  // screen depth
+                    .name   = "default_depth", // screen depth
                     .target = GL_DEPTH,
                     .slot   = GL_DEPTH_ATTACHMENT,
                     .loadOp = LoadOp::LOAD_OP_DONT_CARE,
@@ -373,8 +373,8 @@ void Renderer::setup() {
         m_states["deferred_geometry"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_setting.width,
-            .viewH            = (GLsizei)m_setting.height,
+            .viewW            = (GLsizei)m_setting.frameWidth,
+            .viewH            = (GLsizei)m_setting.frameHeight,
             .depthTestEnable  = GL_TRUE,
             .depthWriteEnable = GL_TRUE,
             .depthFunc        = GL_LESS,
@@ -382,16 +382,16 @@ void Renderer::setup() {
         m_states["deferred_shading"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_setting.width,
-            .viewH            = (GLsizei)m_setting.height,
+            .viewW            = (GLsizei)m_setting.frameWidth,
+            .viewH            = (GLsizei)m_setting.frameWidth,
             .depthTestEnable  = GL_FALSE,
             .depthWriteEnable = GL_FALSE,
         };
         m_states["forward_opaque"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_setting.width,
-            .viewH            = (GLsizei)m_setting.height,
+            .viewW            = (GLsizei)m_setting.frameWidth,
+            .viewH            = (GLsizei)m_setting.frameWidth,
             .depthTestEnable  = GL_TRUE,
             .depthWriteEnable = GL_TRUE,
             .depthFunc        = GL_LESS,
@@ -399,8 +399,8 @@ void Renderer::setup() {
         m_states["skybox"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
-            .viewW            = (GLsizei)m_setting.width,
-            .viewH            = (GLsizei)m_setting.height,
+            .viewW            = (GLsizei)m_setting.frameWidth,
+            .viewH            = (GLsizei)m_setting.frameWidth,
             .depthTestEnable  = GL_TRUE,
             .depthWriteEnable = GL_FALSE,
             .depthFunc        = GL_LEQUAL,
@@ -471,40 +471,32 @@ void Renderer::setup() {
         m_frames["ibl_specular"] = std::make_shared<FrameBuffer>(false, m_setting.skyboxSize, m_setting.skyboxSize);
         m_frames["ibl_brdf_lut"] = std::make_shared<FrameBuffer>(false, m_setting.brdfLUTSize, m_setting.brdfLUTSize);
         m_frames["shadow"]       = std::make_shared<FrameBuffer>(false, m_setting.shadowMapSize, m_setting.shadowMapSize);
-        m_frames["gbuffer"]      = std::make_shared<FrameBuffer>(false, m_setting.width, m_setting.height);
+        m_frames["gbuffer"]      = std::make_shared<FrameBuffer>(false, m_setting.frameWidth, m_setting.frameHeight);
         m_frames["skybox"]       = std::make_shared<FrameBuffer>(false, m_setting.skyboxSize, m_setting.skyboxSize);
-        m_frames["hdr_screen"]   = std::make_shared<FrameBuffer>(false, m_setting.width, m_setting.height);  // hdr_screen is the temporary frame buffer for shading pass, so that later can use it for postprocess(convert hdr into sdr/ldr)
+        m_frames["hdr_screen"]   = std::make_shared<FrameBuffer>(false, m_setting.frameWidth, m_setting.frameHeight); // hdr_screen is the temporary frame buffer for shading pass, so that later can use it for postprocess(convert hdr into sdr/ldr)
         m_frames["highlight"]    = std::make_shared<FrameBuffer>(false, m_setting.highlightMapSize, m_setting.highlightMapSize);
         m_frames["blur_down"]    = std::make_shared<FrameBuffer>(false, m_setting.bloomMapSize, m_setting.bloomMapSize);
         m_frames["blur_up"]      = std::make_shared<FrameBuffer>(false, m_setting.bloomMapSize, m_setting.bloomMapSize);
         m_frames["lensflare"]    = std::make_shared<FrameBuffer>(false, m_setting.lensflareMapSize, m_setting.lensflareMapSize);
-        m_frames["blur_x"]       = std::make_shared<FrameBuffer>(false, m_setting.lensflareMapSize, m_setting.lensflareMapSize);  // blur_x is the temporary frame buffer for horizontal gaussian blur
-        m_frames["blur_y"]       = std::make_shared<FrameBuffer>(false, m_setting.lensflareMapSize, m_setting.lensflareMapSize);  // blur_y is the temporary frame buffer for vertical gaussian blur
-        m_frames["screen"]       = std::make_shared<FrameBuffer>(true, m_setting.width, m_setting.height);
+        m_frames["blur_x"]       = std::make_shared<FrameBuffer>(false, m_setting.lensflareMapSize, m_setting.lensflareMapSize); // blur_x is the temporary frame buffer for horizontal gaussian blur
+        m_frames["blur_y"]       = std::make_shared<FrameBuffer>(false, m_setting.lensflareMapSize, m_setting.lensflareMapSize); // blur_y is the temporary frame buffer for vertical gaussian blur
+        m_frames["screen"]       = std::make_shared<FrameBuffer>(true, m_setting.frameWidth, m_setting.frameHeight);
     }
 
     // 5. Create textures and activate them as drawable attachments for framebuffers
     for (const auto& [passName, pass] : m_passes) {
-        if (m_pass2FrameNames.count(passName) == 0) {
-            continue;
-        }
+        if (m_pass2FrameNames.count(passName) == 0) { continue; }
         auto range = m_pass2FrameNames.equal_range(passName);
         for (auto itr = range.first; itr != range.second; ++itr) {
             auto frameName = itr->second;
-            if (frameName == "screen") {
-                continue;
-            }
+            if (frameName == "screen") { continue; }
             std::cout << "Creating attachments [";
             for (auto attachment : pass.attachments) {
                 auto attachmentName = attachment.name.empty() ? frameName : frameName + "." + attachment.name;
                 std::cout << attachmentName << ", ";
-                if (m_texture2SlotIndexs.count(attachmentName) == 0) {
-                    throw std::runtime_error(format("Renderer::setup(): Attachment {} of pass {} not found in frame {}.", attachmentName, passName, frameName));
-                }
-                if (m_textures.count(attachmentName) == 0) {
-                    m_textures[attachmentName] = std::make_shared<Texture>(m_frames[frameName]->getWidth(), m_frames[frameName]->getHeight(), attachment.type, attachment.format, attachment.mipLevels);
-                }
-                m_frames[frameName]->attach(attachment.slot, m_textures[attachmentName]);  // attach texture level 0 to frame buffer
+                if (m_texture2SlotIndexs.count(attachmentName) == 0) { throw std::runtime_error(format("Renderer::setup(): Attachment {} of pass {} not found in frame {}.", attachmentName, passName, frameName)); }
+                if (m_textures.count(attachmentName) == 0) { m_textures[attachmentName] = std::make_shared<Texture>(m_frames[frameName]->getWidth(), m_frames[frameName]->getHeight(), attachment.type, attachment.format, attachment.mipLevels); }
+                m_frames[frameName]->attach(attachment.slot, m_textures[attachmentName]); // attach texture level 0 to frame buffer
             }
             std::cout << "]\n";
             m_frames[frameName]->finalize();
@@ -547,7 +539,7 @@ void Renderer::setup() {
             .magFilter   = GL_NEAREST,
             .wrapS       = GL_CLAMP_TO_BORDER,
             .wrapT       = GL_CLAMP_TO_BORDER,
-            .borderColor = {1.0f, 1.0f, 1.0f, 1.0f},
+            .borderColor = { 1.0f, 1.0f, 1.0f, 1.0f },
         });
         samplers[0xFF0000]   = std::make_shared<Sampler>(SamplerDesc{
             // slot 16~23 -> GL_TEXTURE16~GL_TEXTURE23 = skybox/ibl textures
@@ -565,9 +557,7 @@ void Renderer::setup() {
             .wrapT     = GL_CLAMP_TO_EDGE,
         });
         for (auto& [name, slot] : m_texture2SlotIndexs) {
-            if (slot >= 32 || slot < 0) {
-                continue;
-            }
+            if (slot >= 32 || slot < 0) { continue; }
             for (auto& [mask, sampler] : samplers) {
                 if (mask & (1 << slot)) {
                     m_samplers[name] = sampler;
@@ -604,7 +594,7 @@ void Renderer::prepare(const Scene& scene) {
             m_shaders["equirect_to_cubemap"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
             m_frames["skybox"]->attach(GL_COLOR_ATTACHMENT0, m_textures["skybox.cubemap"], 0, index);
             m_passes["equirect_to_cubemap"].begin(m_frames["skybox"]);
-            draw(cubeLayout, {"skybox.equirect"}, cubeCount);
+            draw(cubeLayout, { "skybox.equirect" }, cubeCount);
             m_passes["equirect_to_cubemap"].end();
         }
     } else {
@@ -622,7 +612,7 @@ void Renderer::prepare(const Scene& scene) {
                 m_shaders["ibl_irradiance"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
                 m_frames["ibl_diffuse"]->attach(GL_COLOR_ATTACHMENT0, m_textures["ibl_diffuse"], 0, index);
                 m_passes["ibl_irradiance"].begin(m_frames["ibl_diffuse"]);
-                draw(cubeLayout, {"skybox.cubemap"}, cubeCount);
+                draw(cubeLayout, { "skybox.cubemap" }, cubeCount);
                 m_passes["ibl_irradiance"].end();
             }
         }
@@ -643,7 +633,7 @@ void Renderer::prepare(const Scene& scene) {
                     m_frames["ibl_specular"]->attach(GL_COLOR_ATTACHMENT0, m_textures["ibl_specular"], level, index);
 
                     m_passes["ibl_prefiltered"].begin(m_frames["ibl_specular"]);
-                    draw(cubeLayout, {"skybox.cubemap"}, cubeCount);
+                    draw(cubeLayout, { "skybox.cubemap" }, cubeCount);
                     m_passes["ibl_prefiltered"].end();
                 }
             }
@@ -658,11 +648,9 @@ void Renderer::prepare(const Scene& scene) {
             m_passes["ibl_brdf_lut"].end();
         }
     } else {
-        glm::vec4 color = {0.0f, 0.0f, 0.0f, 1.0f};
+        glm::vec4 color = { 0.0f, 0.0f, 0.0f, 1.0f };
         m_textures["ibl_diffuse"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, 0);
-        for (GLint level = 0; level < m_textures["ibl_specular"]->getMipLevels(); level++) {
-            m_textures["ibl_specular"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, level);
-        }
+        for (GLint level = 0; level < m_textures["ibl_specular"]->getMipLevels(); level++) { m_textures["ibl_specular"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, level); }
         m_textures["ibl_brdf_lut"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, 0);
     }
 }
@@ -672,27 +660,21 @@ void Renderer::update(const Scene& scene) {
     {
         // 1.1 Camera uniform block
         const auto& camera = scene.getCamera();
-        if (m_buffers["camera"] == nullptr) {
-            m_buffers["camera"] = std::make_shared<UniformBuffer>(sizeof(CameraBlock));
-        }
+        if (m_buffers["camera"] == nullptr) { m_buffers["camera"] = std::make_shared<UniformBuffer>(sizeof(CameraBlock)); }
         m_buffers["camera"]->upload(0, sizeof(CameraBlock), &camera->getCameraBlock());
         m_buffers["camera"]->bind(0);
 
         // 1.2 Model uniform block
         std::vector<ModelBlock> modelBlocks;
         scene.getModelBlocks(modelBlocks);
-        if (m_buffers["model"] == nullptr) {
-            m_buffers["model"] = std::make_shared<UniformBuffer>(std::max(sizeof(ModelBlock) * modelBlocks.size(), 1ul));
-        }
+        if (m_buffers["model"] == nullptr) { m_buffers["model"] = std::make_shared<UniformBuffer>(std::max(sizeof(ModelBlock) * modelBlocks.size(), 1ul)); }
         m_buffers["model"]->upload(0, std::max(sizeof(ModelBlock) * modelBlocks.size(), 1ul), modelBlocks.data());
         m_buffers["model"]->bind(1);
 
         // 1.3 Light shader storage array
         std::vector<LightBlock> lightBlocks;
         scene.getLightBlocks(lightBlocks);
-        if (m_buffers["light"] == nullptr) {
-            m_buffers["light"] = std::make_shared<ShaderStorageBuffer>(std::max(sizeof(LightBlock) * lightBlocks.size(), 1ul));
-        }
+        if (m_buffers["light"] == nullptr) { m_buffers["light"] = std::make_shared<ShaderStorageBuffer>(std::max(sizeof(LightBlock) * lightBlocks.size(), 1ul)); }
         m_buffers["light"]->upload(0, std::max(sizeof(LightBlock) * lightBlocks.size(), 1ul), lightBlocks.data());
         m_buffers["light"]->bind(0);
     }
@@ -720,7 +702,7 @@ void Renderer::update(const Scene& scene) {
                 m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
                 draw(item, {});
             }
-            lights[i]->setUVOffsetScale({remaps[i * 4], remaps[i * 4 + 1]}, {remaps[i * 4 + 2], remaps[i * 4 + 3]});
+            lights[i]->setUVOffsetScale({ remaps[i * 4], remaps[i * 4 + 1] }, { remaps[i * 4 + 2], remaps[i * 4 + 3] });
         }
         m_passes["shadow_mapping"].end();
 
@@ -748,7 +730,7 @@ void Renderer::render(const Scene& scene) {
             m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
             for (const auto& item : opaqueQueue) {
                 m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-                draw(item, {"albedo", "normal", "mrao"});
+                draw(item, { "albedo", "normal", "mrao" });
             }
             m_passes["deferred_geometry"].end();
         }
@@ -764,7 +746,7 @@ void Renderer::render(const Scene& scene) {
             m_shaders["deferred_shading"]->use();
             m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
             m_passes["deferred_shading"].begin(m_frames["hdr_screen"]);
-            draw(layout, {"gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut"}, count);
+            draw(layout, { "gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut" }, count);
             m_passes["deferred_shading"].end();
         }
     } else {
@@ -774,7 +756,7 @@ void Renderer::render(const Scene& scene) {
         m_passes["forward_opaque"].begin(m_frames["hdr_screen"]);
         for (const auto& item : opaqueQueue) {
             m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-            draw(item, {"albedo", "normal", "mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut"});
+            draw(item, { "albedo", "normal", "mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut" });
         }
         m_passes["forward_opaque"].end();
     }
@@ -786,7 +768,7 @@ void Renderer::render(const Scene& scene) {
         m_states["skybox"].apply();
         m_shaders["skybox"]->use();
         m_passes["skybox"].begin(m_frames["hdr_screen"]);
-        draw(layout, {"skybox.cubemap"}, count);
+        draw(layout, { "skybox.cubemap" }, count);
         m_passes["skybox"].end();
     }
 
@@ -798,13 +780,13 @@ void Renderer::render(const Scene& scene) {
             m_states["postprocess_highlight"].apply();
             m_shaders["postprocess_highlight"]->use();
             m_passes["postprocess_highlight"].begin(m_frames["highlight"]);
-            draw(layout, {"hdr_screen.color"}, count);
+            draw(layout, { "hdr_screen.color" }, count);
             m_passes["postprocess_highlight"].end();
         }
 
         {
-            m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], 0);      // reset blur_down to mip level 0 before copying, as the previous frame's loop leaves it attached to the smallest mip level, while highlight only has one level, no adjustment is needed for it.
-            m_frames["blur_down"]->copy(*m_frames["highlight"], GL_COLOR_BUFFER_BIT, GL_LINEAR);  // GL_LINEAR is used to handle bilinear interpolation since their dimensions may differ.
+            m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], 0);     // reset blur_down to mip level 0 before copying, as the previous frame's loop leaves it attached to the smallest mip level, while highlight only has one level, no adjustment is needed for it.
+            m_frames["blur_down"]->copy(*m_frames["highlight"], GL_COLOR_BUFFER_BIT, GL_LINEAR); // GL_LINEAR is used to handle bilinear interpolation since their dimensions may differ.
         }
 
         m_states["postprocess_kawase_down"].apply();
@@ -814,17 +796,17 @@ void Renderer::render(const Scene& scene) {
             int dstLevel        = level + 1;
             float srcTexelSizeX = 1.0f / (float)m_textures["blur_down"]->getWidth(srcLevel);
             float srcTexelSizeY = 1.0f / (float)m_textures["blur_down"]->getHeight(srcLevel);
-            uint32_t width      = m_textures["blur_down"]->getWidth(dstLevel);
-            uint32_t height     = m_textures["blur_down"]->getHeight(dstLevel);
+            uint32_t dstWidth   = m_textures["blur_down"]->getWidth(dstLevel);
+            uint32_t dstHeight  = m_textures["blur_down"]->getHeight(dstLevel);
 
             m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], dstLevel);
             m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcTexelSizeX", srcTexelSizeX);
             m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcTexelSizeY", srcTexelSizeY);
             m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcLevel", srcLevel);
-            m_states["postprocess_kawase_down"].view(0, 0, width, height);
+            m_states["postprocess_kawase_down"].view(0, 0, dstWidth, dstHeight);
             m_passes["postprocess_kawase_down"].begin(m_frames["blur_down"]);
-            m_textures["blur_down"]->clamp(srcLevel);  // avoid feedback loop
-            draw(layout, {"blur_down"}, count);
+            m_textures["blur_down"]->clamp(srcLevel); // avoid feedback loop
+            draw(layout, { "blur_down" }, count);
             m_textures["blur_down"]->unclamp();
             m_passes["postprocess_kawase_down"].end();
         }
@@ -832,7 +814,7 @@ void Renderer::render(const Scene& scene) {
         {
             m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], m_setting.bloomMipLevels - 1);
             m_frames["blur_up"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_up"], m_setting.bloomMipLevels - 1);
-            m_frames["blur_up"]->copy(*m_frames["blur_down"], GL_COLOR_BUFFER_BIT);  // both framebuffers are needed to be explicitly attached to the final mip level before copying
+            m_frames["blur_up"]->copy(*m_frames["blur_down"], GL_COLOR_BUFFER_BIT); // both framebuffers are needed to be explicitly attached to the final mip level before copying
         }
 
         m_states["postprocess_kawase_up"].apply();
@@ -852,8 +834,8 @@ void Renderer::render(const Scene& scene) {
             m_shaders["postprocess_kawase_up"]->setUniformValue("uDstLevel", dstLevel);
             m_states["postprocess_kawase_up"].view(0, 0, dstWidth, dstHeight);
             m_passes["postprocess_kawase_up"].begin(m_frames["blur_up"]);
-            m_textures["blur_up"]->clamp(srcLevel);  // avoid feedback loop(if commented out, dstLevel will be read inadvertently, causing the blur radius to expand continuously and amplify endlessly across frames.)
-            draw(layout, {"blur_up", "blur_down"}, count);
+            m_textures["blur_up"]->clamp(srcLevel); // avoid feedback loop(if commented out, dstLevel will be read inadvertently, causing the blur radius to expand continuously and amplify endlessly across frames.)
+            draw(layout, { "blur_up", "blur_down" }, count);
             m_textures["blur_up"]->unclamp();
             m_passes["postprocess_kawase_up"].end();
         }
@@ -869,14 +851,14 @@ void Renderer::render(const Scene& scene) {
             m_states["postprocess_lensflare"].apply();
             m_shaders["postprocess_lensflare"]->use();
             m_passes["postprocess_lensflare"].begin(m_frames["lensflare"]);
-            draw(layout, {"bloom"}, count);  // use blurred highlight(namely bloom) as input to generate raw lensflare(ghost/halo/distortion).
+            draw(layout, { "bloom" }, count); // use blurred highlight(namely bloom) as input to generate raw lensflare(ghost/halo/distortion).
             m_passes["postprocess_lensflare"].end();
         }
 
         {
             m_frames["blur_y"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_y"], 0);
             m_frames["lensflare"]->attach(GL_COLOR_ATTACHMENT0, m_textures["lensflare"], 0);
-            m_frames["blur_y"]->copy(*m_frames["lensflare"], GL_COLOR_BUFFER_BIT, GL_LINEAR);  // blur raw lensflare in y direction first to generate final lensflare effect.
+            m_frames["blur_y"]->copy(*m_frames["lensflare"], GL_COLOR_BUFFER_BIT, GL_LINEAR); // blur raw lensflare in y direction first to generate final lensflare effect.
         }
 
         {
@@ -892,10 +874,10 @@ void Renderer::render(const Scene& scene) {
                 m_shaders["postprocess_gaussian_blur"]->setUniformValue("uXFilter", xFilter);
                 if (xFilter) {
                     m_passes["postprocess_gaussian_blur"].begin(m_frames["blur_x"]);
-                    draw(layout, {"blur_y"}, count);
+                    draw(layout, { "blur_y" }, count);
                 } else {
                     m_passes["postprocess_gaussian_blur"].begin(m_frames["blur_y"]);
-                    draw(layout, {"blur_x"}, count);
+                    draw(layout, { "blur_x" }, count);
                 }
                 m_passes["postprocess_gaussian_blur"].end();
                 xFilter = !xFilter;
@@ -905,27 +887,25 @@ void Renderer::render(const Scene& scene) {
         {
             m_frames["blur_y"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_y"], 0);
             m_frames["lensflare"]->attach(GL_COLOR_ATTACHMENT0, m_textures["lensflare"], 0);
-            m_frames["lensflare"]->copy(*m_frames["blur_y"], GL_COLOR_BUFFER_BIT, GL_LINEAR);  // replace the lensflare texture with the blurred one.
+            m_frames["lensflare"]->copy(*m_frames["blur_y"], GL_COLOR_BUFFER_BIT, GL_LINEAR); // replace the lensflare texture with the blurred one.
         }
     }
 
     // TODO: screen space ambient occlusion
-    if (m_setting.ssao) {
-    }
+    if (m_setting.ssao) {}
 
     // TODO: temporal anti aliasing
-    if (m_setting.taa) {
-    }
+    if (m_setting.taa) {}
 
     {
         GLsizei count = instance.getCounts("quad");
         auto& layout  = instance.getLayout("quad");
 
         m_states["postprocess_final"].apply();
-        m_states["postprocess_final"].view(0, 0, m_setting.width, m_setting.height);
+        m_states["postprocess_final"].view(m_setting.x, m_setting.y, m_setting.width, m_setting.height);
         m_shaders["postprocess_final"]->use();
         m_passes["postprocess_final"].begin(m_frames["screen"]);
-        draw(layout, {"hdr_screen.color", "highlight", "blur_up", "blur_down", "lensflare", "dirtmask"}, count);
+        draw(layout, { "hdr_screen.color", "highlight", "blur_up", "blur_down", "lensflare", "dirtmask" }, count);
         m_passes["postprocess_final"].end();
     }
 }
@@ -936,18 +916,14 @@ void Renderer::draw(const RenderItem& item, const std::vector<std::string>& text
     const std::unique_ptr<IndexBuffer>& bufferi  = item.mesh->getIndexBuffer();
 
     for (auto name : textures) {
-        if (m_texture2SlotIndexs.count(name) == 0) {
-            throw std::runtime_error("Renderer::draw: Texture slot index not found: " + name);
-        }
-        if (item.material->getTexture(name) == nullptr && (m_textures.count(name) == 0 || m_textures[name] == nullptr)) {
-            throw std::runtime_error("Renderer::draw: Texture not found: " + name);
-        }
+        if (m_texture2SlotIndexs.count(name) == 0) { throw std::runtime_error("Renderer::draw: Texture slot index not found: " + name); }
+        if (item.material->getTexture(name) == nullptr && (m_textures.count(name) == 0 || m_textures[name] == nullptr)) { throw std::runtime_error("Renderer::draw: Texture not found: " + name); }
         std::shared_ptr<Texture> texture = item.material->getTexture(name) != nullptr ? item.material->getTexture(name) : m_textures[name];
         texture->bind(m_texture2SlotIndexs[name]);
     }
 
     layout->bind();
-    if (!layout->attach(0, bufferv, 0, sizeof(Vertex))) {  //! WARNING: slot 0 and stride sizeof(Vertex) are hardcoded since all meshes share the same vertex format, but can be easily extended in the future if needed
+    if (!layout->attach(0, bufferv, 0, sizeof(Vertex))) { //! WARNING: slot 0 and stride sizeof(Vertex) are hardcoded since all meshes share the same vertex format, but can be easily extended in the future if needed
         return;
     }
     if (layout->attach(bufferi)) {
@@ -960,9 +936,7 @@ void Renderer::draw(const RenderItem& item, const std::vector<std::string>& text
         glDrawArrays(GL_TRIANGLES, item.ioffset, item.length);
     }
 
-    for (auto name : textures) {
-        m_textures[name]->unbind(m_texture2SlotIndexs[name]);
-    }
+    for (auto name : textures) { m_textures[name]->unbind(m_texture2SlotIndexs[name]); }
 
     m_drawCall++;
     return;
@@ -971,22 +945,16 @@ void Renderer::draw(const RenderItem& item, const std::vector<std::string>& text
 void Renderer::draw(const std::shared_ptr<VertexLayout>& layout, const std::vector<std::string>& textures, GLsizei count) {
     layout->bind();
     for (auto name : textures) {
-        if (m_texture2SlotIndexs.count(name) == 0) {
-            throw std::runtime_error("Renderer::draw: Texture slot index not found: " + name);
-        }
-        if (m_textures.count(name) == 0) {
-            throw std::runtime_error("Renderer::draw: Texture not found: " + name);
-        }
+        if (m_texture2SlotIndexs.count(name) == 0) { throw std::runtime_error("Renderer::draw: Texture slot index not found: " + name); }
+        if (m_textures.count(name) == 0) { throw std::runtime_error("Renderer::draw: Texture not found: " + name); }
         m_textures[name]->bind(m_texture2SlotIndexs[name]);
     }
     // std::cout << "Quad/Skybox VBO Draw: vertex count " << count << std::endl;
     glDrawArrays(GL_TRIANGLES, 0, count);
-    for (auto name : textures) {
-        m_textures[name]->unbind(m_texture2SlotIndexs[name]);
-    }
+    for (auto name : textures) { m_textures[name]->unbind(m_texture2SlotIndexs[name]); }
 
     m_drawCall++;
     return;
 }
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer

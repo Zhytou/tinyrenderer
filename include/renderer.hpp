@@ -9,6 +9,7 @@
 #include "bindablebuffer.hpp"
 #include "framebuffer.hpp"
 #include "pipelinestate.hpp"
+#include "renderersetting.hpp"
 #include "renderitem.hpp"
 #include "renderpass.hpp"
 #include "sampler.hpp"
@@ -16,7 +17,6 @@
 #include "shader.hpp"
 #include "vertexbuffer.hpp"
 #include "vertexlayout.hpp"
-#include "rendersetting.hpp"
 
 namespace tinyglrenderer {
 
@@ -28,9 +28,10 @@ namespace tinyglrenderer {
  */
 class Renderer {
    public:
-    Renderer()  = default;
-    ~Renderer() = default;
-    Renderer(const Renderer& renderer) = delete;
+    Renderer(RendererSetting& setting) : m_setting(setting) {}
+    ~Renderer() { shutdown(); }
+
+    Renderer(const Renderer& renderer)            = delete;
     Renderer& operator=(const Renderer& renderer) = delete;
 
     void setup();
@@ -41,13 +42,8 @@ class Renderer {
     void update(const Scene& scene);
     // Render scene
     void render(const Scene& scene);
-    // Config renderer settings
-    void config(const RenderSetting& setting) { m_setting = setting; }
-    // Resize renderer window
-    void resize(uint32_t width, uint32_t height) { m_setting.width = width; m_setting.height = height; }
 
     uint32_t getDrawCall() const { return m_drawCall; }
-    RenderSetting getSetting() const { return m_setting; }
 
    private:
     // draw mesh
@@ -72,8 +68,8 @@ class Renderer {
     std::unordered_map<std::string, uint32_t> m_texture2SlotIndexs;
 
     /// renderer settings
-    RenderSetting m_setting;
-    uint32_t m_drawCall = 0;
+    RendererSetting& m_setting;
+    size_t m_drawCall = 0;
 };
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer
