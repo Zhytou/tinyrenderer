@@ -16,9 +16,11 @@ Shader::Shader(const fs::path& vertShaderPath, const fs::path& fragShaderPath) {
     std::cout << "Compiling GLSL shader [" << vertShaderPath << "] and [" << fragShaderPath << "]\n";
 
     // compile and link shaders
-    m_id = link({
-        compile(precompile(vertShaderPath), GL_VERTEX_SHADER),
-        compile(precompile(fragShaderPath), GL_FRAGMENT_SHADER),
+    m_filename = { vertShaderPath.string(), fragShaderPath.string() };
+    m_source   = { precompile(vertShaderPath), precompile(fragShaderPath) };
+    m_id       = link({
+        compile(m_source.first, GL_VERTEX_SHADER),
+        compile(m_source.second, GL_FRAGMENT_SHADER),
     });
 
     // generate binding point layout for attributes,uniformbuffers and textures
@@ -26,21 +28,15 @@ Shader::Shader(const fs::path& vertShaderPath, const fs::path& fragShaderPath) {
 }
 
 Shader::~Shader() {
-    if (m_id != 0) {
-        glDeleteProgram(m_id);
-    }
+    if (m_id != 0) { glDeleteProgram(m_id); }
 }
 
 void Shader::use() const {
-    if (m_id != 0) {
-        glUseProgram(m_id);
-    }
+    if (m_id != 0) { glUseProgram(m_id); }
 }
 
-uint32_t Shader::getUniformLocation(const std::string& name) {
-    if (m_locations.count(name) == 0) {
-        m_locations[name] = glGetUniformLocation(m_id, name.c_str());
-    }
+GLint Shader::getUniformLocation(const std::string& name) {
+    if (m_locations.count(name) == 0) { m_locations[name] = glGetUniformLocation(m_id, name.c_str()); }
     return m_locations[name];
 }
 
@@ -50,12 +46,8 @@ std::string Shader::precompile(const fs::path& shaderPath) {
     std::string line;
     fs::path baseDir = shaderPath.parent_path();
 
-    if (!fs::exists(shaderPath)) {
-        throw std::runtime_error("Shader::compile: Shader source file not found: " + shaderPath.string());
-    }
-    if (!file.is_open()) {
-        throw std::runtime_error("Shader::compile: Failed to open: " + shaderPath.string());
-    }
+    if (!fs::exists(shaderPath)) { throw std::runtime_error("Shader::compile: Shader source file not found: " + shaderPath.string()); }
+    if (!file.is_open()) { throw std::runtime_error("Shader::compile: Failed to open: " + shaderPath.string()); }
 
     while (std::getline(file, line)) {
         size_t pos = line.find("#include \"");
@@ -95,9 +87,7 @@ GLuint Shader::compile(const std::string& source, GLenum type) {
 GLuint Shader::link(const std::initializer_list<GLuint>& shaders) {
     GLuint program = glCreateProgram();
 
-    for (GLuint shader : shaders) {
-        glAttachShader(program, shader);
-    }
+    for (GLuint shader : shaders) { glAttachShader(program, shader); }
     glLinkProgram(program);
     for (GLuint shader : shaders) {
         glDetachShader(program, shader);
@@ -124,7 +114,7 @@ void Shader::introspect() {
     GLint numUniforms = 0;
     glGetProgramInterfaceiv(m_id, GL_UNIFORM, GL_ACTIVE_RESOURCES, &numUniforms);
 
-    GLenum properties[] = {GL_NAME_LENGTH, GL_TYPE, GL_LOCATION};
+    GLenum properties[] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION };
 
     for (int i = 0; i < numUniforms; ++i) {
         GLint results[3];
@@ -147,4 +137,4 @@ void Shader::introspect() {
     }
 }
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer

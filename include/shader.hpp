@@ -21,22 +21,19 @@ class Shader {
     Shader(const std::filesystem::path&, const std::filesystem::path&);
     Shader(const Shader&)            = delete;
     Shader& operator=(const Shader&) = delete;
-    Shader(Shader&& other) noexcept : m_id(other.m_id), m_locations(std::move(other.m_locations)) {
-        other.m_id = 0;
-    }
     ~Shader();
 
-    uint32_t getUniformLocation(const std::string& name);
-    template <typename T>
-    void setUniformValue(const std::string& name, const T& value);
-    // void setUniformBinding(uint32_t binding);
+    GLint getUniformLocation(const std::string& name);
+    template <typename T> void setUniformValue(const std::string& name, const T& value);
 
     void use() const;
 
    private:
     GLuint m_id = 0;
-    std::unordered_map<std::string, uint32_t> m_locations;  // normal uniform variable locations
-    std::unordered_map<std::string, uint32_t> m_bindings;   // uniform block/teture slot binding points
+    std::pair<std::string, std::string> m_filename;
+    std::pair<std::string, std::string> m_source;
+    std::unordered_map<std::string, GLint> m_locations; // normal uniform variable locations
+    std::unordered_map<std::string, GLint> m_bindings;  // uniform block/teture slot binding points
 
     static std::string precompile(const std::filesystem::path& filename);
     static GLuint compile(const std::string& source, GLenum type);
@@ -44,8 +41,7 @@ class Shader {
     void introspect();
 };
 
-template <typename T>
-void Shader::setUniformValue(const std::string& name, const T& value) {
+template <typename T> void Shader::setUniformValue(const std::string& name, const T& value) {
     auto loc = getUniformLocation(name);
     if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, int> || std::is_same_v<T, long> || std::is_same_v<T, long long>) {
         glProgramUniform1i(m_id, loc, value);
@@ -76,4 +72,4 @@ void Shader::setUniformValue(const std::string& name, const T& value) {
     }
 }
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer
