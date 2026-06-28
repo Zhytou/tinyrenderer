@@ -13,12 +13,12 @@ struct alignas(16) CameraBlock {
 };
 
 enum class CameraMovement {
-    FORWARD,   // POSITIVE_Z
-    BACKWARD,  // NEGATIVE_Z
-    LEFT,      // NEGATIVE_X
-    RIGHT,     // POSITIVE_X
-    UPWARD,    // POSITIVE_Y
-    DOWNWARD,  // NEGATIVE_Y
+    FORWARD,  // POSITIVE_Z
+    BACKWARD, // NEGATIVE_Z
+    LEFT,     // NEGATIVE_X
+    RIGHT,    // POSITIVE_X
+    UPWARD,   // POSITIVE_Y
+    DOWNWARD, // NEGATIVE_Y
 };
 
 class Camera {
@@ -90,7 +90,7 @@ class Camera {
         m_far = far;
         update();
     }
-    void setViewport(int width, int height) {
+    void setAspect(int width, int height) {
         m_width  = width;
         m_height = height;
         m_aspect = static_cast<float>(width) / static_cast<float>(height);
@@ -143,4 +143,4 @@ class OrthographicCamera : public Camera {
     }
 };
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer
