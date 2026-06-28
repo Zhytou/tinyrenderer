@@ -10,10 +10,14 @@ namespace tinyglrenderer {
 
 namespace fs = std::filesystem;
 
-Texture::Texture(uint32_t size, GLenum target, GLenum internalFormat, GLsizei mipLevels) : m_width(size), m_height(1), m_depth(1), m_target(target), m_internalFormat(internalFormat), m_mipLevels(mipLevels) {
-    if (size == 0 || mipLevels > 10 || size < (1 << (mipLevels - 1))) {
-        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {} for mip level {}", size, mipLevels));
-    }
+Texture::Texture(GLsizei size, GLenum target, GLenum internalFormat, GLsizei mipLevels)
+    : m_width(size),
+      m_height(1),
+      m_depth(1),
+      m_target(target),
+      m_internalFormat(internalFormat),
+      m_mipLevels(mipLevels) {
+    if (size == 0 || mipLevels > 10 || size < (1 << (mipLevels - 1))) { throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {} for mip level {}", size, mipLevels)); }
 
     glCreateTextures(m_target, 1, &m_id);
 
@@ -24,10 +28,14 @@ Texture::Texture(uint32_t size, GLenum target, GLenum internalFormat, GLsizei mi
     }
 }
 
-Texture::Texture(uint32_t width, uint32_t height, GLenum target, GLenum internalFormat, GLsizei mipLevels) : m_width(width), m_height(height), m_depth(1), m_target(target), m_internalFormat(internalFormat), m_mipLevels(mipLevels) {
-    if (width == 0 || height == 0 || mipLevels > 10 || width < (1 << (mipLevels - 1)) || height < (1 << (mipLevels - 1))) {
-        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{} for mip level {}", width, height, mipLevels));
-    }
+Texture::Texture(GLsizei width, GLsizei height, GLenum target, GLenum internalFormat, GLsizei mipLevels)
+    : m_width(width),
+      m_height(height),
+      m_depth(1),
+      m_target(target),
+      m_internalFormat(internalFormat),
+      m_mipLevels(mipLevels) {
+    if (width == 0 || height == 0 || mipLevels > 10 || width < (1 << (mipLevels - 1)) || height < (1 << (mipLevels - 1))) { throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{} for mip level {}", width, height, mipLevels)); }
 
     // Create texture handle
     //
@@ -78,10 +86,14 @@ Texture::Texture(uint32_t width, uint32_t height, GLenum target, GLenum internal
     }
 }
 
-Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum target, GLenum internalFormat, GLsizei mipLevels) : m_width(width), m_height(height), m_depth(depth), m_target(target), m_mipLevels(mipLevels), m_internalFormat(internalFormat) {
-    if (width == 0 || height == 0 || depth == 0 || mipLevels > 10 || width < (1 << (mipLevels - 1)) || height < (1 << (mipLevels - 1)) || depth < (1 << (mipLevels - 1))) {
-        throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{}x{} for mip level {}", width, height, depth, mipLevels));
-    }
+Texture::Texture(GLsizei width, GLsizei height, GLsizei depth, GLenum target, GLenum internalFormat, GLsizei mipLevels)
+    : m_width(width),
+      m_height(height),
+      m_depth(depth),
+      m_target(target),
+      m_mipLevels(mipLevels),
+      m_internalFormat(internalFormat) {
+    if (width == 0 || height == 0 || depth == 0 || mipLevels > 10 || width < (1 << (mipLevels - 1)) || height < (1 << (mipLevels - 1)) || depth < (1 << (mipLevels - 1))) { throw std::runtime_error(std::format("Texture::Texture: Invalid Texture size {}x{}x{} for mip level {}", width, height, depth, mipLevels)); }
 
     glCreateTextures(m_target, 1, &m_id);
 
@@ -93,9 +105,7 @@ Texture::Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum target,
 }
 
 Texture::Texture(Texture&& other) {
-    if (m_id) {
-        glDeleteTextures(1, &m_id);
-    }
+    if (m_id) { glDeleteTextures(1, &m_id); }
     m_id             = other.m_id;
     m_target         = other.m_target;
     m_width          = other.m_width;
@@ -106,9 +116,7 @@ Texture::Texture(Texture&& other) {
 }
 
 Texture& Texture::operator=(Texture&& other) {
-    if (m_id) {
-        glDeleteTextures(1, &m_id);
-    }
+    if (m_id) { glDeleteTextures(1, &m_id); }
     m_id             = other.m_id;
     m_target         = other.m_target;
     m_width          = other.m_width;
@@ -120,30 +128,26 @@ Texture& Texture::operator=(Texture&& other) {
 }
 
 Texture::~Texture() {
-    if (m_id) {
-        glDeleteTextures(1, &m_id);
-    }
+    if (m_id) { glDeleteTextures(1, &m_id); }
 }
 
-uint32_t Texture::getWidth(GLint level) const {
-    return m_width / (1 << level);
-}
+GLsizei Texture::getWidth(GLint level) const { return m_width / (1 << level); }
 
-uint32_t Texture::getHeight(GLint level) const {
+GLsizei Texture::getHeight(GLint level) const {
     if (m_target == GL_TEXTURE_1D) {
-        return m_height;  // 1
+        return m_height; // 1
     }
     return m_height / (1 << level);
 }
 
-uint32_t Texture::getDepth(GLint level) const {
+GLsizei Texture::getDepth(GLint level) const {
     if (m_target == GL_TEXTURE_1D || m_target == GL_TEXTURE_2D || m_target == GL_TEXTURE_CUBE_MAP || m_target == GL_TEXTURE_RECTANGLE || m_target == GL_TEXTURE_1D_ARRAY) {
-        return m_depth;  // 1
+        return m_depth; // 1
     }
     return m_depth / (1 << level);
 }
 
-void Texture::bind(uint32_t slot) const {
+void Texture::bind(GLuint slot) const {
     // Bind texture to a specific texture slot, namely the glsl binding index
     //
     // ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -158,27 +162,19 @@ void Texture::bind(uint32_t slot) const {
     // │ • Must specify texture target (e.g., GL_TEXTURE_2D) │ • Target inferred from texture object │
     // │ • Slower (state validation overhead)          │ • Faster (direct state access)  │
     // └───────────────────────────────────────────────┴─────────────────────────────────┘
-    glBindTextureUnit((GLuint)slot, m_id);
+    glBindTextureUnit(slot, m_id);
 }
 
-void Texture::unbind(uint32_t slot) const {
-    glBindTextureUnit((GLuint)slot, 0);
-}
+void Texture::unbind(GLuint slot) const { glBindTextureUnit(slot, 0); }
 
 void Texture::unbind() {
     static GLint slots = 0;
-    if (slots == 0) {
-        glGetIntegerv(GL_MAX_TEXTURE_UNITS, &slots);
-    }
-    for (GLint slot = 0; slot < slots; slot++) {
-        glBindTextureUnit((GLuint)slot, 0);
-    }
+    if (slots == 0) { glGetIntegerv(GL_MAX_TEXTURE_UNITS, &slots); }
+    for (GLint slot = 0; slot < slots; slot++) { glBindTextureUnit(slot, 0); }
 }
 
 void Texture::clear(const void* value, GLenum format, GLenum type, GLint level) {
-    if (m_id == 0) {
-        return;
-    }
+    if (m_id == 0) { return; }
     GLsizei w = getWidth(level);
     GLsizei h = getHeight(level);
     GLsizei d = getDepth(level);
@@ -189,19 +185,13 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint level) {
     // std::cout << "Uploading texture data from image [" << img->getWidth() << ' ' << img->getHeight() << ' ' << img->getChannels() << ' ' << std::showbase << std::hex << img->getFormat() << ' ' << img->getDataType() << std::dec << "] to level" << level << " GPU memory\n";
 
     // Check if image data is valid
-    if (img == nullptr || img->getData() == nullptr) {
-        throw std::runtime_error("Texture::upload: image data is null");
-    }
-    if (level < 0 || level >= m_mipLevels) {
-        throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevels));
-    }
+    if (img == nullptr || img->getData() == nullptr) { throw std::runtime_error("Texture::upload: image data is null"); }
+    if (level < 0 || level >= m_mipLevels) { throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevels)); }
     GLsizei width     = img->getWidth();
     GLsizei height    = img->getHeight();
     GLsizei texWidth  = getWidth(level);
     GLsizei texHeight = getHeight(level);
-    if (width > texWidth || height > texHeight) {
-        throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, texWidth, texHeight, level));
-    }
+    if (width > texWidth || height > texHeight) { throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, texWidth, texHeight, level)); }
 
     // Upload texture data to GPU memory
     //
@@ -227,49 +217,35 @@ void Texture::upload(const std::shared_ptr<Image>& img, GLint pos, GLint level) 
     // std::cout << "Uploading texture data from image [" << img->getWidth() << ' ' << img->getHeight() << ' ' << img->getChannels() << ' ' << std::showbase << std::hex << img->getFormat() << ' ' << img->getDataType() << std::dec << "] to level" << level << " GPU memory\n";
 
     // Check if image data is valid
-    if (img == nullptr || img->getData() == nullptr) {
-        throw std::runtime_error("Texture::upload: image data is null");
-    }
-    if (level < 0 || level >= m_mipLevels) {
-        throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevels));
-    }
+    if (img == nullptr || img->getData() == nullptr) { throw std::runtime_error("Texture::upload: image data is null"); }
+    if (level < 0 || level >= m_mipLevels) { throw std::runtime_error(std::format("Texture::upload: mip level {} out of range [0 - {}]", level, m_mipLevels)); }
     GLsizei width     = img->getWidth();
     GLsizei height    = img->getHeight();
     GLsizei texWidth  = getWidth(level);
     GLsizei texHeight = getHeight(level);
-    if (width > texWidth || height > texHeight) {
-        throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, texWidth, texHeight, level));
-    }
+    if (width > texWidth || height > texHeight) { throw std::runtime_error(std::format("Texture::upload: image size {}x{} does not match texture size {}x{} at level {}", width, height, texWidth, texHeight, level)); }
 
     // Upload texture data to GPU memory
     glTextureSubImage3D(m_id, level, 0, 0, pos, width, height, 1, img->getFormat(), img->getDataType(), img->getData());
 }
 
 void Texture::copy(const Texture& other, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ) {
-    if (dstLevel < 0 || dstLevel >= m_mipLevels || srcLevel < 0 || srcLevel >= other.m_mipLevels) {
-        throw std::runtime_error(std::format("Texture::copy: dst mip level {} out of range [0 - {}] or src mip level {} out of range [0 - {}]", dstLevel, m_mipLevels - 1, srcLevel, other.m_mipLevels - 1));
-    }
+    if (dstLevel < 0 || dstLevel >= m_mipLevels || srcLevel < 0 || srcLevel >= other.m_mipLevels) { throw std::runtime_error(std::format("Texture::copy: dst mip level {} out of range [0 - {}] or src mip level {} out of range [0 - {}]", dstLevel, m_mipLevels - 1, srcLevel, other.m_mipLevels - 1)); }
 
     auto srcId = other.m_id;
     auto dstId = m_id;
-    if (srcId == 0 || dstId == 0) {
-        throw std::runtime_error("Texture::copy: texture id is null");
-    }
+    if (srcId == 0 || dstId == 0) { throw std::runtime_error("Texture::copy: texture id is null"); }
 
     auto srcTarget = other.m_target;
     auto dstTarget = m_target;
-    if (srcTarget != dstTarget) {
-        throw std::runtime_error("Texture::copy: source texture target does not match destination texture target");
-    }
+    if (srcTarget != dstTarget) { throw std::runtime_error("Texture::copy: source texture target does not match destination texture target"); }
 
     auto srcWidth  = other.getWidth(srcLevel);
     auto srcHeight = other.getHeight(srcLevel);
     auto dstWidth  = getWidth(dstLevel);
     auto dstHeight = getHeight(dstLevel);
     auto dstDepth  = getDepth(dstLevel);
-    if (srcWidth > dstWidth || srcHeight > dstHeight) {
-        throw std::runtime_error(std::format("Texture::copy: source texture size {}x{} does not match destination texture size {}x{} at level {}", srcWidth, srcHeight, dstWidth, dstHeight, dstLevel));
-    }
+    if (srcWidth > dstWidth || srcHeight > dstHeight) { throw std::runtime_error(std::format("Texture::copy: source texture size {}x{} does not match destination texture size {}x{} at level {}", srcWidth, srcHeight, dstWidth, dstHeight, dstLevel)); }
 
     // Copy texture data from source to destination
     // ┌──────────────────────────────────────────────────────────────────────────────────────────┐
@@ -293,25 +269,19 @@ void Texture::copy(const Texture& other, GLint srcLevel, GLint srcX, GLint srcY,
 }
 
 void Texture::clamp(GLint level) {
-    if (m_id == 0) {
-        return;
-    }
+    if (m_id == 0) { return; }
     glTextureParameteri(m_id, GL_TEXTURE_BASE_LEVEL, level);
     glTextureParameteri(m_id, GL_TEXTURE_MAX_LEVEL, level);
 }
 
 void Texture::unclamp() {
-    if (m_id == 0) {
-        return;
-    }
+    if (m_id == 0) { return; }
     glTextureParameteri(m_id, GL_TEXTURE_BASE_LEVEL, 0);
     glTextureParameteri(m_id, GL_TEXTURE_MAX_LEVEL, m_mipLevels - 1);
 }
 
 void Texture::generate() {
-    if (m_mipLevels > 1) {
-        glGenerateMipmap(m_id);
-    }
+    if (m_mipLevels > 1) { glGenerateMipmap(m_id); }
 }
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer

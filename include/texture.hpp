@@ -18,18 +18,18 @@ namespace tinyglrenderer {
  */
 class Texture {
    public:
-    Texture(uint32_t size, GLenum target, GLenum internalFormat, GLsizei mipLevels);
-    Texture(uint32_t width, uint32_t height, GLenum target, GLenum internalFormat, GLsizei mipLevels);
-    Texture(uint32_t width, uint32_t height, uint32_t depth, GLenum target, GLenum internalFormat, GLsizei mipLevels);
+    Texture(GLsizei size, GLenum target, GLenum internalFormat, GLsizei mipLevels);
+    Texture(GLsizei width, GLsizei height, GLenum target, GLenum internalFormat, GLsizei mipLevels);
+    Texture(GLsizei width, GLsizei height, GLsizei depth, GLenum target, GLenum internalFormat, GLsizei mipLevels);
     Texture(const Texture&)            = delete;
     Texture& operator=(const Texture&) = delete;
     Texture(Texture&& other);
     Texture& operator=(Texture&& other);
     ~Texture();
 
-    uint32_t getWidth(GLint level) const;
-    uint32_t getHeight(GLint level) const;
-    uint32_t getDepth(GLint level) const;
+    GLsizei getWidth(GLint level) const;
+    GLsizei getHeight(GLint level) const;
+    GLsizei getDepth(GLint level) const;
     GLuint getId() const { return m_id; }
     GLenum getTarget() const { return m_target; }
     GLenum getInternalFormat() const { return m_internalFormat; }
@@ -98,9 +98,9 @@ class Texture {
     uint32_t m_height       = 0;
     uint32_t m_depth        = 0;
     GLuint m_id             = 0;
-    GLenum m_target         = GL_TEXTURE_2D;  // texture target indicates the target to bind and upload texture data to, and also how the texture storage is organized in GPU memory (e.g., 2D array for GL_TEXTURE_2D, or 6-face cube for GL_TEXTURE_CUBE_MAP)
-    GLenum m_internalFormat = GL_RGBA8;       // texture gpu format indicates both the channel ORDER and the data TYPE (e.g., GL_RGBA8 for 8-bit RGBA format, GL_RGB16F for 16-bit float RGB format, GL_R32F for 32-bit float R format, etc.)
+    GLenum m_target         = GL_TEXTURE_2D; // texture target indicates the target to bind and upload texture data to, and also how the texture storage is organized in GPU memory (e.g., 2D array for GL_TEXTURE_2D, or 6-face cube for GL_TEXTURE_CUBE_MAP)
+    GLenum m_internalFormat = GL_RGBA8;      // texture gpu format indicates both the channel ORDER and the data TYPE (e.g., GL_RGBA8 for 8-bit RGBA format, GL_RGB16F for 16-bit float RGB format, GL_R32F for 32-bit float R format, etc.)
     GLsizei m_mipLevels     = 1;
 };
 
-}  // namespace tinyglrenderer
+} // namespace tinyglrenderer
