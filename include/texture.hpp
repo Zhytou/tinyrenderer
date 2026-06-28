@@ -37,10 +37,10 @@ class Texture {
 
     // Bind texture to a specific texture slot, namely the glsl binding index
     // @param slot The texture slot to bind to.
-    void bind(uint32_t slot) const;
+    void bind(GLuint slot) const;
     // Unbind texture from a specific texture slot.
     // @param slot The texture slot to unbind from.
-    void unbind(uint32_t slot) const;
+    void unbind(GLuint slot) const;
     // Unbind texture from all slots.
     static void unbind();
 
@@ -94,9 +94,9 @@ class Texture {
     void generate();
 
    private:
-    uint32_t m_width        = 0;
-    uint32_t m_height       = 0;
-    uint32_t m_depth        = 0;
+    GLsizei m_width         = 0;
+    GLsizei m_height        = 0;
+    GLsizei m_depth         = 0;
     GLuint m_id             = 0;
     GLenum m_target         = GL_TEXTURE_2D; // texture target indicates the target to bind and upload texture data to, and also how the texture storage is organized in GPU memory (e.g., 2D array for GL_TEXTURE_2D, or 6-face cube for GL_TEXTURE_CUBE_MAP)
     GLenum m_internalFormat = GL_RGBA8;      // texture gpu format indicates both the channel ORDER and the data TYPE (e.g., GL_RGBA8 for 8-bit RGBA format, GL_RGB16F for 16-bit float RGB format, GL_R32F for 32-bit float R format, etc.)
