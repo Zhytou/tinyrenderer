@@ -57,7 +57,7 @@ void Renderer::setup(ResourceManager& manager) {
 
             // 16~23: environment/ibl textures
             {"skybox.cubemap", 16},
-            {"skybox.equirect", 17}, // skybox.equirect is registered in m_textures by scene.m_skyboxEquirect when prepare() is called
+            {"skybox.equirect", 17}, // skybox.equirect is registered in m_textures by scene.m_skyboxEquirect when prepare(...) is called
             {"ibl_diffuse", 18},
             {"ibl_specular", 19},
             {"ibl_brdf_lut", 20},
@@ -504,11 +504,6 @@ void Renderer::setup(ResourceManager& manager) {
         }
     }
 
-    {
-        // static renderer resources
-        m_textures["dirtmask"] = manager.load2DTexture("dirtmask", m_setting.dirtmask ? "../asset/static/dirtmask.png" : "", glm::vec4(1.0f), GL_RGBA32F, 1);
-    }
-
     // 6. Create samplers for corresponding slots
     {
         std::unordered_map<uint32_t, std::shared_ptr<Sampler>> samplers;
@@ -595,7 +590,7 @@ void Renderer::prepare(const Scene& scene) {
     }
 
     // 2. Precalculate environment map
-    if (m_setting.ibl) {
+    {
         // 2.1 Precalculate irradiance map
         {
             m_states["ibl_irradiance"].apply();
@@ -642,15 +637,23 @@ void Renderer::prepare(const Scene& scene) {
             draw(quadLayout, {}, quadCount);
             m_passes["ibl_brdf_lut"].end();
         }
-    } else {
-        glm::vec4 color = {0.0f, 0.0f, 0.0f, 1.0f};
-        m_textures["ibl_diffuse"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, 0);
-        for (GLint level = 0; level < m_textures["ibl_specular"]->getMipLevels(); level++) { m_textures["ibl_specular"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, level); }
-        m_textures["ibl_brdf_lut"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, 0);
+
+        // 2.4 Rename the precalculated result
+        {
+            std::vector<std::pair<std::string, std::string>> name2name = {
+                { "ibl_diffuse",  "ibl_irradiance_map"  },
+                { "ibl_specular", "ibl_prefiltered_map" },
+                { "ibl_brdf_lut", "ibl_brdf_map"    }
+            };
+            for (auto [name1, name2]: name2name) {
+                m_textures[name2] = m_textures[name1];
+                m_textures.erase(name1); 
+            }
+        }
     }
 }
 
-void Renderer::update(const Scene& scene) {
+void Renderer::update(const Scene& scene, ResourceManager& manager) {
     // 1. Update uniform/shaderstorage buffers with scene data, and bind them to shader binding points
     {
         // 1.1 Camera uniform block
@@ -674,17 +677,14 @@ void Renderer::update(const Scene& scene) {
         m_buffers["light"]->bind(0);
     }
 
-    // 2. Generate render item queue(draw command)
-    std::vector<RenderItem> opaqueQueue, transparentQueue;
-    scene.getRenderQueue(opaqueQueue, true);
-    scene.getRenderQueue(transparentQueue, false);
-
-    // 3. Render shadow map and update the light shader storage buffer if needed
+    // 2. Render shadow map and update the light shader storage buffer if needed
     if (m_setting.shadow) {
         std::vector<std::shared_ptr<Light>> lights = scene.getLights();
         std::vector<int> rects;
         std::vector<float> remaps;
-
+        std::vector<RenderItem> items;
+        
+        scene.getRenderQueue(items, true);
         m_frames["shadow"]->divide(rects, remaps, lights.size());
         m_states["shadow_mapping"].apply();
         m_shaders["shadow_mapping"]->use();
@@ -692,7 +692,7 @@ void Renderer::update(const Scene& scene) {
         for (int i = 0; i < lights.size(); i++) {
             m_states["shadow_mapping"].view(rects[i * 4], rects[i * 4 + 1], rects[i * 4 + 2], rects[i * 4 + 3]);
             m_shaders["shadow_mapping"]->setUniformValue("uLightViewProjMatrix", lights[i]->getViewProjMatrix());
-            for (const auto& item : opaqueQueue) {
+            for (const auto& item : items) {
                 m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
                 draw(item, {});
             }
@@ -707,21 +707,38 @@ void Renderer::update(const Scene& scene) {
         float depth = 1.0f;
         m_textures["shadow"]->clear(&depth, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
     }
+
+    // 3. Load precalculated environment map or default white map depending on m_setting.ibl
+    if (m_setting.ibl) {
+        m_textures["ibl_diffuse"] = m_textures["ibl_irradiance_map"];
+        m_textures["ibl_specular"] = m_textures["ibl_prefiltered_map"];
+        m_textures["ibl_brdf_lut"] = m_textures["ibl_brdf_map"];
+    } else {
+        // do not use clear, otherwise the cahced texture in resource manager will be cleared also.
+        m_textures["ibl_diffuse"] = manager.loadCubeTexture("default_black_cube", {}, glm::vec4(0.0f), GL_RGBA32F, 1); 
+        m_textures["ibl_specular"] = manager.loadCubeTexture("default_black_cube", {}, glm::vec4(0.0f), GL_RGBA32F, 1); 
+        m_textures["ibl_brdf_lut"] = manager.load2DTexture("default_black_2d", "", glm::vec4(0.0f), GL_RGBA32F, 1);
+    }
+
+    // 4. Load or reset dirt mask
+    if (m_setting.dirtmask) {
+        m_textures["dirtmask"] = manager.load2DTexture("dirtmask", "../asset/static/dirtmask.png", glm::vec4(1.0f), GL_RGBA32F, 1);
+    } else {
+        // do not use clear, otherwise the cahced texture in resource manager will be cleared also.
+        m_textures["dirtmask"] = manager.load2DTexture("default_white_2d", "", glm::vec4(1.0f), GL_RGBA32F, 1); 
+    }
 }
 
 void Renderer::render(const Scene& scene) {
-    std::vector<RenderItem> opaqueQueue, transparentQueue;
-    scene.getRenderQueue(opaqueQueue, true);
-    scene.getRenderQueue(transparentQueue, false);
-    // std::cout << "OpaqueQueue size: " << opaqueQueue.size() << std::endl;
-    // std::cout << "TransparentQueue size: " << transparentQueue.size() << std::endl;
+    std::vector<RenderItem> items;
+    scene.getRenderQueue(items, true);
 
     if (m_setting.deferred) {
         {
             m_states["deferred_geometry"].apply();
             m_shaders["deferred_geometry"]->use();
             m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
-            for (const auto& item : opaqueQueue) {
+            for (const auto& item : items) {
                 m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
                 draw(item, {"albedo", "normal", "mrao"});
             }
@@ -747,7 +764,7 @@ void Renderer::render(const Scene& scene) {
         m_shaders["forward_opaque"]->use();
         m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
         m_passes["forward_opaque"].begin(m_frames["hdr_screen"]);
-        for (const auto& item : opaqueQueue) {
+        for (const auto& item : items) {
             m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
             draw(item, {"albedo", "normal", "mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut"});
         }

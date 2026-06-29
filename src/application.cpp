@@ -146,12 +146,11 @@ void Application::load(const std::string& scenePath) {
     buffer << file.rdbuf();
 
     m_scene.initialize(buffer.str(), m_manager);
-    m_renderer.prepare(m_scene);
+    m_renderer.prepare(m_scene); // convert .hdr skybox into cubemap
 }
 
 void Application::run() {
     static float lastFrame  = static_cast<float>(glfwGetTime()); // in seconds
-    static DisplayInfo info = getDisplayInfo(0);
 
     while (!glfwWindowShouldClose(m_window)) {
         float currFrame = static_cast<float>(glfwGetTime()); // in seconds
@@ -161,12 +160,17 @@ void Application::run() {
         // Process input
         processInput(deltaTime);
 
-        // Update and render scene
-        m_renderer.update(m_scene);
+        // Update the renderer state according to renderer setting
+        m_renderer.update(m_scene, m_manager); // must be called before render, otherwise resource might be not reset or updated
+        
+        // Render the scene
         m_renderer.render(m_scene);
 
+        // Get display info
+        getDisplayInfo(deltaTime);
+
         // Draw user interface
-        m_editor.draw(m_scene, m_manager, info);
+        m_editor.draw(m_scene, m_manager, m_info);
 
         // Swap buffers and poll events
         glfwSwapBuffers(m_window);
@@ -194,12 +198,12 @@ void Application::processInput(float deltaTime) {
     if (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS) { glfwSetWindowShouldClose(m_window, true); }
 }
 
-DisplayInfo Application::getDisplayInfo(float deltaTime) {
-    return DisplayInfo{
-        .framePerSecond = calculateFPS(deltaTime),
-        .deltaTime      = deltaTime,
-        .drawCall       = m_renderer.getDrawCall(),
-    };
+void Application::getDisplayInfo(float deltaTime) {
+    m_info.framePerSecond = calculateFPS(deltaTime);
+    m_info.deltaTime      = deltaTime;
+    m_info.drawCall       = m_renderer.getDrawCall();
+
+    return;
 }
 
 float Application::calculateFPS(float deltaTime) {
@@ -227,6 +231,7 @@ float Application::calculateFPS(float deltaTime) {
 }
 
 void Application::scrollCallback(GLFWwindow* window, double scrollX, double scrollY) {
+    if (ImGui::GetIO().WantCaptureMouse) { return; }
     auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
     if (!app) { return; }
 
@@ -235,6 +240,7 @@ void Application::scrollCallback(GLFWwindow* window, double scrollX, double scro
 }
 
 void Application::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    if (ImGui::GetIO().WantCaptureMouse) { return; } // TODO: fix title bar dragging
     auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
     if (!app) { return; }
     if (button != GLFW_MOUSE_BUTTON_RIGHT && button != GLFW_MOUSE_BUTTON_LEFT) { return; }

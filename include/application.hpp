@@ -35,7 +35,7 @@ class Application {
 
    private:
     void processInput(float deltaTime);
-    DisplayInfo getDisplayInfo(float deltaTime);
+    void getDisplayInfo(float deltaTime);
     float calculateFPS(float deltaTime);
 
     static void scrollCallback(GLFWwindow* window, double scrollX, double scrollY);
@@ -51,6 +51,7 @@ class Application {
     Editor m_editor;
     EditorSetting m_editorSetting;
     Scene m_scene;
+    DisplayInfo m_info;
 
     bool m_mouseLeftDragging  = false;
     bool m_mouseRightDragging = false;

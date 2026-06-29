@@ -37,10 +37,10 @@ class Renderer {
 
     void setup(ResourceManager& manager);
     void shutdown();
-    // Convert .hdr skybox to cubemap and bake the IBL environment map
+    // Convert .hdr skybox into cubemap if needed
     void prepare(const Scene& scene);
-    // Update ubo/ssbo and bake shadow map
-    void update(const Scene& scene);
+    // Update ubo/ssbo and bake shadow map, and bake the IBL environment map if needed, also load the dirtmask
+    void update(const Scene& scene, ResourceManager& manager);
     // Render scene
     void render(const Scene& scene);
 
