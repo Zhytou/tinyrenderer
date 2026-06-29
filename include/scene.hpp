@@ -9,6 +9,7 @@
 #include "model.hpp"
 #include "renderitem.hpp"
 #include "texture.hpp"
+#include "resourcemanager.hpp"
 
 namespace tinyglrenderer {
 
@@ -18,7 +19,6 @@ class Scene {
     Scene(const Scene&)            = delete;
     Scene& operator=(const Scene&) = delete;
     ~Scene() { destroy(); }
-    Scene(const std::string& json) { initialize(json); }
 
     const std::shared_ptr<Texture>& getSkyboxCubeMap() const { return m_skyboxCubemap; }
     const std::shared_ptr<Texture>& getSkyboxEquirect() const { return m_skyboxEquirect; }
@@ -30,7 +30,7 @@ class Scene {
     void getLightBlocks(std::vector<LightBlock>& blocks) const;
     void getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const;
 
-    void initialize(const std::string& json);
+    void initialize(const std::string& json, ResourceManager& manager);
     void destroy();
 
    private:

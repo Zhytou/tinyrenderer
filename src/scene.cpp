@@ -49,15 +49,15 @@ void Scene::initialize(const std::string& json, ResourceManager& manager) {
         for (int i = 0; i < doc["models"].Size(); i++) {
             auto& modelDoc = doc["models"][i];
             // model base dir and name required
-            fs::path baseDir   = modelDoc["base_dir"].GetString();
-            fs::path modelName = modelDoc["name"].GetString();
-            m_models.emplace_back(manager.loadModel(baseDir, modelName));
+            fs::path modelDir     = modelDoc["base_dir"].GetString();
+            std::string modelName = modelDoc["name"].GetString();
+            m_models.emplace_back(manager.loadModel(modelName, modelDir));
 
             // default material optional
             if (modelDoc.HasMember("default_mat")) {
                 auto& matDoc = modelDoc["default_mat"];
                 tinyobj::material_t material;
-                material.name = matDoc.HasMember("name") ? matDoc["name"].GetString() : modelName.string() + "_default";
+                material.name = matDoc.HasMember("name") ? matDoc["name"].GetString() : modelName + "_default";
                 material.diffuse[0] = matDoc.HasMember("albedo") ? matDoc["albedo"][0].GetFloat() : 0.5f;
                 material.diffuse[1] = matDoc.HasMember("albedo") ? matDoc["albedo"][1].GetFloat() : 0.5f;
                 material.diffuse[2] = matDoc.HasMember("albedo") ? matDoc["albedo"][2].GetFloat() : 0.5f;
@@ -68,8 +68,8 @@ void Scene::initialize(const std::string& json, ResourceManager& manager) {
                 material.metallic_texname = matDoc.HasMember("metallic_map") ? matDoc["metallic_map"].GetString() : "";
                 material.roughness_texname = matDoc.HasMember("roughness_map") ? matDoc["roughness_map"].GetString() : "";
                 material.ambient_texname = matDoc.HasMember("ambient_map") ? matDoc["ambient_map"].GetString() : "";
-                std::string baseMatDir = matDoc.HasMember("base_dir") ? matDoc["base_dir"].GetString() : "";
-                auto nmaterial = manager.loadMaterial(baseMatDir, material);
+                std::string matDir = matDoc.HasMember("base_dir") ? matDoc["base_dir"].GetString() : "";
+                auto nmaterial = manager.loadMaterial(material.name, matDir, material);
                 m_models.back()->setDefaultMaterial(nmaterial);
             }
 
@@ -93,17 +93,17 @@ void Scene::initialize(const std::string& json, ResourceManager& manager) {
     if (doc.HasMember("skybox")) {
         if (doc["skybox"].HasMember("cubemap")) {
             std::vector<fs::path> imagePaths;
-            fs::path baseDir = doc["skybox"]["cubemap"]["base_dir"].GetString();
+            fs::path skyboxDir = doc["skybox"]["cubemap"]["base_dir"].GetString();
             for (auto face : {"right", "left", "top", "bottom", "front", "back"}) { // face order must be: right, left, top, bottom, front, back.
                 std::string imageName = doc["skybox"]["cubemap"][face].GetString();
-                imagePaths.push_back(baseDir / imageName);
+                imagePaths.push_back(skyboxDir / imageName);
             }
-            m_skyboxCubemap = manager.loadCubeTexture(imagePaths, glm::vec4(0.0f), GL_RGBA32F, 1);
+            m_skyboxCubemap = manager.loadCubeTexture("skybox_cubemap", imagePaths, glm::vec4(0.0f), GL_RGBA32F, 1);
         }
         if (doc["skybox"].HasMember("equirect")) {
-            fs::path baseDir      = doc["skybox"]["equirect"]["base_dir"].GetString();
+            fs::path skyboxDir    = doc["skybox"]["equirect"]["base_dir"].GetString();
             fs::path equirectName = doc["skybox"]["equirect"]["name"].GetString();
-            m_skyboxEquirect      = manager.load2DTexture(baseDir / equirectName, glm::vec4(0.0f), GL_RGBA32F, 1);
+            m_skyboxEquirect      = manager.load2DTexture("skybox_equirect", skyboxDir / equirectName, glm::vec4(0.0f), GL_RGBA32F, 1);
         }
     }
 
