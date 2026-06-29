@@ -30,7 +30,7 @@ class Texture {
     GLsizei getWidth(GLint level) const;
     GLsizei getHeight(GLint level) const;
     GLsizei getDepth(GLint level) const;
-    GLuint getId() const { return m_id; }
+    GLuint getID() const { return m_id; }
     GLenum getTarget() const { return m_target; }
     GLenum getInternalFormat() const { return m_internalFormat; }
     GLsizei getMipLevels() const { return m_mipLevels; }

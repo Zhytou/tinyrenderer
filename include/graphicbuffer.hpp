@@ -11,7 +11,7 @@ class GraphicBuffer {
     GraphicBuffer(const GraphicBuffer&)            = delete;
     GraphicBuffer& operator=(const GraphicBuffer&) = delete;
 
-    GLuint getId() const { return m_id; }
+    GLuint getID() const { return m_id; }
     GLenum getTarget() const { return m_target; }
     GLsizeiptr getSize() const { return m_size; }
 

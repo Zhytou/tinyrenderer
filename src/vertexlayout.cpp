@@ -46,7 +46,7 @@ void VertexLayout::initialize(const std::vector<VertexAttribute>& attributes) {
 
 bool VertexLayout::attach(GLuint slot, const std::unique_ptr<VertexBuffer>& buffer, GLintptr offset, GLsizei stride) const {
     if (buffer) {
-        glVertexArrayVertexBuffer(m_id, slot, buffer->getId(), offset, stride);
+        glVertexArrayVertexBuffer(m_id, slot, buffer->getID(), offset, stride);
         return true;
     }
     return false;
@@ -54,7 +54,7 @@ bool VertexLayout::attach(GLuint slot, const std::unique_ptr<VertexBuffer>& buff
 
 bool VertexLayout::attach(const std::unique_ptr<IndexBuffer>& buffer) const {
     if (buffer) {
-        glVertexArrayElementBuffer(m_id, buffer->getId());
+        glVertexArrayElementBuffer(m_id, buffer->getID());
         return true;
     }
     return false;

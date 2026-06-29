@@ -105,7 +105,7 @@ void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture, G
     //
     // Key insight:  glFramebufferTexture2D   = "bind then attach" (state-dependent)
     //               glNamedFramebufferTexture = "attach directly" (stateless, explicit)
-    glNamedFramebufferTexture(m_id, slot, texture->getId(), level);
+    glNamedFramebufferTexture(m_id, slot, texture->getID(), level);
 }
 
 void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture, GLint level, GLint layer) {
@@ -115,7 +115,7 @@ void FrameBuffer::attach(GLenum slot, const std::shared_ptr<Texture>& texture, G
     if (texture->getTarget() != GL_TEXTURE_CUBE_MAP && texture->getTarget() != GL_TEXTURE_2D_ARRAY && texture->getTarget() != GL_TEXTURE_3D) { throw std::runtime_error("FrameBuffer::attach: attachment target not supported"); }
 
     // Attach a 2D texture level to a framebuffer
-    glNamedFramebufferTextureLayer(m_id, slot, texture->getId(), level, layer);
+    glNamedFramebufferTextureLayer(m_id, slot, texture->getID(), level, layer);
 }
 
 void FrameBuffer::finalize() {
