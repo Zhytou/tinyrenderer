@@ -21,14 +21,14 @@ struct Vertex {
 };
 
 struct SubMesh {
-    uint32_t matid;      // material id(index in m_materials vector of model)
-    uint32_t offset = 0; // start index in indices vector
-    uint32_t length = 0; // length of indices in submesh
+    int matid;      // material id(index in m_materials vector of model) -1 represents default material
+    uint offset = 0; // start index in indices vector
+    uint length = 0; // length of indices in submesh
 };
 
 class Mesh {
    public:
-    Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t numMats, bool defaultMat = false);
+    Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num);
     Mesh(const Mesh&)            = delete;
     Mesh& operator=(const Mesh&) = delete;
     ~Mesh();

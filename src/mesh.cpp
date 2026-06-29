@@ -2,16 +2,16 @@
 
 #include <glm/glm.hpp>
 
-#include "staticresource.hpp"
+#include "resourcemanager.hpp"
 
 namespace tinyglrenderer {
 
-Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t numMats, bool defaultMat) {
+Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num) {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
     // 1. Traverse tinyobj loading data and initialize vertices
-    std::vector<std::vector<uint32_t>> submeshes(numMats);
+    std::vector<std::vector<uint32_t>> submeshes(num + 1); // num is material count
     for (auto& shape : shapes) {
         for (int i = 0; i < shape.mesh.material_ids.size(); i++) {
             glm::vec3 vertex[3], normal[3], tangent;
@@ -22,12 +22,8 @@ Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape
                 int v = index.vertex_index, n = index.normal_index, t = index.texcoord_index;
 
                 vertex[j] = glm::vec3(attributes.vertices[3 * v], attributes.vertices[3 * v + 1], attributes.vertices[3 * v + 2]);
-                if (n >= 0) {
-                    normal[j] = glm::vec3(attributes.normals[3 * n], attributes.normals[3 * n + 1], attributes.normals[3 * n + 2]);
-                }
-                if (t >= 0) {
-                    uv[j] = glm::vec2(attributes.texcoords[2 * t], attributes.texcoords[2 * t + 1]);
-                }
+                if (n >= 0) { normal[j] = glm::vec3(attributes.normals[3 * n], attributes.normals[3 * n + 1], attributes.normals[3 * n + 2]); }
+                if (t >= 0) { uv[j] = glm::vec2(attributes.texcoords[2 * t], attributes.texcoords[2 * t + 1]); }
                 m_bounds.first  = glm::min(m_bounds.first, vertex[j]);
                 m_bounds.second = glm::max(m_bounds.second, vertex[j]);
             }
@@ -45,31 +41,29 @@ Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape
                 tangent   = glm::normalize(tangent);
             }
 
-            int matID = shape.mesh.material_ids[i];
+            int id = shape.mesh.material_ids[i];
             for (int j = 0; j < 3; ++j) {
                 vertices.emplace_back(vertex[j], normal[j], tangent, uv[j]);
-                if (matID >= 0) {
-                    submeshes[matID].push_back(static_cast<unsigned int>(vertices.size() - 1));
-                }
-                if (matID == -1 && defaultMat) {
-                    // matID == -1 means no material assigned. Retain these vertices into the trailing
-                    // default submesh only if defaultMat is initialized; otherwise, they are excluded from the mesh.
-                    submeshes[numMats - 1].push_back(static_cast<unsigned int>(vertices.size() - 1));
+                if (id >= 0 && id < num) { submeshes[id].push_back(static_cast<unsigned int>(vertices.size() - 1)); }
+                if (id == -1) {
+                    // id == -1 means no material assigned, retain these vertices into the trailing
+                    submeshes[num].push_back(static_cast<unsigned int>(vertices.size() - 1));
                 }
             }
         }
     }
 
     // 2. Group geometry into submeshes by material, and concatenate all index data into m_indices
-    for (int i = 0; i < submeshes.size(); i++) {
-        if (!submeshes[i].empty()) {
-            m_submeshes.emplace_back(i, indices.size(), submeshes[i].size());
-            indices.insert(indices.end(), submeshes[i].begin(), submeshes[i].end());
+    for (int id = 0; id <= num; id++) { // id is material index
+        auto& submesh = submeshes[id];
+        if (!submesh.empty()) {
+            m_submeshes.emplace_back(id < num ? id : -1, indices.size(), submesh.size());
+            indices.insert(indices.end(), submesh.begin(), submesh.end());
         }
     }
 
     // 3.Create VAO/VBO/IBO and configure vertex attributes
-    m_layout  = StaticResource::getInstance().getLayout("mesh");
+    m_layout  = ResourceManager::getLayout("mesh");
     m_bufferv = std::make_unique<VertexBuffer>(vertices.size() * sizeof(Vertex), vertices.data());
     m_bufferi = std::make_unique<IndexBuffer>(indices.size() * sizeof(uint32_t), indices.data());
 }
