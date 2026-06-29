@@ -16,7 +16,7 @@ Shader::Shader(const fs::path& vertShaderPath, const fs::path& fragShaderPath) {
     std::cout << "Compiling GLSL shader [" << vertShaderPath << "] and [" << fragShaderPath << "]\n";
 
     // compile and link shaders
-    m_filename = { vertShaderPath.string(), fragShaderPath.string() };
+    m_filepath = { vertShaderPath.string(), fragShaderPath.string() };
     m_source   = { precompile(vertShaderPath), precompile(fragShaderPath) };
     m_id       = link({
         compile(m_source.first, GL_VERTEX_SHADER),

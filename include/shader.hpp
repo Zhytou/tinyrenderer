@@ -23,6 +23,8 @@ class Shader {
     Shader& operator=(const Shader&) = delete;
     ~Shader();
 
+    const std::pair<std::string, std::string>& getFilePath() const { return m_filepath; }
+    const std::pair<std::string, std::string>& getSource() const { return m_source; }
     GLint getUniformLocation(const std::string& name);
     template <typename T> void setUniformValue(const std::string& name, const T& value);
 
@@ -30,7 +32,7 @@ class Shader {
 
    private:
     GLuint m_id = 0;
-    std::pair<std::string, std::string> m_filename;
+    std::pair<std::string, std::string> m_filepath;
     std::pair<std::string, std::string> m_source;
     std::unordered_map<std::string, GLint> m_locations; // normal uniform variable locations
     std::unordered_map<std::string, GLint> m_bindings;  // uniform block/teture slot binding points

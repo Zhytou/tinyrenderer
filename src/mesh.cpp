@@ -6,11 +6,12 @@
 
 namespace tinyglrenderer {
 
-Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num) {
+Mesh::Mesh(const fs::path& path, const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num) {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
     // 1. Traverse tinyobj loading data and initialize vertices
+    m_filepath = path;
     std::vector<std::vector<uint32_t>> submeshes(num + 1); // num is material count
     for (auto& shape : shapes) {
         for (int i = 0; i < shape.mesh.material_ids.size(); i++) { // i is triangle index

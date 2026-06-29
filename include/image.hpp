@@ -15,7 +15,7 @@ namespace tinyglrenderer {
 class Image {
    private:
     Image() = default;
-    Image(void* data, GLenum type, int width, int height, int channels);
+    Image(const std::string& filename, void* data, GLenum type, int width, int height, int channels);
 
    public:
     Image(const Image& other)            = delete;
@@ -24,6 +24,7 @@ class Image {
     Image& operator=(Image&& other);
     ~Image();
 
+    const std::string& getFilename() const { return m_filename; }
     void* getData() const { return m_data; }
     int getWidth() const { return m_width; }
     int getHeight() const { return m_height; }
@@ -59,40 +60,12 @@ class Image {
     static std::shared_ptr<Image> resize(const std::shared_ptr<Image>& image, int width, int height);
 
    private:
+    std::string m_filename;
     void* m_data   = nullptr;
     GLenum m_type  = GL_UNSIGNED_BYTE;  // GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, or GL_FLOAT
     int m_width    = 0;
     int m_height   = 0;
     int m_channels = 0;
 };
-
-// class ImageLoader {
-//    public:
-//     static ImageLoader& getInstance() {
-//         static ImageLoader m_instance;
-//         return m_instance;
-//     }
-//     std::shared_ptr<Image> load(const std::string& path) {
-//         std::shared_ptr<Image> image = nullptr;
-//         if (m_cache.count(path)) {
-//             if (image = m_cache[path].lock()) {
-//                 return image;
-//             } else {
-//                 m_cache.erase(path);
-//             }
-//         }
-//         if (image == nullptr) {
-//             image         = Image::create(path);
-//             m_cache[path] = image;
-//         }
-//         return image;
-//     }
-
-//    private:
-//     ImageLoader()  = default;
-//     ~ImageLoader() = default;
-
-//     std::unordered_map<std::string, std::weak_ptr<Image>> m_cache;
-// };
 
 }  // namespace tinyglrenderer
