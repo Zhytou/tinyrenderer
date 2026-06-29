@@ -10,6 +10,7 @@
 
 #include "editor.hpp"
 #include "renderer.hpp"
+#include "resourcemanager.hpp"
 #include "scene.hpp"
 
 namespace tinyglrenderer {
@@ -45,6 +46,7 @@ class Application {
 
     GLFWwindow* m_window;
     Renderer m_renderer;
+    ResourceManager m_manager;
     RendererSetting m_rendererSetting;
     Editor m_editor;
     EditorSetting m_editorSetting;

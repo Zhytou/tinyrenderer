@@ -11,19 +11,24 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <stdexcept>
 
-#include "staticresource.hpp"
+#include "resourcemanager.hpp"
 #include "utils.hpp"
 
 namespace tinyglrenderer {
-Application::Application(int width, int height, const std::string& title) : m_window(nullptr), m_editor(m_editorSetting, m_rendererSetting), m_renderer(m_rendererSetting) {
-    if (width < 800 || height < 600) {
-        throw std::runtime_error("Application::Application: Window size must be at least 800x600");
-    }
+Application::Application(int width, int height, const std::string& title)
+    : m_window(nullptr),
+      m_editor(m_editorSetting, m_rendererSetting),
+      m_renderer(m_rendererSetting) {
+    if (width < 800 || height < 600) { throw std::runtime_error("Application::Application: Window size must be at least 800x600"); }
 
     // initialize glfw and glad
     std::cout << "Initializing GLFW & GLAD for [" << title << "]\n";
     setup(width, height, title);
     resize(width, height);
+
+    // initialize static resources
+    std::cout << "Initializing Static Resources\n";
+    m_manager.initialize();
 
     // initialize editor
     std::cout << "Running ImGui Editor [" << ImGui::GetVersion() << "]\n";
@@ -31,21 +36,18 @@ Application::Application(int width, int height, const std::string& title) : m_wi
 
     // initialize renderer
     std::cout << "Running OpenGL Renderer [" << glGetString(GL_RENDERER) << "]\n";
-    m_renderer.setup();
-
-    // initialize static resources
-    StaticResource::getInstance().initialize();
+    m_renderer.setup(m_manager);
 }
 
 Application::~Application() {
-    // destroy static resources
-    StaticResource::getInstance().destroy();
-
     // clear renderer resources
     m_renderer.shutdown();
 
     // clear scene resources
     m_scene.destroy();
+
+    // destroy all resources
+    m_manager.destroy();
 
     // clear glfw resources
     shutdown();
@@ -53,9 +55,7 @@ Application::~Application() {
 
 void Application::setup(int width, int height, const std::string& title) {
     // glfw initialization
-    if (!glfwInit()) {
-        throw std::runtime_error("Application::setup: Failed to initialize GLFW library");
-    }
+    if (!glfwInit()) { throw std::runtime_error("Application::setup: Failed to initialize GLFW library"); }
     // set opengl version
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -67,9 +67,7 @@ void Application::setup(int width, int height, const std::string& title) {
 
     // glfw window creation
     m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
-    if (!m_window) {
-        throw std::runtime_error("Application::setup: Failed to create OpenGL context");
-    }
+        if (!m_window) { throw std::runtime_error("Application::setup: Failed to create OpenGL context"); }
 
     // glfw context settings(make sure it is all set before glad initialization)
     glfwMakeContextCurrent(m_window);
@@ -89,19 +87,15 @@ void Application::setup(int width, int height, const std::string& title) {
     glfwGetWindowSize(m_window, &m_restoredWinSize.first, &m_restoredWinSize.second);
     glfwGetWindowPos(m_window, &m_restoredWinPos.first, &m_restoredWinPos.second);
 
-    // glad initialization(load all OpenGL function pointers)
-    if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) {
-        throw std::runtime_error("Application::setup: Failed to initialize OpenGL extensions loader");
-    }
+    if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) { throw std::runtime_error("Application::setup: Failed to initialize OpenGL extensions loader"); }
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(
         [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
-            if (severity == GL_DEBUG_SEVERITY_HIGH || severity == GL_DEBUG_SEVERITY_MEDIUM) {
-                std::cerr << "[OpenGL Error] " << message << std::endl;
-            }
+            if (severity == GL_DEBUG_SEVERITY_HIGH || severity == GL_DEBUG_SEVERITY_MEDIUM) { std::cerr << "[OpenGL Error] " << message << std::endl; }
         },
-        nullptr);
+        nullptr
+    );
 
     // imgui initialization
     IMGUI_CHECKVERSION();
@@ -110,7 +104,10 @@ void Application::setup(int width, int height, const std::string& title) {
     ImGui_ImplOpenGL3_Init("#version 410");
 
     // initialize editor callback
-    m_editor.setCallback("titlebar_minimize", [this]() { glfwIconifyWindow(m_window); return true; });
+    m_editor.setCallback("titlebar_minimize", [this]() {
+        glfwIconifyWindow(m_window);
+        return true;
+    });
     m_editor.setCallback("titlebar_is_maximized", [this]() { return m_maximized; });
     m_editor.setCallback("titlebar_maximize_restore", [this]() {
         if (!m_maximized) {
@@ -125,7 +122,10 @@ void Application::setup(int width, int height, const std::string& title) {
         m_maximized = !m_maximized;
         return true;
     });
-    m_editor.setCallback("titlebar_close", [this]() { glfwSetWindowShouldClose(m_window, GLFW_TRUE); return true; });
+    m_editor.setCallback("titlebar_close", [this]() {
+        glfwSetWindowShouldClose(m_window, GLFW_TRUE);
+        return true;
+    });
 }
 
 void Application::shutdown() {
@@ -135,21 +135,17 @@ void Application::shutdown() {
     ImGui::DestroyContext();
 
     // destroy glfw window
-    if (m_window) {
-        glfwDestroyWindow(m_window);
-    }
+    if (m_window) { glfwDestroyWindow(m_window); }
     glfwTerminate();
 }
 
 void Application::load(const std::string& scenePath) {
     std::ifstream file{scenePath};
-    if (!file.is_open()) {
-        throw std::runtime_error("Application::load: Could not open file: " + scenePath);
-    }
+    if (!file.is_open()) { throw std::runtime_error("Application::load: Could not open file: " + scenePath); }
     std::stringstream buffer;
     buffer << file.rdbuf();
 
-    m_scene.initialize(buffer.str());
+    m_scene.initialize(buffer.str(), m_manager);
     m_renderer.prepare(m_scene);
 }
 
@@ -170,7 +166,7 @@ void Application::run() {
         m_renderer.render(m_scene);
 
         // Draw user interface
-        m_editor.draw(m_scene, info);
+        m_editor.draw(m_scene, m_manager, info);
 
         // Swap buffers and poll events
         glfwSwapBuffers(m_window);
@@ -189,32 +185,20 @@ void Application::resize(int width, int height) {
 void Application::processInput(float deltaTime) {
     auto& camera = m_scene.getCamera();
 
-    if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(m_window, GLFW_KEY_UP) == GLFW_PRESS) {
-        camera->move(CameraMovement::UPWARD, deltaTime);
-    }
-    if (glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(m_window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        camera->move(CameraMovement::DOWNWARD, deltaTime);
-    }
-    if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(m_window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-        camera->move(CameraMovement::LEFT, deltaTime);
-    }
-    if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS || glfwGetKey(m_window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-        camera->move(CameraMovement::RIGHT, deltaTime);
-    }
+    if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(m_window, GLFW_KEY_UP) == GLFW_PRESS) { camera->move(CameraMovement::UPWARD, deltaTime); }
+    if (glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(m_window, GLFW_KEY_DOWN) == GLFW_PRESS) { camera->move(CameraMovement::DOWNWARD, deltaTime); }
+    if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS || glfwGetKey(m_window, GLFW_KEY_LEFT) == GLFW_PRESS) { camera->move(CameraMovement::LEFT, deltaTime); }
+    if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS || glfwGetKey(m_window, GLFW_KEY_RIGHT) == GLFW_PRESS) { camera->move(CameraMovement::RIGHT, deltaTime); }
 
-    if (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        camera->reset();
-    }
-    if (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        glfwSetWindowShouldClose(m_window, true);
-    }
+    if (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS) { camera->reset(); }
+    if (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS) { glfwSetWindowShouldClose(m_window, true); }
 }
 
 DisplayInfo Application::getDisplayInfo(float deltaTime) {
     return DisplayInfo{
-        .fps       = calculateFPS(deltaTime),
-        .deltaTime = deltaTime,
-        .drawCall  = m_renderer.getDrawCall(),
+        .framePerSecond = calculateFPS(deltaTime),
+        .deltaTime      = deltaTime,
+        .drawCall       = m_renderer.getDrawCall(),
     };
 }
 
@@ -247,9 +231,7 @@ void Application::scrollCallback(GLFWwindow* window, double scrollX, double scro
     if (!app) { return; }
 
     auto& camera = app->m_scene.getCamera();
-    if (camera) {
-        camera->zoom(static_cast<float>(scrollY));
-    }
+    if (camera) { camera->zoom(static_cast<float>(scrollY)); }
 }
 
 void Application::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
@@ -335,7 +317,7 @@ void Application::windowSizeCallback(GLFWwindow* window, int w, int h) {
     //======================================
     if (!app->m_maximized) {
         app->m_restoredWinSize = {w, h}; // update the restored window size if not maximized
-    };
+    }
 
     //=======================================
     // Update editor layout and renderer viewport
@@ -352,7 +334,7 @@ void Application::windowPosCallback(GLFWwindow* window, int x, int y) {
     //======================================
     if (!app->m_maximized) {
         app->m_restoredWinPos = {x, y}; // update the restored window position if not maximized
-    };
+    }
 }
 
 } // namespace tinyglrenderer
