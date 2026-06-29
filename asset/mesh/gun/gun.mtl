@@ -1,7 +1,7 @@
 newmtl 08_-_Default
 d 1
-map_Kd gun_albedo.png
-map_Ka gun_ao.png
-map_Pm gun_metallic.png
-map_Pr gun_roughness.png
-norm gun_normal.png
+map_Kd ../../material/gun/albedo.png
+map_Ka ../../material/gun/ao.png
+map_Pm ../../material/gun/metallic.png
+map_Pr ../../material/gun/roughness.png
+norm ../../material/gun/normal.png

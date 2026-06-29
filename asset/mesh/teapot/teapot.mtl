@@ -1,7 +1,7 @@
 newmtl lapis
 d 1
-map_Kd lapis_albedo.png
-map_Ka lapis_ao.png
-map_Pm lapis_metallic.png
-map_Pr lapis_roughness.png
-norm lapis_normal.png
+map_Kd ../../material/lapis/albedo.png
+map_Ka ../../material/lapis/ao.png
+map_Pm ../../material/lapis/metallic.png
+map_Pr ../../material/lapis/roughness.png
+norm ../../material/lapis/normal.png

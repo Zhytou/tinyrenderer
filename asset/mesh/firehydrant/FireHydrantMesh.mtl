@@ -1,7 +1,7 @@
 newmtl fire_hydrant
 d 1
-map_Kd firehydrant_albedo.png
-map_Ka firehydrant_ao.png
-map_Pm firehydrant_metallic.png
-map_Pr firehydrant_roughness.png
-norm firehydrant_normal.png
+map_Kd ../../material/firehydrant/albedo.png
+map_Ka ../../material/firehydrant/ao.png
+map_Pm ../../material/firehydrant/metallic.png
+map_Pr ../../material/firehydrant/roughness.png
+norm ../../material/firehydrant/normal.png
