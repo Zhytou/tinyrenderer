@@ -13,23 +13,37 @@ Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape
     // 1. Traverse tinyobj loading data and initialize vertices
     std::vector<std::vector<uint32_t>> submeshes(num + 1); // num is material count
     for (auto& shape : shapes) {
-        for (int i = 0; i < shape.mesh.material_ids.size(); i++) {
+        for (int i = 0; i < shape.mesh.material_ids.size(); i++) { // i is triangle index
+            bool vn = true, vt = true;
             glm::vec3 vertex[3], normal[3], tangent;
             glm::vec2 uv[3];
 
-            for (int j = 0; j < 3; ++j) {
+            for (int j = 0; j < 3; ++j) { // j is vertex index
                 tinyobj::index_t index = shape.mesh.indices[3 * i + j];
                 int v = index.vertex_index, n = index.normal_index, t = index.texcoord_index;
 
                 vertex[j] = glm::vec3(attributes.vertices[3 * v], attributes.vertices[3 * v + 1], attributes.vertices[3 * v + 2]);
                 if (n >= 0) { normal[j] = glm::vec3(attributes.normals[3 * n], attributes.normals[3 * n + 1], attributes.normals[3 * n + 2]); }
                 if (t >= 0) { uv[j] = glm::vec2(attributes.texcoords[2 * t], attributes.texcoords[2 * t + 1]); }
+                vn = (n >= 0) && vn;
+                vt = (t >= 0) && vt;
                 m_bounds.first  = glm::min(m_bounds.first, vertex[j]);
                 m_bounds.second = glm::max(m_bounds.second, vertex[j]);
             }
 
-            {
-                glm::vec3 edge1 = vertex[1] - vertex[0], edge2 = vertex[2] - vertex[1];
+            if (!vn) {
+                glm::vec3 edge1 = vertex[1] - vertex[0], edge2 = vertex[2] - vertex[0]; // different from tangent calculation, share the same end
+                glm::vec3 fnormal = glm::normalize(glm::cross(edge1, edge2)); // face normal
+                for (int j = 0; j < 3; ++j) { normal[j] = fnormal;}
+            }
+
+            if (!vt) {
+                for (int j = 0; j < 3; ++j) { uv[j] = glm::vec2(0.0f, 0.0f);}
+                tangent = glm::vec3(0.0f, 1.0f, 0.0f);
+            }
+
+            if (vt) { // only calculate tangent if uv is available, otherwise set tangent to 0, 1, 0
+                glm::vec3 edge1 = vertex[1] - vertex[0], edge2 = vertex[2] - vertex[1]; // different from face normal calculation, end to end
                 glm::vec2 deltaUV1 = uv[1] - uv[0], deltaUV2 = uv[2] - uv[1];
 
                 float divide = deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y;
@@ -41,7 +55,7 @@ Mesh::Mesh(const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape
                 tangent   = glm::normalize(tangent);
             }
 
-            int id = shape.mesh.material_ids[i];
+            int id = shape.mesh.material_ids[i]; // id is material index
             for (int j = 0; j < 3; ++j) {
                 vertices.emplace_back(vertex[j], normal[j], tangent, uv[j]);
                 if (id >= 0 && id < num) { submeshes[id].push_back(static_cast<unsigned int>(vertices.size() - 1)); }
