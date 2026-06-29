@@ -166,21 +166,21 @@ const glm::mat4& ResourceManager::getCaptureMatrix(GLint index) {
 }
 
 std::shared_ptr<Mesh> ResourceManager::getMesh(const std::string& name) const {
-    if (m_meshes.count(name) == 0) {
+    if (m_meshes.count(name) == 0 || m_meshes.at(name).expired()) {
         throw std::runtime_error(std::format("ResourceManager::getMesh: mesh {} does not exist!", name));
     }
     return m_meshes.at(name).lock();
 }
 
 std::shared_ptr<Texture> ResourceManager::getTexture(const std::string& name) const {
-    if (m_textures.count(name) == 0) {
+    if (m_textures.count(name) == 0 || m_textures.at(name).expired()) {
         throw std::runtime_error(std::format("ResourceManager::getShader: texture {} does not exist!", name));
     }
     return m_textures.at(name).lock();
 }
 
 std::shared_ptr<Shader> ResourceManager::getShader(const std::string& name) const {
-    if (m_shaders.count(name) == 0) {
+    if (m_shaders.count(name) == 0 || m_shaders.at(name).expired()) {
         throw std::runtime_error(std::format("ResourceManager::getShader: shader {} does not exist!", name));
     }
     return m_shaders.at(name).lock();
@@ -238,7 +238,7 @@ std::shared_ptr<Model> ResourceManager::loadModel(const std::string& modelName, 
 }
 
 std::shared_ptr<Mesh> ResourceManager::loadMesh(const std::string& meshName, const fs::path& meshPath, const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num) {
-    if (m_meshes.count(meshName)) {
+    if (m_meshes.count(meshName) && !m_meshes[meshName].expired()) {
         return m_meshes[meshName].lock();
     }
 
@@ -249,7 +249,7 @@ std::shared_ptr<Mesh> ResourceManager::loadMesh(const std::string& meshName, con
 }
 
 std::shared_ptr<Material> ResourceManager::loadMaterial(const std::string& matName, const fs::path& matDir, const tinyobj::material_t& material) {
-    if (m_materials.count(matName)) {
+    if (m_materials.count(matName) && !m_materials[matName].expired()) {
         return m_materials[matName].lock();
     }
 
@@ -271,7 +271,7 @@ std::shared_ptr<Material> ResourceManager::loadMaterial(const std::string& matNa
 
 std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texName, const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels, int desiredChannels, bool verticalFlip) {
     std::string texAlias = std::format("default_2d_tex_color({:.3f}, {:.3f}, {:.3f}, {:.3f})", defaultValue.x, defaultValue.y, defaultValue.z, defaultValue.w);
-    if (m_textures.count(texName)) {
+    if (m_textures.count(texName) && !m_textures[texName].expired()) {
         return m_textures[texName].lock();
     }
     
@@ -282,7 +282,7 @@ std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texNa
         texture = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, internalFormat, mipLevels);
         texture->upload(image);
     } else {
-        if (m_textures.count(texAlias)) {
+        if (m_textures.count(texAlias) && !m_textures[texAlias].expired()) {
             return m_textures[texAlias].lock();
         }
 
@@ -307,7 +307,7 @@ bool is_all_regular_file(const std::vector<fs::path>& paths) {
 
 std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels, int desiredChannels, bool verticalFlip) {
     std::string texAlias = std::format("default_2d_tex_color({:.3f}, {:.3f}, {:.3f}, {:.3f})", defaultValue.x, defaultValue.y, defaultValue.z, defaultValue.w);
-    if (m_textures.count(texName)) {
+    if (m_textures.count(texName) && !m_textures[texName].expired()) {
         return m_textures[texName].lock();
     }
     
@@ -325,7 +325,7 @@ std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texNa
         texture = std::make_shared<Texture>(mimage->getWidth(), mimage->getHeight(), GL_TEXTURE_2D, internalFormat, mipLevels);
         texture->upload(mimage);
     } else {
-        if (m_textures.count(texAlias)) {
+        if (m_textures.count(texAlias) && !m_textures[texAlias].expired()) {
             return m_textures[texAlias].lock();
         }
         
@@ -341,7 +341,7 @@ std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texNa
 
 std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels, int desiredChannels, bool verticalFlip) {
     std::string texAlias = std::format("default_cube_tex_color({:.3f}, {:.3f}, {:.3f}, {:.3f})", defaultValue.x, defaultValue.y, defaultValue.z, defaultValue.w);
-    if (m_textures.count(texName)) {
+    if (m_textures.count(texName) && !m_textures[texName].expired()) {
         return m_textures[texName].lock();
     }
 
@@ -358,7 +358,7 @@ std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::string& tex
         }
         std::cout << "]\n";
     } else {
-        if (m_textures.count(texAlias)) {
+        if (m_textures.count(texAlias) && !m_textures[texAlias].expired()) {
             return m_textures[texAlias].lock();
         }
 
@@ -383,7 +383,7 @@ std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::string& tex
 }
 
 std::shared_ptr<Image> ResourceManager::loadImage(const std::string& imageName, const fs::path& imagePath, int desiredChannels, bool verticalFlip) {
-    if (m_images.count(imageName)) {
+    if (m_images.count(imageName) && !m_images[imageName].expired()) {
         return m_images[imageName].lock();
     }
 
@@ -394,7 +394,7 @@ std::shared_ptr<Image> ResourceManager::loadImage(const std::string& imageName, 
 }
 
 std::shared_ptr<Shader> ResourceManager::loadShader(const std::string& shaderName, const fs::path& vertexShaderPath, const fs::path& fragmentShaderPath) {
-    if (m_shaders.count(shaderName)) {
+    if (m_shaders.count(shaderName) && !m_shaders[shaderName].expired()) {
         return m_shaders[shaderName].lock();
     }
     
