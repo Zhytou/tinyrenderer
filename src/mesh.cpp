@@ -1,17 +1,28 @@
 #include "mesh.hpp"
 
 #include <glm/glm.hpp>
+#include <fstream>
 
 #include "resourcemanager.hpp"
 
 namespace tinyglrenderer {
 
 Mesh::Mesh(const fs::path& path, const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num) {
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
+    // 0. Initialize obj file source
+    std::ifstream file{path};
+    std::stringstream buffer;
+    if (!file.is_open()) { 
+        throw std::runtime_error("Mesh::Mesh: Could not open file: " + path.string());
+    } else {
+        buffer << file.rdbuf();
+    }
+
+    m_filepath = fs::canonical(path);
+    m_source = buffer.str();
 
     // 1. Traverse tinyobj loading data and initialize vertices
-    m_filepath = path;
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
     std::vector<std::vector<uint32_t>> submeshes(num + 1); // num is material count
     for (auto& shape : shapes) {
         for (int i = 0; i < shape.mesh.material_ids.size(); i++) { // i is triangle index

@@ -37,6 +37,7 @@ class Mesh {
     ~Mesh();
 
     const fs::path& getFilePath() const { return m_filepath; }
+    const std::string& getSource() const { return m_source; }
     size_t getSubMeshCount() const { return m_submeshes.size(); }
     size_t getVertexCount() const { return m_bufferv ? m_bufferv->getSize() : 0; }
     size_t getIndexCount() const { return m_bufferi ? m_bufferi->getSize() : 0; }
@@ -48,6 +49,7 @@ class Mesh {
 
    private:
     fs::path m_filepath;
+    std::string m_source;
     std::shared_ptr<VertexLayout> m_layout;            // vertex array object
     std::unique_ptr<VertexBuffer> m_bufferv = nullptr; // vertex buffer object
     std::unique_ptr<IndexBuffer> m_bufferi  = nullptr; // index buffer object
