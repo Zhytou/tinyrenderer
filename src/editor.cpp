@@ -8,6 +8,8 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
+#include "utils.hpp"
+
 namespace tinyglrenderer {
 
 void Editor::setup() {
@@ -409,24 +411,28 @@ void Editor::drawResourcePanel(Scene& scene, ResourceManager& manager) {
             case ResourcePanelTab::RP_TAB_MESHES: {
                 const auto& mesh = manager.getMesh(name);
 
-                ImGui::Text("ref count: %ld", mesh.use_count());
-                ImGui::Text("submesh/material count: %ld", mesh->getSubMeshCount());
-                // ImGui::Text("directory: assets/models/%s", currentName.substr(0, currentName.find_last_of('.')).c_str());
+                ImGui::Text("ref count: %ld", mesh.use_count() - 1);
+                ImGui::Text("submesh count: %ld", mesh->getSubMeshCount());
+                ImGui::Text("vertex count: %ld", mesh->getVertexCount());
+                ImGui::TextWrapped("obj file path: %s", mesh->getFilePath().c_str());
             } break;
             case ResourcePanelTab::RP_TAB_TEXTURES: {
                 const auto& texture = manager.getTexture(name);
 
-                ImGui::Text("ref count: 1");
-                ImGui::Text("width(level 0): %d px", texture->getWidth(0));
-                ImGui::Text("height(level 0): %d px", texture->getHeight(0));
+                ImGui::Text("ref count: %ld", texture.use_count() - 1);
+                ImGui::Text("texture type: %s", glMacro2Str(texture->getTarget()).c_str());
+                ImGui::Text("internal format: %s", glMacro2Str(texture->getInternalFormat()).c_str());
                 ImGui::Text("mip levels: %d", texture->getMipLevels());
-                // ImGui::Text("path: assets/textures/%s", currentName.c_str());
+                ImGui::Text("width: %d", texture->getWidth(0));
+                ImGui::Text("height: %d", texture->getHeight(0));
+                ImGui::Text("depth: %d", texture->getDepth(0));
             } break;
-            default: {
+            default: { // ResourcePanelTab::RP_TAB_SHADERS
                 const auto& shader = manager.getShader(name);
 
-                ImGui::Text("ref count: 2");
-                ImGui::Text("stage: Vertex & Fragment");
+                ImGui::Text("ref count: %ld", shader.use_count() - 1);
+                ImGui::TextWrapped("vert file path: %s", shader->getFilePath().first.c_str());
+                ImGui::TextWrapped("frag file path: %s", shader->getFilePath().second.c_str());
             }
         }
     }
@@ -444,8 +450,24 @@ void Editor::drawResourcePanel(Scene& scene, ResourceManager& manager) {
             case ResourcePanelTab::RP_TAB_SHADERS: {
                 
             } break;
-            default: {
+            default: { // ResourcePanelTab::RP_TAB_TEXTURES
+                const auto& texture = manager.getTexture(name);
+                GLuint glTexID = texture->getID(); 
+                ImTextureID imguiTexID = (ImTextureID)(intptr_t)glTexID;
 
+                GLsizei width  = (float)texture->getWidth(0);
+                GLsizei height = (float)texture->getHeight(0);
+                ImVec2 availSize = ImGui::GetContentRegionAvail(); // maximum size for display
+                float scale = std::min(availSize.x / width, availSize.y / height);
+                ImVec2 displaySize = ImVec2(width * scale, height * scale);
+
+                ImVec2 paddingPos = ImVec2((availSize.x - displaySize.x) * 0.5f, (availSize.y - displaySize.y) * 0.5f);
+                if (paddingPos.x > 0.0f || paddingPos.y > 0.0f) {
+                    ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + paddingPos.x, ImGui::GetCursorPosY() + paddingPos.y));
+                }
+                ImVec2 uv0 = ImVec2(0.0f, 1.0f); 
+                ImVec2 uv1 = ImVec2(1.0f, 0.0f);
+                ImGui::Image(imguiTexID, displaySize, uv0, uv1);
             }
         }
     } else {
