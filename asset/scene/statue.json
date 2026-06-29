@@ -11,20 +11,20 @@
         "speed": 0.05
     },
     "lights": {
-        "directionallight": [
+        "directional": [
             {
                 "color": [1, 1, 1],
                 "intensity": 2.0,
                 "direction": [-1, -1, 1]
             }
         ],
-        "pointlight": [
+        "point": [
 
         ]            
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/asset/model/statue/",
+            "base_dir": "/home/zhytou/tinyrenderer/asset/model/statue/",
             "name": "statue.obj",
             "transform": {
                 "rotate": [0, 0, 0]
@@ -32,7 +32,7 @@
         }
     ],
     "skybox": {
-        "baseDir": "/home/zhytou/tinyrenderer/asset/cubemap/skybox",
+        "base_dir": "/home/zhytou/tinyrenderer/asset/cubemap/skybox",
         "left": "negx.jpg",
         "right": "posx.jpg",
         "bottom": "negy.jpg",

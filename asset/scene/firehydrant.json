@@ -11,7 +11,7 @@
         "speed": 0.05
     },
     "lights": {
-        "directionallight": [
+        "directional": [
             {
                 "color": [1, 1, 1],
                 "intensity": 2.0,
@@ -23,18 +23,18 @@
                 "direction": [1, -1, 1]
             }
         ],
-        "pointlight": [
+        "point": [
         ]            
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/asset/model/firehydrant/",
+            "base_dir": "/home/zhytou/tinyrenderer/asset/model/firehydrant/",
             "name": "firehydrant.obj",
             "transform": {
             }
         },
         {
-            "baseDir": "/home/zhytou/tinyrenderer/asset/model/floor/",
+            "base_dir": "/home/zhytou/tinyrenderer/asset/model/floor/",
             "name": "floor.obj",
             "transform": {
                 "scale": [1.7, 1, 1.7]

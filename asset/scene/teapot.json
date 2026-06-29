@@ -11,19 +11,19 @@
         "speed": 0.05
     },
     "lights": {
-        "directionallight": [
+        "directional": [
                 {
                     "color": [1, 1, 1],
                     "intensity": 2.0,
                     "direction": [-1, -1, -1]
                 }
             ],
-        "pointlight": [
+        "point": [
         ]            
     },
     "models": [
         {
-            "baseDir": "/home/zhytou/tinyrenderer/asset/model/teapot/",
+            "base_dir": "/home/zhytou/tinyrenderer/asset/model/teapot/",
             "name": "teapot.obj",
             "transform": {
                 "rotate": [90, 0, -30]
@@ -31,7 +31,7 @@
         }
     ],
     "skybox": {
-        "baseDir": "/home/zhytou/tinyrenderer/asset/cubemap/indoor",
+        "base_dir": "/home/zhytou/tinyrenderer/asset/cubemap/indoor",
         "left": "negx.jpg",
         "right": "posx.jpg",
         "bottom": "negy.jpg",

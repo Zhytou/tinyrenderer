@@ -11,32 +11,23 @@
         "speed": 0.05
     },
     "lights": {
-        "directionallight": [
+        "directional": [
             {
                 "intensity": 2.0,
                 "color": [1, 1, 1],
                 "direction": [-1, -1, -1]
             }
         ],
-        "pointlight": [
+        "point": [
         ]            
     },
     "models": [
-        {
-            "baseDir": "/home/zhytou/tinyrenderer/asset/model/gun/",
-            "name": "gun.obj",
-            "transform": {
-                "scale": [3, 3, 3]
-            }
-        }
+
     ],
     "skybox":{
-        "baseDir": "/home/zhytou/tinyrenderer/asset/cubemap/grace-cathedral",
-        "left": "negx.jpg",
-        "right": "posx.jpg",
-        "bottom": "negy.jpg",
-        "top": "posy.jpg",
-        "front": "negz.jpg",
-        "back": "posz.jpg"
+        "equirect": {
+            "base_dir": "/home/zhytou/tinyglrenderer/asset/skybox/equirect/barcelona",
+            "name": "barcelona.hdr"
+        }
     }
 }
