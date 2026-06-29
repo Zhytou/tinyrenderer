@@ -13,6 +13,7 @@
 #include "displayinfo.hpp"
 #include "editorsetting.hpp"
 #include "renderersetting.hpp"
+#include "resourcemanager.hpp"
 #include "scene.hpp"
 
 namespace tinyglrenderer {
@@ -29,7 +30,7 @@ class Editor {
     void shutdown();
 
     // draw the editor window
-    void draw(Scene& scene, const DisplayInfo& info);
+    void draw(Scene& scene, ResourceManager& manager, const DisplayInfo& info);
     // return the hovered editor widget name(sidebar/titlebar/resourcebrowser/renderer)
     std::string hover(float x, float y);
 
@@ -39,11 +40,10 @@ class Editor {
 
    private:
     void drawCustomTitleBar();
+    void drawActivityBar();
     void drawSideBar(Scene& scene);
-    void drawResourcePanel(Scene& scene);
+    void drawResourcePanel(Scene& scene, ResourceManager& manager);
     void drawHUD(Scene& scene, const DisplayInfo& info);
-
-    void drawSideBarButton(const std::string& icon, const std::string& tooltip, SideBarTab tab, const ImVec2& size);
 
     std::unordered_map<std::string, std::function<bool()>> m_funcs;
     std::unordered_map<std::string, ImFont*> m_fonts; // no need RAII, ImGui::DestroyContext() is called in Application::shutdown()

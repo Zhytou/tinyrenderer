@@ -1,6 +1,8 @@
 #include "editor.hpp"
 
 #include <string>
+#include <array>
+#include <format>
 
 #include <icon/IconsFontAwesome6.h>
 #include <imgui/imgui_impl_glfw.h>
@@ -14,7 +16,7 @@ void Editor::setup() {
     // ==========================================
     auto& io                           = ImGui::GetIO();
     static const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();
-    static const ImWchar icon_ranges[] = {0xf000, 0xf3ff, 0}; // range of FontAwesome6
+    static const ImWchar icon_ranges[] = { 0xf000, 0xf3ff, 0 }; // range of FontAwesome6
 
     m_fonts["text"]       = io.Fonts->AddFontFromFileTTF("../asset/fonts/DejaVuSans.ttf", m_setting.fontSize, nullptr, glyph_ranges);
     m_fonts["small_text"] = io.Fonts->AddFontFromFileTTF("../asset/fonts/DejaVuSans.ttf", m_setting.smallFontSize, nullptr, glyph_ranges);
@@ -176,16 +178,16 @@ void Editor::setup() {
     colors[ImGuiCol_ScrollbarGrabActive]  = accent;
 }
 
-void Editor::shutdown() {
-}
+void Editor::shutdown() {}
 
-void Editor::draw(Scene& scene, const DisplayInfo& info) {
+void Editor::draw(Scene& scene, ResourceManager& manager, const DisplayInfo& info) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
     drawCustomTitleBar();
-    drawResourcePanel(scene);
+    drawResourcePanel(scene, manager);
+    drawActivityBar();
     drawSideBar(scene);
     drawHUD(scene, info);
 
@@ -205,16 +207,14 @@ std::string Editor::hover(float x, float y) {
     const float rw_height = sb_height;
 
     std::unordered_map<std::string, glm::vec4> name2Rects = {
-        {"titlebar", {0.0f, 0.0f, width, tb_height}},
-        {"activitybar", {0.0f, 0.0f, ab_width, ab_height}},
-        {"sidebar", sb_active ? glm::vec4(0.0f, 0.0f, -1.0f, -1.0f) : glm::vec4(ab_width, 0.0f, sb_width, sb_height)},
-        {"renderwindow", sb_active ? glm::vec4(ab_width, 0.0f, width - ab_width, rw_height) : glm::vec4(ab_width + sb_width, 0.0f, width - ab_width - sb_width, rw_height)}
+        { "titlebar", { 0.0f, 0.0f, width, tb_height } },
+        { "activitybar", { 0.0f, 0.0f, ab_width, ab_height } },
+        { "sidebar", sb_active ? glm::vec4(0.0f, 0.0f, -1.0f, -1.0f) : glm::vec4(ab_width, 0.0f, sb_width, sb_height) },
+        { "renderwindow", sb_active ? glm::vec4(ab_width, 0.0f, width - ab_width, rw_height) : glm::vec4(ab_width + sb_width, 0.0f, width - ab_width - sb_width, rw_height) }
     };
 
     for (auto& [name, rect] : name2Rects) { // rect.w is height
-        if (rect.x <= x && x <= rect.x + rect.w && rect.y <= y && y <= rect.y + rect.w) {
-            return name;
-        }
+        if (rect.x <= x && x <= rect.x + rect.w && rect.y <= y && y <= rect.y + rect.w) { return name; }
     }
     return "none";
 }
@@ -224,9 +224,9 @@ void Editor::drawCustomTitleBar() {
     float buttonWidth    = 45.0f; // button width of title bar is hard coded
     const int numButtons = 3;
     auto label2Callback  = std::vector<std::pair<std::string, std::string>>{
-        {std::string(ICON_FA_MINUS) + std::string("##TitleBar_Minimize"),                                       "titlebar_minimize"        },
-        {std::string(maximized ? ICON_FA_WINDOW_RESTORE : ICON_FA_SQUARE) + std::string("##TitleBar_Maximize"), "titlebar_maximize_restore"},
-        {std::string(ICON_FA_XMARK) + std::string("##TitleBar_Close"),                                          "titlebar_close"           },
+        { std::string(ICON_FA_MINUS) + std::string("##TitleBar_Minimize"),                                       "titlebar_minimize"         },
+        { std::string(maximized ? ICON_FA_WINDOW_RESTORE : ICON_FA_SQUARE) + std::string("##TitleBar_Maximize"), "titlebar_maximize_restore" },
+        { std::string(ICON_FA_XMARK) + std::string("##TitleBar_Close"),                                          "titlebar_close"            },
     };
     const ImVec2 titleBarPos  = ImVec2(0.0f, 0.0f);
     const ImVec2 titleBarSize = ImVec2(m_setting.width, m_setting.titleBarHeight);
@@ -243,7 +243,7 @@ void Editor::drawCustomTitleBar() {
     if (ImGui::Begin("##CustomTitleBar", nullptr, flags)) {
         ImGui::SetCursorPosY((titleBarSize.y - textHeight) * 0.5f); // set cursor position for later text draw
         ImGui::Text("TinyGLRenderer");
-        ImGui::SetCursorPosY(0.0f);                                               // reset cursor position
+        ImGui::SetCursorPosY(0.0f);                                               // reset cursor y position
         ImGui::SetCursorPosX(titleBarSize.x - (buttonWidth * numButtons) - 1.0f); // set cursor position for later button draw
 
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);       // no rounding for title bar buttons
@@ -254,12 +254,8 @@ void Editor::drawCustomTitleBar() {
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.90f, 0.20f, 0.20f, 1.0f)); // when hovered on close button, turn it into a red X
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.70f, 0.15f, 0.15f, 1.0f));  // when clicked on close button, turn it into a darker red X
             }
-            if (ImGui::Button(buttonLabel.c_str(), buttonSize)) {
-                m_funcs[buttonCallback]();
-            }
-            if (buttonCallback == "titlebar_close") {
-                ImGui::PopStyleColor(2);
-            }
+            if (ImGui::Button(buttonLabel.c_str(), buttonSize)) { m_funcs[buttonCallback](); }
+            if (buttonCallback == "titlebar_close") { ImGui::PopStyleColor(2); }
             ImGui::SameLine();
         }
         ImGui::PopFont();
@@ -270,110 +266,89 @@ void Editor::drawCustomTitleBar() {
     ImGui::PopStyleVar(2); // 弹出 WindowPadding 和 WindowBorderSize
 }
 
-void Editor::drawSideBar(Scene& scene) {
-    ImGuiStyle& style      = ImGui::GetStyle();
+void Editor::drawActivityBar() {
     const float borderSize = m_setting.borderSize;
+    const float padding    = 0.0f;
+    auto activityBarTab2IconAndTooltip = std::array<std::pair<SideBarTab, std::pair<const char*, const char*>>, 3> {{
+        { SideBarTab::SB_TAB_RENDERER, { ICON_FA_GEAR, "Renderer Settings" } },
+        { SideBarTab::SB_TAB_LIGHTS, { ICON_FA_LIGHTBULB, "Light Studio" } },
+        { SideBarTab::SB_TAB_MODELS, { ICON_FA_CUBE, "Scene Entities" } },
+    }};
     ImVec2 activityBarPos  = ImVec2(0.0f, m_setting.titleBarHeight);
     ImVec2 activityBarSize = ImVec2(m_setting.activityBarWidth, m_setting.height - m_setting.titleBarHeight);
-    ImVec2 buttonSize      = ImVec2(m_setting.activityBarWidth, m_setting.activityBarWidth);
-    ImVec2 sideBarPos      = ImVec2(m_setting.activityBarWidth, m_setting.titleBarHeight);
-    ImVec2 sideBarSize     = ImVec2(m_setting.sideBarWidth, m_setting.height - m_setting.titleBarHeight);
-    auto sideBarTab2Name   = std::unordered_map<SideBarTab, const char*>{
-        {SideBarTab::SB_TAB_NONE,     "Inspector##SideBarTab_None"            },
-        {SideBarTab::SB_TAB_RENDERER, "Renderer Settings##SideBarTab_Renderer"},
-        {SideBarTab::SB_TAB_LIGHTS,   "Light Studio##SideBarTab_Lights"       },
-        {SideBarTab::SB_TAB_MODELS,   "Scene Entities##SideBarTab_Models"     },
-    };
-    auto sideBarTitle     = sideBarTab2Name[m_setting.currSBTab];
-    auto activityBarFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
-    auto sideBarFlags     = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
+    ImVec2 activityButtonSize = ImVec2(m_setting.activityBarWidth, m_setting.activityBarWidth);
+    auto activityBarFlags  = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
+    ImGuiStyle& style      = ImGui::GetStyle();
 
     ImGui::SetNextWindowPos(activityBarPos, ImGuiCond_Always);
     ImGui::SetNextWindowSize(activityBarSize, ImGuiCond_Always);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, borderSize);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f)); // remove spacing between buttons
     ImGui::PushStyleColor(ImGuiCol_WindowBg, style.Colors[ImGuiCol_ChildBg]);
     if (ImGui::Begin("##ActivityBar", nullptr, activityBarFlags)) {
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f)); // remove spacing between buttons
-        drawSideBarButton(ICON_FA_GEAR, "Renderer Settings", SideBarTab::SB_TAB_RENDERER, buttonSize);
-        drawSideBarButton(ICON_FA_LIGHTBULB, "Light Studio", SideBarTab::SB_TAB_LIGHTS, buttonSize);
-        drawSideBarButton(ICON_FA_CUBE, "Scene Entities", SideBarTab::SB_TAB_MODELS, buttonSize);
-        ImGui::PopStyleVar(1); // pop out ItemSpacing
-    }
-    ImGui::End();
-    ImGui::PopStyleColor();
-    if (m_setting.currSBTab == SideBarTab::SB_TAB_NONE) {
-        ImGui::PopStyleVar(2);
-        return;
-    }
-
-    ImGui::SetNextWindowPos(sideBarPos, ImGuiCond_Always);
-    ImGui::SetNextWindowSize(sideBarSize, ImGuiCond_Always);
-    if (ImGui::Begin(sideBarTitle, nullptr, sideBarFlags)) {
-        if (m_setting.currSBTab == SideBarTab::SB_TAB_RENDERER) {
-            ImGui::Checkbox("Shadow Mapping", &m_rendererSetting.shadow);
-            ImGui::Checkbox("Environment IBL", &m_rendererSetting.ibl);
-            ImGui::Checkbox("Bloom Blur", &m_rendererSetting.bloom);
-            ImGui::Checkbox("Lensflare Effect", &m_rendererSetting.lensflare);
-        } else if (m_setting.currSBTab == SideBarTab::SB_TAB_LIGHTS) {
-            auto& lights = scene.getLights();
-            if (lights.empty()) {
-                ImGui::TextDisabled("No ambient/direct lights.");
-            }
-        } else if (m_setting.currSBTab == SideBarTab::SB_TAB_MODELS) {
-            if (ImGui::TreeNodeEx("Main Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-                auto& camera = scene.getCamera();
-                if (camera) {
-                    glm::vec3 eye = camera->getEye();
-                    if (ImGui::SliderFloat3("Eye Pos", &eye.x, -50.0f, 50.0f, "%.2f"))
-                        camera->setEye(eye);
-                    glm::vec3 target = camera->getTarget();
-                    if (ImGui::SliderFloat3("Target Look", &target.x, -50.0f, 50.0f, "%.2f"))
-                        camera->setTarget(target);
-                }
-                ImGui::TreePop();
-            }
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-            auto& models = scene.getModels();
-            if (models.empty()) {
-                ImGui::TextDisabled("Empty world hierarchy.");
-            }
+        for (auto [tab, icontooltip] : activityBarTab2IconAndTooltip) {
+            char label[128];
+            sprintf(label, "%s##SideActivityBar_%s", icontooltip.first, icontooltip.second);
+            bool selected = (m_setting.currSBTab == tab);
+            if (selected) { ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Header]); }
+            ImGui::PushFont(m_fonts["large_icon"]); // use icon font to render icon
+            if (ImGui::Button(label, activityButtonSize)) { m_setting.currSBTab = (selected) ? SideBarTab::SB_TAB_NONE : tab; }
+            ImGui::PopFont(); // pop out icon font to restore default font, otherwise the tooltip will be rendered in icon font as well
+            if (selected) { ImGui::PopStyleColor(); }
+            if (ImGui::IsItemHovered()) { ImGui::SetTooltip("%s", icontooltip.second); }  // show tooltip when cursor hover on the button
         }
     }
     ImGui::End();
-
-    ImGui::PopStyleVar(2); // 弹出 WindowBorderSize 和 WindowPadding
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(3);
 }
 
-void Editor::drawSideBarButton(const std::string& icon, const std::string& tooltip, SideBarTab tab, const ImVec2& size) {
-    ImGuiStyle& style = ImGui::GetStyle();
-    std::string label = icon + "##SideActivityBar_" + std::to_string(static_cast<int>(tab));
+void Editor::drawSideBar(Scene& scene) {
+    if (m_setting.currSBTab == SideBarTab::SB_TAB_NONE) { return; }
 
-    bool selected = (m_setting.currSBTab == tab);
-    if (selected) { ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Header]); }
-    ImGui::PushFont(m_fonts["large_icon"]); // use icon font to render icon
-    if (ImGui::Button(label.c_str(), size)) {
-        m_setting.currSBTab = (selected) ? SideBarTab::SB_TAB_NONE : tab;
-    }
-    ImGui::PopFont(); // pop out icon font to restore default font
-    if (selected) { ImGui::PopStyleColor(); }
+    auto sideBarTab2Name   = std::unordered_map<SideBarTab, const char*>{
+        { SideBarTab::SB_TAB_RENDERER, "Renderer Settings##SideBarTab_Renderer" },
+        { SideBarTab::SB_TAB_LIGHTS,   "Light Studio##SideBarTab_Lights"        },
+        { SideBarTab::SB_TAB_MODELS,   "Scene Entities##SideBarTab_Models"      },
+    };
+    ImVec2 sideBarPos  = ImVec2(m_setting.activityBarWidth, m_setting.titleBarHeight);
+    ImVec2 sideBarSize = ImVec2(m_setting.sideBarWidth, m_setting.height - m_setting.titleBarHeight);
+    auto sideBarLabel  = sideBarTab2Name[m_setting.currSBTab];
+    auto sideBarFlags  = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 
-    if (ImGui::IsItemHovered()) { // show tooltip when cursor hover on the button
-        ImGui::SetTooltip("%s", tooltip.c_str());
+    ImGui::SetNextWindowPos(sideBarPos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(sideBarSize, ImGuiCond_Always);
+    if (ImGui::Begin(sideBarLabel, nullptr, sideBarFlags)) {
+        switch (m_setting.currSBTab) {
+            case SideBarTab::SB_TAB_RENDERER: {
+                ImGui::Checkbox("Shadow Mapping", &m_rendererSetting.shadow);
+                ImGui::Checkbox("Environment IBL", &m_rendererSetting.ibl);
+                ImGui::Checkbox("Bloom Blur", &m_rendererSetting.bloom);
+                ImGui::Checkbox("Lensflare Effect", &m_rendererSetting.lensflare);
+            } break;
+            case SideBarTab::SB_TAB_LIGHTS: {
+                auto& lights = scene.getLights();
+                if (lights.empty()) { ImGui::TextDisabled("No ambient/direct lights.");} 
+            } break;
+            case SideBarTab::SB_TAB_MODELS: {
+                auto& models = scene.getModels();
+                if (models.empty()) { ImGui::TextDisabled("Empty world hierarchy."); }
+            } break;
+        }
     }
+    ImGui::End();
 }
 
-void Editor::drawResourcePanel(Scene& scene) {
+void Editor::drawResourcePanel(Scene& scene, ResourceManager& manager) {
     float resourcePanelPosX    = (m_setting.currSBTab == SideBarTab::SB_TAB_NONE ? 0 : m_setting.sideBarWidth) + m_setting.activityBarWidth;
     float resourcePanelPosY    = m_setting.height - m_setting.resourcePanelHeight;
     ImVec2 resourcePanelSize   = ImVec2(m_setting.width - resourcePanelPosX, m_setting.resourcePanelHeight);
-    auto resourcePanelTab2Name = std::unordered_map<ResourcePanelTab, const char*>{
-        {ResourcePanelTab::RP_TAB_MESHES,   "Loaded Meshes##ResourcePanelTab_Meshes"    },
-        {ResourcePanelTab::RP_TAB_SHADERS,  "Loaded Shaders##ResourcePanelTab_SHADERS"  },
-        {ResourcePanelTab::RP_TAB_TEXTURES, "Loaded Textures##ResourcePanelTab_TEXTURES"},
-    };
+    auto resourcePanelTab2Name = std::array<std::pair<ResourcePanelTab, const char*>, 3>{{
+        { ResourcePanelTab::RP_TAB_MESHES,   "Loaded Meshes##ResourcePanelTab_Meshes"     },
+        { ResourcePanelTab::RP_TAB_SHADERS,  "Loaded Shaders##ResourcePanelTab_SHADERS"   },
+        { ResourcePanelTab::RP_TAB_TEXTURES, "Loaded Textures##ResourcePanelTab_TEXTURES" },
+    }};
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar;
 
     ImGui::SetNextWindowPos(ImVec2(resourcePanelPosX, resourcePanelPosY));
@@ -381,133 +356,122 @@ void Editor::drawResourcePanel(Scene& scene) {
     ImGui::Begin("##ResourcePanel", nullptr, flags);
 
     // =========================================================================
-    // Draw Resource Panel Tabs
+    // Draw resource panel tabs
     // =========================================================================
-    for (auto& [tab, name] : resourcePanelTab2Name) {
+    for (auto& [tab, label] : resourcePanelTab2Name) {
         bool selected = (m_setting.currRPTab == tab);
         if (selected) { ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_Header]); }
-        if (ImGui::Button(name)) {
-            m_setting.currRPTab = tab;
-        }
+        if (ImGui::Button(label)) { m_setting.currRPTab = tab; }
         if (selected) { ImGui::PopStyleColor(); }
-        ImGui::SameLine();
+        if (tab != ResourcePanelTab::RP_TAB_TEXTURES) { ImGui::SameLine(); } // only keep the same line if the tab button is not the last one, otherwise separator will cross the tab button
     }
     ImGui::Separator();
 
     // =========================================================================
-    // Split the resource panel into two parts: left list (width40%) and right details (width70%)
+    // Split the resource panel into two parts: left list (width30%), middle details (width40%) and left preview (width 30%)
     // =========================================================================
     float innerPanelWidth  = ImGui::GetContentRegionAvail().x;
     float innerPanelHeight = ImGui::GetContentRegionAvail().y;
 
-    // =========================================================================
-    // Draw left list with 40% width for all tabs
-    // =========================================================================
-    ImGui::BeginChild("##LeftList", ImVec2(innerPanelWidth * 0.4f, innerPanelHeight), true);
-    int selectedItemIdx = 0;
-    std::vector<std::string> items;
-    // if (selectedItemIdx >= items.size())
-    //     selectedItemIdx = 0;
-    // for (int i = 0; i < items.size(); ++i) {
-    //     const bool isSelected = (selectedItemIdx == i);
-    //     if (ImGui::Selectable(items[i].c_str(), isSelected)) {
-    //         selectedItemIdx = i;
-    //     }
-    // }
-    ImGui::EndChild();
-
-    ImGui::SameLine();
+    std::vector<std::string> currRPItemNames;
+    switch (m_setting.currRPTab) {
+        case ResourcePanelTab::RP_TAB_MESHES: {
+            manager.getAllMeshNames(currRPItemNames);
+        } break;
+        case ResourcePanelTab::RP_TAB_SHADERS: {
+            manager.getAllShaderNames(currRPItemNames);
+        } break;
+        case ResourcePanelTab::RP_TAB_TEXTURES: {
+            manager.getAllTextureNames(currRPItemNames);
+        } break;
+    }
 
     // =========================================================================
-    // 第二栏：中部详细信息（占剩余宽度的 70%）
+    // Draw left list
     // =========================================================================
-    float remainingWidth = ImGui::GetContentRegionAvail().x;
-    ImGui::BeginChild("##MiddleDetails", ImVec2(remainingWidth * 0.7f, innerPanelHeight), true);
-
-    if (!items.empty() && selectedItemIdx < items.size()) {
-        std::string currentName = items[selectedItemIdx];
-
-        // 打印元数据 (完美对齐图片格式)
-        ImGui::Text("name: %s", currentName.c_str());
-
-        if (m_setting.currRPTab == ResourcePanelTab::RP_TAB_MESHES) { // 模型详情
-            int meshCount = (currentName == "nanosuit.obj") ? 7 : 1;
-            int texCount  = (currentName == "nanosuit.obj") ? 19 : 2;
-            ImGui::Text("mesh count: %d", meshCount);
-            ImGui::Text("ref count: 1");
-            ImGui::Text("loaded textures: %d", texCount);
-            ImGui::Text("directory: assets/models/%s", currentName.substr(0, currentName.find_last_of('.')).c_str());
-        } else if (m_setting.currRPTab == ResourcePanelTab::RP_TAB_TEXTURES) { // 纹理详情
-            ImGui::Text("ref count: 1");
-            ImGui::Text("path: assets/textures/%s", currentName.c_str());
-
-            // 模仿下拉格式选择框
-            static int comboType   = 0;
-            const char* texTypes[] = {"SRGB", "RGBA", "RGB", "RED"};
-            ImGui::SetNextItemWidth(150.0f);
-            ImGui::Combo("type", &comboType, texTypes, IM_ARRAYSIZE(texTypes));
-
-            ImGui::Text("width: 1024");
-            ImGui::Text("height: 1024");
-        } else { // Shader 详情
-            ImGui::Text("ref count: 2");
-            ImGui::Text("stage: Vertex & Fragment");
+    ImGui::BeginChild("##LeftList", ImVec2(innerPanelWidth * 0.2f, innerPanelHeight), true);
+    for (int i = 0; i < currRPItemNames.size(); ++i) {
+        bool selected = (m_setting.currRPItemIndex == i);
+        if (ImGui::Selectable(currRPItemNames[i].c_str(), selected)) {
+            m_setting.currRPItemIndex = i;
         }
     }
     ImGui::EndChild();
 
+    // =========================================================================
+    // Draw middle details
+    // =========================================================================
     ImGui::SameLine();
+    ImGui::BeginChild("##MiddleDetails", ImVec2(innerPanelWidth * 0.3f, innerPanelHeight), true);
+    if (!currRPItemNames.empty() && m_setting.currRPItemIndex < currRPItemNames.size()) {
+        std::string name = currRPItemNames[m_setting.currRPItemIndex];
+        switch(m_setting.currRPTab) {
+            case ResourcePanelTab::RP_TAB_MESHES: {
+                const auto& mesh = manager.getMesh(name);
+
+                ImGui::Text("ref count: %ld", mesh.use_count());
+                ImGui::Text("submesh/material count: %ld", mesh->getSubMeshCount());
+                // ImGui::Text("directory: assets/models/%s", currentName.substr(0, currentName.find_last_of('.')).c_str());
+            } break;
+            case ResourcePanelTab::RP_TAB_TEXTURES: {
+                const auto& texture = manager.getTexture(name);
+
+                ImGui::Text("ref count: 1");
+                ImGui::Text("width(level 0): %d px", texture->getWidth(0));
+                ImGui::Text("height(level 0): %d px", texture->getHeight(0));
+                ImGui::Text("mip levels: %d", texture->getMipLevels());
+                // ImGui::Text("path: assets/textures/%s", currentName.c_str());
+            } break;
+            default: {
+                const auto& shader = manager.getShader(name);
+
+                ImGui::Text("ref count: 2");
+                ImGui::Text("stage: Vertex & Fragment");
+            }
+        }
+    }
+    ImGui::EndChild();
 
     // =========================================================================
-    // 第三栏：右侧预览区域（占满剩余空间）
+    // Draw right preview
     // =========================================================================
-    ImGui::BeginChild("##RightPreview", ImVec2(0, innerPanelHeight), true);
+    ImGui::SameLine();
+    ImGui::BeginChild("##RightPreview", ImVec2(innerPanelWidth * 0.5f, innerPanelHeight), true);
+    if (!currRPItemNames.empty() && m_setting.currRPItemIndex < currRPItemNames.size()) {
+        std::string name = currRPItemNames[m_setting.currRPItemIndex];
+        switch(m_setting.currRPTab) {
+            case ResourcePanelTab::RP_TAB_MESHES: 
+            case ResourcePanelTab::RP_TAB_SHADERS: {
+                
+            } break;
+            default: {
 
-    if (m_setting.currRPTab == ResourcePanelTab::RP_TAB_TEXTURES && !items.empty()) {
-        // 如果是纹理标签，绘制实时预览图
-        // 实际开发中，这里应当通过名字找到你的 Texture 对象，拿到它的 OpenGL Texture ID
-        // ImTextureID texID = (ImTextureID)(intptr_t)texture->getID();
-
-        // 此处暂用 ImGui 纯色绘制一个 128x128 占位矩形（或类似图片中的火警栓红色纹理效果）
-        ImVec2 uv0       = ImVec2(0.0f, 0.0f);
-        ImVec2 uv1       = ImVec2(1.0f, 1.0f);
-        ImVec4 tintColor = ImVec4(0.5f, 0.1f, 0.1f, 1.0f); // 类似 hydrant_albedo.jpg 的暗红底色
-
-        // 如果没有绑定的真实纹理 ID，可以用内置 ImGui 绘制
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        ImVec2 pMin          = ImGui::GetCursorScreenPos();
-        float previewSize    = 0; //ImMin(ImGui::GetContentRegionAvail().x, childHeight - 10.0f);
-        ImVec2 pMax          = ImVec2(pMin.x + previewSize, pMin.y + previewSize);
-
-        drawList->AddRectFilled(pMin, pMax, IM_COL32(130, 20, 20, 255)); // 模拟红色材质
-        drawList->AddRect(pMin, pMax, IM_COL32(255, 255, 255, 50));      // 微弱白边
+            }
+        }
     } else {
-        // 模型或 Shader 展示一个扁平化的小图标底色
         ImGui::TextUnformatted("[ No Preview ]");
     }
-
     ImGui::EndChild();
 
     ImGui::End();
 }
 
 void Editor::drawHUD(Scene& scene, const DisplayInfo& info) {
-    static uint32_t prevDrawCall = 0;
-    uint32_t currDrawCall        = info.drawCall;
-    const float width            = m_setting.width;
-    const float padding          = m_setting.padding;
-    ImVec2 hudPos                = ImVec2(width - padding, padding);
-    ImVec2 hudPosPivot           = ImVec2(1.0f, 0.0f);
-    ImGuiWindowFlags flags       = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove; // set the window unavailable to interact with the user
+    static size_t prevDrawCall = 0;
+    size_t currDrawCall        = info.drawCall;
+    const float padding        = m_setting.padding;
+    ImVec2 hudPos              = ImVec2(m_setting.width - padding, m_setting.titleBarHeight + padding);
+    ImVec2 hudPosPivot         = ImVec2(1.0f, 0.0f);
+    ImGuiWindowFlags flags     = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove; // set the window unavailable to interact with the user
 
-    ImGui::SetNextWindowPos(hudPos, ImGuiCond_Always, hudPos); // set the window position to the top right corner of the screen
+    ImGui::SetNextWindowPos(hudPos, ImGuiCond_Always, hudPosPivot); // set the window position to the top right corner of the screen
     ImGui::SetNextWindowBgAlpha(0.35f);                        // slightly transparent black background, not blocking 3D scene
     if (ImGui::Begin("HUD", nullptr, flags)) {
         ImGui::Text("PERFORMANCE");
         ImGui::Separator();
-        ImGui::Text("FPS       : %.1f", info.fps);
+        ImGui::Text("FPS       : %.1f", info.framePerSecond);
         ImGui::Text("Frame Time: %.2f ms", info.deltaTime * 1000.0f);
-        ImGui::Text("Draw Call: %d draw calls", currDrawCall - prevDrawCall);
+        ImGui::Text("Draw Call: %ld draw calls", currDrawCall - prevDrawCall);
 
         ImGui::Spacing();
         ImGui::Text("STATE");
