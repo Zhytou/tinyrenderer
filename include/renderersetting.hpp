@@ -8,9 +8,9 @@ struct RendererSetting {
     bool deferred  = false; // deferred rendering enabled or not
     bool ibl       = false; // image based light enabled or not
     bool shadow    = false; // shadow mapping enabled or not
-    bool bloom     = true;  // bloom blur enabled or not
-    bool lensflare = true;  // lensflare enabled or not
-    bool dirtmask  = true;  // dirtmask enabled or not
+    bool bloom     = false;  // bloom blur enabled or not
+    bool lensflare = false;  // lensflare enabled or not
+    bool dirtmask  = false;  // dirtmask enabled or not
     bool ssao      = false; // screen space ambient occlusion enabled or not
     bool taa       = false; // temporal anti aliasing enabled or not
 
