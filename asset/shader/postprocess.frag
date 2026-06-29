@@ -14,13 +14,33 @@ layout(binding = 31) uniform sampler2D tDirtmaskMap;
 
 out vec4 oFragColor;
 
-vec3 ACESFilm(vec3 x) {
+vec3 ACESFilm(vec3 color) {
     float a = 2.51; 
     float b = 0.03; 
     float c = 2.43; 
     float d = 0.59; 
     float e = 0.14;
-    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+    return clamp((color * (a * color + b)) / (color * (c * color + d) + e), 0.0, 1.0);
+}
+
+vec3 ACESFilm_Advanced(vec3 color) {
+    mat3 inputMatrix = mat3(
+        0.59719, 0.07600, 0.02840,
+        0.35458, 0.90834, 0.13383,
+        0.04823, 0.01566, 0.83777
+    );
+    vec3 v = inputMatrix * color;
+    
+    vec3 a = v * (v + 0.0245786) - 0.000090537;
+    vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
+    vec3 r = a / b;
+    
+    mat3 outputMatrix = mat3(
+        1.60475, -0.10208, -0.00327,
+        -0.53108,  1.10813, -0.07276,
+        -0.07367, -0.00605,  1.07602
+    );
+    return clamp(outputMatrix * r, 0.0, 1.0);
 }
 
 void main() {
@@ -36,7 +56,7 @@ void main() {
     hdrColor = hdrColor + flareColor * dirtColor * uFlareIntensity;
     
     // Tone mapping(convert hdr color into sdr color)
-    vec3 sdrColor = ACESFilm(hdrColor);
+    vec3 sdrColor = ACESFilm_Advanced(hdrColor);
 
     // Gamma correction
     vec3 finalColor = pow(sdrColor, vec3(1.0 / 2.2));
