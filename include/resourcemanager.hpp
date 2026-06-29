@@ -34,8 +34,8 @@ class ResourceManager {
     ResourceManager(ResourceManager&&)                 = delete;
     ResourceManager& operator=(ResourceManager&&)      = delete;
 
-    static const GLsizei& getCounts(const std::string& name) {
-        if (!m_counts.count(name)) { throw std::runtime_error("ResourceManager::getCounts: Vertex count for " + name + " not found in ResourceManager"); }
+    static const GLsizei& getCount(const std::string& name) {
+        if (!m_counts.count(name)) { throw std::runtime_error("ResourceManager::getCount: Vertex count for " + name + " not found in ResourceManager"); }
         return m_counts.at(name);
     }
     static const std::shared_ptr<VertexLayout>& getLayout(const std::string& name) {
@@ -56,9 +56,11 @@ class ResourceManager {
 
     std::shared_ptr<Model> loadModel(const fs::path& baseDir, const fs::path& modelName);
     std::shared_ptr<Material> loadMaterial(const fs::path& baseDir, const tinyobj::material_t& material);
-    std::shared_ptr<Texture> loadTexture(const fs::path& texPath, const glm::vec4& defaultValue, GLsizei mipLevels = 1);
-    std::shared_ptr<Texture> loadTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLsizei mipLevels = 1);
+    std::shared_ptr<Texture> load2DTexture(const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
+    std::shared_ptr<Texture> load2DTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
+    std::shared_ptr<Texture> loadCubeTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
     std::shared_ptr<Image> loadImage(const fs::path& imagePath, int desiredChannels, bool verticalFlip);
+    std::shared_ptr<Shader> loadShader(const fs::path& vertexShaderPath, const fs::path& fragmentShaderPath);
 
    private:
     static std::unordered_map<std::string, GLsizei> m_counts;

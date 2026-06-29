@@ -12,74 +12,74 @@
 #include "camera.hpp"
 #include "model.hpp"
 #include "renderitem.hpp"
+#include "resourcemanager.hpp"
 #include "shaderstoragebuffer.hpp"
-#include "staticresource.hpp"
 #include "uniformbuffer.hpp"
 #include "utils.hpp"
 
 namespace tinyglrenderer {
 
-void Renderer::setup() {
+void Renderer::setup(ResourceManager& manager) {
     // 0. Define name mappings
     {
         m_pass2FrameNames = {
-            { "equirect_to_cubemap",       "skybox"       },
-            { "ibl_irradiance",            "ibl_diffuse"  },
-            { "ibl_prefiltered",           "ibl_specular" },
-            { "ibl_brdf_lut",              "ibl_brdf_lut" },
-            { "shadow_mapping",            "shadow"       },
-            { "deferred_geometry",         "gbuffer"      },
-            { "deferred_shading",          "hdr_screen"   },
-            { "forward_opaque",            "hdr_screen"   },
-            { "skybox",                    "hdr_screen"   },
-            { "postprocess_highlight",     "highlight"    },
-            { "postprocess_kawase_down",   "blur_down"    },
-            { "postprocess_kawase_up",     "blur_up"      },
-            { "postprocess_lensflare",     "lensflare"    },
-            { "postprocess_gaussian_blur", "blur_x"       },
-            { "postprocess_gaussian_blur", "blur_y"       },
-            { "postprocess_final",         "screen"       },
+            {"equirect_to_cubemap", "skybox"},
+            {"ibl_irradiance", "ibl_diffuse"},
+            {"ibl_prefiltered", "ibl_specular"},
+            {"ibl_brdf_lut", "ibl_brdf_lut"},
+            {"shadow_mapping", "shadow"},
+            {"deferred_geometry", "gbuffer"},
+            {"deferred_shading", "hdr_screen"},
+            {"forward_opaque", "hdr_screen"},
+            {"skybox", "hdr_screen"},
+            {"postprocess_highlight", "highlight"},
+            {"postprocess_kawase_down", "blur_down"},
+            {"postprocess_kawase_up", "blur_up"},
+            {"postprocess_lensflare", "lensflare"},
+            {"postprocess_gaussian_blur", "blur_x"},
+            {"postprocess_gaussian_blur", "blur_y"},
+            {"postprocess_final", "screen"},
         };
         m_texture2SlotIndexs = {
             // 0~7: material textures
-            { "albedo",           0  },
-            { "normal",           1  },
-            { "mrao",             2  },
+            {"albedo", 0},
+            {"normal", 1},
+            {"mrao", 2},
 
             // 8~11: gbuffer textures
-            { "gbuffer.albedo",   8  },
-            { "gbuffer.normal",   9  },
-            { "gbuffer.mrao",     10 },
-            { "gbuffer.depth",    11 },
+            {"gbuffer.albedo", 8},
+            {"gbuffer.normal", 9},
+            {"gbuffer.mrao", 10},
+            {"gbuffer.depth", 11},
 
             // 12~15: shadow textures
-            { "shadow",           12 },
+            {"shadow", 12},
 
             // 16~23: environment/ibl textures
-            { "skybox.cubemap",   16 },
-            { "skybox.equirect",  17 }, // skybox.equirect is registered in m_textures by scene.m_skyboxEquirect when prepare() is called
-            { "ibl_diffuse",      18 },
-            { "ibl_specular",     19 },
-            { "ibl_brdf_lut",     20 },
+            {"skybox.cubemap", 16},
+            {"skybox.equirect", 17}, // skybox.equirect is registered in m_textures by scene.m_skyboxEquirect when prepare() is called
+            {"ibl_diffuse", 18},
+            {"ibl_specular", 19},
+            {"ibl_brdf_lut", 20},
 
             // 24~31: postprocess textures
-            { "hdr_screen.color", 24 },
-            { "hdr_screen.depth", -1 }, // only used as output, no need to bind
-            { "highlight",        25 },
-            { "blur_down",        26 },
-            { "blur_up",          27 },
-            { "bloom",            27 }, // bloom is the output of bloom blur pass
-            { "lensflare",        28 },
-            { "blur_x",           29 },
-            { "blur_y",           30 }, // even though ping-pong buffering technique is used in blur pass, blur_x and blur_y can not share the same slot(write/read access may cause conflict)
-            { "dirtmask",         31 },
+            {"hdr_screen.color", 24},
+            {"hdr_screen.depth", -1}, // only used as output, no need to bind
+            {"highlight", 25},
+            {"blur_down", 26},
+            {"blur_up", 27},
+            {"bloom", 27}, // bloom is the output of bloom blur pass
+            {"lensflare", 28},
+            {"blur_x", 29},
+            {"blur_y", 30}, // even though ping-pong buffering technique is used in blur pass, blur_x and blur_y can not share the same slot(write/read access may cause conflict)
+            {"dirtmask", 31},
         };
     }
 
     // 1. Initialize renderpasses, namely define the input and output attachments of each pipeline
     {
         m_passes["equirect_to_cubemap"] = RenderPass{
-            .attachments = { 
+            .attachments = {
                 AttachmentDesc{
                     .name   = "cubemap",
                     .target = GL_COLOR,
@@ -87,7 +87,7 @@ void Renderer::setup() {
                     .format = GL_RGBA32F,
                     .slot   = GL_COLOR_ATTACHMENT0,
                     .loadOp = LoadOp::LOAD_OP_CLEAR,
-                    .value  = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } },
+                    .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
                 },
             },
         };
@@ -119,7 +119,7 @@ void Renderer::setup() {
             },
         };
         m_passes["ibl_brdf_lut"] = RenderPass{
-            .attachments = { 
+            .attachments = {
                 AttachmentDesc{
                     .name   = "", // use frame buffer name as ouput attachment name
                     .target = GL_COLOR,
@@ -127,12 +127,12 @@ void Renderer::setup() {
                     .format = GL_RGBA32F,
                     .slot   = GL_COLOR_ATTACHMENT0,
                     .loadOp = LoadOp::LOAD_OP_CLEAR,
-                    .value  = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } },
-                }, 
+                    .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+                },
             },
         };
         m_passes["shadow_mapping"] = RenderPass{
-            .attachments = { 
+            .attachments = {
                 AttachmentDesc{
                     .name   = "", // use frame buffer name as ouput attachment name
                     .target = GL_DEPTH,
@@ -140,7 +140,7 @@ void Renderer::setup() {
                     .format = GL_DEPTH_COMPONENT24,
                     .slot   = GL_DEPTH_ATTACHMENT,
                     .loadOp = LoadOp::LOAD_OP_CLEAR,
-                    .value  = { .depthStencil = {1.0f, 0.0f} },
+                    .value  = {.depthStencil = {1.0f, 0.0f}},
                 },
             },
         };
@@ -448,21 +448,21 @@ void Renderer::setup() {
 
     // 3. Compile and link shaders
     {
-        m_shaders["equirect_to_cubemap"]       = std::make_shared<Shader>("../asset/shader/equirect_to_cubemap.vert", "../asset/shader/equirect_to_cubemap.frag");
-        m_shaders["ibl_irradiance"]            = std::make_shared<Shader>("../asset/shader/ibl_irradiance.vert", "../asset/shader/ibl_irradiance.frag");
-        m_shaders["ibl_prefiltered"]           = std::make_shared<Shader>("../asset/shader/ibl_prefiltered.vert", "../asset/shader/ibl_prefiltered.frag");
-        m_shaders["ibl_brdf_lut"]              = std::make_shared<Shader>("../asset/shader/ibl_brdf_lut.vert", "../asset/shader/ibl_brdf_lut.frag");
-        m_shaders["shadow_mapping"]            = std::make_shared<Shader>("../asset/shader/shadow_mapping.vert", "../asset/shader/shadow_mapping.frag");
-        m_shaders["deferred_geometry"]         = std::make_shared<Shader>("../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
-        m_shaders["deferred_shading"]          = std::make_shared<Shader>("../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
-        m_shaders["forward_opaque"]            = std::make_shared<Shader>("../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
-        m_shaders["skybox"]                    = std::make_shared<Shader>("../asset/shader/skybox.vert", "../asset/shader/skybox.frag");
-        m_shaders["postprocess_highlight"]     = std::make_shared<Shader>("../asset/shader/postprocess_highlight.vert", "../asset/shader/postprocess_highlight.frag");
-        m_shaders["postprocess_kawase_down"]   = std::make_shared<Shader>("../asset/shader/postprocess_kawase_down.vert", "../asset/shader/postprocess_kawase_down.frag");
-        m_shaders["postprocess_kawase_up"]     = std::make_shared<Shader>("../asset/shader/postprocess_kawase_up.vert", "../asset/shader/postprocess_kawase_up.frag");
-        m_shaders["postprocess_lensflare"]     = std::make_shared<Shader>("../asset/shader/postprocess_lensflare.vert", "../asset/shader/postprocess_lensflare.frag");
-        m_shaders["postprocess_gaussian_blur"] = std::make_shared<Shader>("../asset/shader/postprocess_gaussian_blur.vert", "../asset/shader/postprocess_gaussian_blur.frag");
-        m_shaders["postprocess_final"]         = std::make_shared<Shader>("../asset/shader/postprocess.vert", "../asset/shader/postprocess.frag");
+        m_shaders["equirect_to_cubemap"]       = manager.loadShader("../asset/shader/equirect_to_cubemap.vert", "../asset/shader/equirect_to_cubemap.frag");
+        m_shaders["ibl_irradiance"]            = manager.loadShader("../asset/shader/ibl_irradiance.vert", "../asset/shader/ibl_irradiance.frag");
+        m_shaders["ibl_prefiltered"]           = manager.loadShader("../asset/shader/ibl_prefiltered.vert", "../asset/shader/ibl_prefiltered.frag");
+        m_shaders["ibl_brdf_lut"]              = manager.loadShader("../asset/shader/ibl_brdf_lut.vert", "../asset/shader/ibl_brdf_lut.frag");
+        m_shaders["shadow_mapping"]            = manager.loadShader("../asset/shader/shadow_mapping.vert", "../asset/shader/shadow_mapping.frag");
+        m_shaders["deferred_geometry"]         = manager.loadShader("../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
+        m_shaders["deferred_shading"]          = manager.loadShader("../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
+        m_shaders["forward_opaque"]            = manager.loadShader("../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
+        m_shaders["skybox"]                    = manager.loadShader("../asset/shader/skybox.vert", "../asset/shader/skybox.frag");
+        m_shaders["postprocess_highlight"]     = manager.loadShader("../asset/shader/postprocess_highlight.vert", "../asset/shader/postprocess_highlight.frag");
+        m_shaders["postprocess_kawase_down"]   = manager.loadShader("../asset/shader/postprocess_kawase_down.vert", "../asset/shader/postprocess_kawase_down.frag");
+        m_shaders["postprocess_kawase_up"]     = manager.loadShader("../asset/shader/postprocess_kawase_up.vert", "../asset/shader/postprocess_kawase_up.frag");    
+        m_shaders["postprocess_lensflare"]     = manager.loadShader("../asset/shader/postprocess_lensflare.vert", "../asset/shader/postprocess_lensflare.frag");
+        m_shaders["postprocess_gaussian_blur"] = manager.loadShader("../asset/shader/postprocess_gaussian_blur.vert", "../asset/shader/postprocess_gaussian_blur.frag");
+        m_shaders["postprocess_final"]         = manager.loadShader("../asset/shader/postprocess.vert", "../asset/shader/postprocess.frag");
     }
 
     // 4. Create framebuffers
@@ -505,15 +505,8 @@ void Renderer::setup() {
     }
 
     {
-        std::cout << "Creating textures [dirtmask,";
-        if (m_setting.dirtmask) {
-            auto image             = Image::create("/home/zhytou/tinyglrenderer/asset/static/dirtmask.png");
-            m_textures["dirtmask"] = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA32F, 1);
-            m_textures["dirtmask"]->upload(image, 0);
-        } else {
-            m_textures["dirtmask"] = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, GL_RGBA32F, 1);
-        }
-        std::cout << "]\n";
+        // static renderer resources
+        m_textures["dirtmask"] = manager.load2DTexture(m_setting.dirtmask ? "../asset/static/dirtmask.png" : "", glm::vec4(1.0f), GL_RGBA32F, 1);
     }
 
     // 6. Create samplers for corresponding slots
@@ -539,7 +532,7 @@ void Renderer::setup() {
             .magFilter   = GL_NEAREST,
             .wrapS       = GL_CLAMP_TO_BORDER,
             .wrapT       = GL_CLAMP_TO_BORDER,
-            .borderColor = { 1.0f, 1.0f, 1.0f, 1.0f },
+            .borderColor = {1.0f, 1.0f, 1.0f, 1.0f},
         });
         samplers[0xFF0000]   = std::make_shared<Sampler>(SamplerDesc{
             // slot 16~23 -> GL_TEXTURE16~GL_TEXTURE23 = skybox/ibl textures
@@ -577,11 +570,10 @@ void Renderer::shutdown() {
 }
 
 void Renderer::prepare(const Scene& scene) {
-    StaticResource& instance = StaticResource::getInstance();
-    auto cubeLayout          = instance.getLayout("cube");
-    auto quadLayout          = instance.getLayout("quad");
-    GLsizei cubeCount        = instance.getCounts("cube");
-    GLsizei quadCount        = instance.getCounts("quad");
+    auto cubeLayout   = ResourceManager::getLayout("cube");
+    auto quadLayout   = ResourceManager::getLayout("quad");
+    GLsizei cubeCount = ResourceManager::getCount("cube");
+    GLsizei quadCount = ResourceManager::getCount("quad");
 
     // 1. Convert equirect skybox into cube map skybox if needed
     const auto& cubemap           = scene.getSkyboxCubeMap();
@@ -591,10 +583,11 @@ void Renderer::prepare(const Scene& scene) {
         m_shaders["equirect_to_cubemap"]->use();
         for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
             GLint index = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-            m_shaders["equirect_to_cubemap"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
+            auto matrix = ResourceManager::getCaptureMatrix(index);
+            m_shaders["equirect_to_cubemap"]->setUniformValue("uViewProjMatrix", matrix);
             m_frames["skybox"]->attach(GL_COLOR_ATTACHMENT0, m_textures["skybox.cubemap"], 0, index);
             m_passes["equirect_to_cubemap"].begin(m_frames["skybox"]);
-            draw(cubeLayout, { "skybox.equirect" }, cubeCount);
+            draw(cubeLayout, {"skybox.equirect"}, cubeCount);
             m_passes["equirect_to_cubemap"].end();
         }
     } else {
@@ -609,10 +602,11 @@ void Renderer::prepare(const Scene& scene) {
             m_shaders["ibl_irradiance"]->use();
             for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
                 GLint index = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-                m_shaders["ibl_irradiance"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
+                auto matrix = ResourceManager::getCaptureMatrix(index);
+                m_shaders["ibl_irradiance"]->setUniformValue("uViewProjMatrix", matrix);
                 m_frames["ibl_diffuse"]->attach(GL_COLOR_ATTACHMENT0, m_textures["ibl_diffuse"], 0, index);
                 m_passes["ibl_irradiance"].begin(m_frames["ibl_diffuse"]);
-                draw(cubeLayout, { "skybox.cubemap" }, cubeCount);
+                draw(cubeLayout, {"skybox.cubemap"}, cubeCount);
                 m_passes["ibl_irradiance"].end();
             }
         }
@@ -624,7 +618,8 @@ void Renderer::prepare(const Scene& scene) {
             for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
                 GLint index       = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
                 GLsizei mipLevels = m_textures["ibl_specular"]->getMipLevels();
-                m_shaders["ibl_prefiltered"]->setUniformValue("uViewProjMatrix", instance.getCaptureMatrix(index));
+                glm::mat4 matrix  = ResourceManager::getCaptureMatrix(index);
+                m_shaders["ibl_prefiltered"]->setUniformValue("uViewProjMatrix", matrix);
 
                 for (GLsizei level = 0; level < mipLevels; level++) {
                     float roughness = static_cast<float>(level) / mipLevels;
@@ -633,7 +628,7 @@ void Renderer::prepare(const Scene& scene) {
                     m_frames["ibl_specular"]->attach(GL_COLOR_ATTACHMENT0, m_textures["ibl_specular"], level, index);
 
                     m_passes["ibl_prefiltered"].begin(m_frames["ibl_specular"]);
-                    draw(cubeLayout, { "skybox.cubemap" }, cubeCount);
+                    draw(cubeLayout, {"skybox.cubemap"}, cubeCount);
                     m_passes["ibl_prefiltered"].end();
                 }
             }
@@ -648,7 +643,7 @@ void Renderer::prepare(const Scene& scene) {
             m_passes["ibl_brdf_lut"].end();
         }
     } else {
-        glm::vec4 color = { 0.0f, 0.0f, 0.0f, 1.0f };
+        glm::vec4 color = {0.0f, 0.0f, 0.0f, 1.0f};
         m_textures["ibl_diffuse"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, 0);
         for (GLint level = 0; level < m_textures["ibl_specular"]->getMipLevels(); level++) { m_textures["ibl_specular"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, level); }
         m_textures["ibl_brdf_lut"]->clear(glm::value_ptr(color), GL_RGBA, GL_FLOAT, 0);
@@ -680,7 +675,6 @@ void Renderer::update(const Scene& scene) {
     }
 
     // 2. Generate render item queue(draw command)
-    StaticResource& instance = StaticResource::getInstance();
     std::vector<RenderItem> opaqueQueue, transparentQueue;
     scene.getRenderQueue(opaqueQueue, true);
     scene.getRenderQueue(transparentQueue, false);
@@ -702,7 +696,7 @@ void Renderer::update(const Scene& scene) {
                 m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
                 draw(item, {});
             }
-            lights[i]->setUVOffsetScale({ remaps[i * 4], remaps[i * 4 + 1] }, { remaps[i * 4 + 2], remaps[i * 4 + 3] });
+            lights[i]->setUVOffsetScale({remaps[i * 4], remaps[i * 4 + 1]}, {remaps[i * 4 + 2], remaps[i * 4 + 3]});
         }
         m_passes["shadow_mapping"].end();
 
@@ -716,7 +710,6 @@ void Renderer::update(const Scene& scene) {
 }
 
 void Renderer::render(const Scene& scene) {
-    StaticResource& instance = StaticResource::getInstance();
     std::vector<RenderItem> opaqueQueue, transparentQueue;
     scene.getRenderQueue(opaqueQueue, true);
     scene.getRenderQueue(transparentQueue, false);
@@ -730,7 +723,7 @@ void Renderer::render(const Scene& scene) {
             m_passes["deferred_geometry"].begin(m_frames["gbuffer"]);
             for (const auto& item : opaqueQueue) {
                 m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-                draw(item, { "albedo", "normal", "mrao" });
+                draw(item, {"albedo", "normal", "mrao"});
             }
             m_passes["deferred_geometry"].end();
         }
@@ -739,14 +732,14 @@ void Renderer::render(const Scene& scene) {
         m_frames["hdr_screen"]->copy(*m_frames["gbuffer"], GL_DEPTH_BUFFER_BIT);
 
         {
-            GLsizei count = instance.getCounts("quad");
-            auto& layout  = instance.getLayout("quad");
+            GLsizei count = ResourceManager::getCount("quad");
+            auto& layout  = ResourceManager::getLayout("quad");
 
             m_states["deferred_shading"].apply();
             m_shaders["deferred_shading"]->use();
             m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
             m_passes["deferred_shading"].begin(m_frames["hdr_screen"]);
-            draw(layout, { "gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut" }, count);
+            draw(layout, {"gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut"}, count);
             m_passes["deferred_shading"].end();
         }
     } else {
@@ -756,31 +749,31 @@ void Renderer::render(const Scene& scene) {
         m_passes["forward_opaque"].begin(m_frames["hdr_screen"]);
         for (const auto& item : opaqueQueue) {
             m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
-            draw(item, { "albedo", "normal", "mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut" });
+            draw(item, {"albedo", "normal", "mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut"});
         }
         m_passes["forward_opaque"].end();
     }
 
     if (m_textures["skybox.cubemap"] != nullptr) {
-        GLsizei count = instance.getCounts("cube");
-        auto& layout  = instance.getLayout("cube");
+        GLsizei count = ResourceManager::getCount("cube");
+        auto& layout  = ResourceManager::getLayout("cube");
 
         m_states["skybox"].apply();
         m_shaders["skybox"]->use();
         m_passes["skybox"].begin(m_frames["hdr_screen"]);
-        draw(layout, { "skybox.cubemap" }, count);
+        draw(layout, {"skybox.cubemap"}, count);
         m_passes["skybox"].end();
     }
 
     if (m_setting.bloom || m_setting.lensflare) {
-        GLsizei count = instance.getCounts("quad");
-        auto& layout  = instance.getLayout("quad");
+        GLsizei count = ResourceManager::getCount("quad");
+        auto& layout  = ResourceManager::getLayout("quad");
 
         {
             m_states["postprocess_highlight"].apply();
             m_shaders["postprocess_highlight"]->use();
             m_passes["postprocess_highlight"].begin(m_frames["highlight"]);
-            draw(layout, { "hdr_screen.color" }, count);
+            draw(layout, {"hdr_screen.color"}, count);
             m_passes["postprocess_highlight"].end();
         }
 
@@ -796,8 +789,8 @@ void Renderer::render(const Scene& scene) {
             int dstLevel        = level + 1;
             float srcTexelSizeX = 1.0f / (float)m_textures["blur_down"]->getWidth(srcLevel);
             float srcTexelSizeY = 1.0f / (float)m_textures["blur_down"]->getHeight(srcLevel);
-            uint32_t dstWidth   = m_textures["blur_down"]->getWidth(dstLevel);
-            uint32_t dstHeight  = m_textures["blur_down"]->getHeight(dstLevel);
+            GLsizei dstWidth    = m_textures["blur_down"]->getWidth(dstLevel);
+            GLsizei dstHeight   = m_textures["blur_down"]->getHeight(dstLevel);
 
             m_frames["blur_down"]->attach(GL_COLOR_ATTACHMENT0, m_textures["blur_down"], dstLevel);
             m_shaders["postprocess_kawase_down"]->setUniformValue("uSrcTexelSizeX", srcTexelSizeX);
@@ -806,7 +799,7 @@ void Renderer::render(const Scene& scene) {
             m_states["postprocess_kawase_down"].view(0, 0, dstWidth, dstHeight);
             m_passes["postprocess_kawase_down"].begin(m_frames["blur_down"]);
             m_textures["blur_down"]->clamp(srcLevel); // avoid feedback loop
-            draw(layout, { "blur_down" }, count);
+            draw(layout, {"blur_down"}, count);
             m_textures["blur_down"]->unclamp();
             m_passes["postprocess_kawase_down"].end();
         }
@@ -835,7 +828,7 @@ void Renderer::render(const Scene& scene) {
             m_states["postprocess_kawase_up"].view(0, 0, dstWidth, dstHeight);
             m_passes["postprocess_kawase_up"].begin(m_frames["blur_up"]);
             m_textures["blur_up"]->clamp(srcLevel); // avoid feedback loop(if commented out, dstLevel will be read inadvertently, causing the blur radius to expand continuously and amplify endlessly across frames.)
-            draw(layout, { "blur_up", "blur_down" }, count);
+            draw(layout, {"blur_up", "blur_down"}, count);
             m_textures["blur_up"]->unclamp();
             m_passes["postprocess_kawase_up"].end();
         }
@@ -844,14 +837,14 @@ void Renderer::render(const Scene& scene) {
     }
 
     if (m_setting.lensflare) {
-        GLsizei count = instance.getCounts("quad");
-        auto& layout  = instance.getLayout("quad");
+        GLsizei count = ResourceManager::getCount("quad");
+        auto& layout  = ResourceManager::getLayout("quad");
 
         {
             m_states["postprocess_lensflare"].apply();
             m_shaders["postprocess_lensflare"]->use();
             m_passes["postprocess_lensflare"].begin(m_frames["lensflare"]);
-            draw(layout, { "bloom" }, count); // use blurred highlight(namely bloom) as input to generate raw lensflare(ghost/halo/distortion).
+            draw(layout, {"bloom"}, count); // use blurred highlight(namely bloom) as input to generate raw lensflare(ghost/halo/distortion).
             m_passes["postprocess_lensflare"].end();
         }
 
@@ -874,10 +867,10 @@ void Renderer::render(const Scene& scene) {
                 m_shaders["postprocess_gaussian_blur"]->setUniformValue("uXFilter", xFilter);
                 if (xFilter) {
                     m_passes["postprocess_gaussian_blur"].begin(m_frames["blur_x"]);
-                    draw(layout, { "blur_y" }, count);
+                    draw(layout, {"blur_y"}, count);
                 } else {
                     m_passes["postprocess_gaussian_blur"].begin(m_frames["blur_y"]);
-                    draw(layout, { "blur_x" }, count);
+                    draw(layout, {"blur_x"}, count);
                 }
                 m_passes["postprocess_gaussian_blur"].end();
                 xFilter = !xFilter;
@@ -898,14 +891,14 @@ void Renderer::render(const Scene& scene) {
     if (m_setting.taa) {}
 
     {
-        GLsizei count = instance.getCounts("quad");
-        auto& layout  = instance.getLayout("quad");
+        GLsizei count = ResourceManager::getCount("quad");
+        auto& layout  = ResourceManager::getLayout("quad");
 
         m_states["postprocess_final"].apply();
         m_states["postprocess_final"].view(m_setting.x, m_setting.y, m_setting.width, m_setting.height);
         m_shaders["postprocess_final"]->use();
         m_passes["postprocess_final"].begin(m_frames["screen"]);
-        draw(layout, { "hdr_screen.color", "highlight", "blur_up", "blur_down", "lensflare", "dirtmask" }, count);
+        draw(layout, {"hdr_screen.color", "highlight", "blur_up", "blur_down", "lensflare", "dirtmask"}, count);
         m_passes["postprocess_final"].end();
     }
 }

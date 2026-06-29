@@ -12,16 +12,12 @@ namespace fs = std::filesystem;
 
 void Scene::getLightBlocks(std::vector<LightBlock>& blocks) const {
     blocks.clear();
-    for (auto& light : m_lights) {
-        blocks.emplace_back(light->getLightBlock());
-    }
+    for (auto& light : m_lights) { blocks.emplace_back(light->getLightBlock()); }
 }
 
 void Scene::getModelBlocks(std::vector<ModelBlock>& blocks) const {
     blocks.clear();
-    for (auto& model : m_models) {
-        blocks.emplace_back(model->getModelBlock());
-    }
+    for (auto& model : m_models) { blocks.emplace_back(model->getModelBlock()); }
 }
 
 void Scene::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
@@ -39,15 +35,11 @@ void Scene::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
     }
 }
 
-void Scene::initialize(const std::string& json) {
+void Scene::initialize(const std::string& json, ResourceManager& manager) {
     rapidjson::Document doc;
-    if (doc.Parse(json.c_str()).HasParseError()) {
-        throw std::runtime_error("Scene::initialize: Error parsing JSON");
-    }
+    if (doc.Parse(json.c_str()).HasParseError()) { throw std::runtime_error("Scene::initialize: Error parsing JSON"); }
     auto getVec3 = [](rapidjson::Value& arr) -> glm::vec3 {
-        if (!arr.IsArray() || arr.Size() != 3 || !arr[0].IsNumber() || !arr[1].IsNumber() || !arr[2].IsNumber()) {
-            throw std::runtime_error("Scene::initialize: Invalid array size or element type");
-        }
+        if (!arr.IsArray() || arr.Size() != 3 || !arr[0].IsNumber() || !arr[1].IsNumber() || !arr[2].IsNumber()) { throw std::runtime_error("Scene::initialize: Invalid array size or element type"); }
 
         return glm::vec3{arr[0].GetFloat(), arr[1].GetFloat(), arr[2].GetFloat()};
     };
@@ -59,45 +51,40 @@ void Scene::initialize(const std::string& json) {
             // model base dir and name required
             fs::path baseDir   = modelDoc["base_dir"].GetString();
             fs::path modelName = modelDoc["name"].GetString();
+            m_models.emplace_back(manager.loadModel(baseDir, modelName));
 
             // default material optional
             std::map<std::vector<const char*>, const char*> mat2Type = {
-                {{"albedo"},                                       "vec3"  },
-                {{"normal"},                                       "vec3"  },
-                {{"metallic", "roughness", "ambient"},             "float" },
-                {{"albedo_map"},                                   "string"},
-                {{"normal_map"},                                   "string"},
+                {{"albedo"}, "vec3"},
+                {{"normal"}, "vec3"},
+                {{"metallic", "roughness", "ambient"}, "float"},
+                {{"albedo_map"}, "string"},
+                {{"normal_map"}, "string"},
                 {{"metallic_map", "roughness_map", "ambient_map"}, "string"},
             };
-            std::shared_ptr<Material> material = nullptr;
             if (modelDoc.HasMember("default_mat")) {
-                material = std::make_shared<Material>();
-                for (auto& [names, type] : mat2Type) {
-                    glm::vec4 value = glm::vec4(std::nanf(""));
-                    std::vector<fs::path> paths;
-                    for (int i = 0; i < names.size(); i++) {
-                        if (!modelDoc["default_mat"].HasMember(names[i])) { continue; }
-                        if (type == "vec3") {
-                            value = glm::vec4(getVec3(modelDoc["default_mat"][names[i]]), 0.0f);
-                        } else if (type == "float") {
-                            value[i] = modelDoc["default_mat"][names[i]].GetFloat();
-                        } else {
-                            paths.push_back(modelDoc["default_mat"][names[i]].GetString());
-                        }
-                    }
-                    if ((std::isnan(value.x) || std::isnan(value.y) || std::isnan(value.z)) && paths.empty()) { continue; }
-                    if (type == "vec3" || type == "float") {
-                        material->setTexture(names[i], value);
-                    } else if (paths.size() == 1) {
-                        std::string name = names[i];
-                        name.erase(name.find("_map")); // remove "_map" suffix
-                        material->setTexture(name, paths[0]);
-                    } else { // only maro texture need multiple paths
-                        material->setTexture("mrao", paths);
-                    }
-                }
+                auto& matDoc = modelDoc["default_mat"];
+                glm::vec3 albedo = matDoc.HasMember("albedo") ? getVec3(matDoc["albedo"]) : glm::vec3(0.5f);
+                float metallic = matDoc.HasMember("metallic") ? matDoc["metallic"].GetFloat() : 0.0f;
+                float roughness = matDoc.HasMember("roughness") ? matDoc["roughness"].GetFloat() : 0.0f;
+
+                std::string baseMatDir = matDoc.HasMember("base_dir") ? matDoc["base_dir"].GetString() : "";
+                tinyobj::material_t material;
+                material.name = matDoc.HasMember("name") ? matDoc["name"].GetString() : modelName.string() + "_default";
+                material.diffuse[0] = albedo[0];
+                material.diffuse[1] = albedo[1];
+                material.diffuse[2] = albedo[2];
+                material.metallic = metallic;
+                material.roughness = roughness;
+                material.diffuse_texname = matDoc.HasMember("albedo_map") ? matDoc["albedo_map"].GetString() : "";
+                material.normal_texname = matDoc.HasMember("normal_map") ? matDoc["normal_map"].GetString() : "";
+                material.metallic_texname = matDoc.HasMember("metallic_map") ? matDoc["metallic_map"].GetString() : "";
+                material.roughness_texname = matDoc.HasMember("roughness_map") ? matDoc["roughness_map"].GetString() : "";
+                material.ambient_texname = matDoc.HasMember("ambient_map") ? matDoc["ambient_map"].GetString() : "";
+
+                auto nmaterial = manager.loadMaterial(baseMatDir, material);
+                m_models.back()->setDefaultMaterial(nmaterial);
             }
-            m_models.emplace_back(std::make_shared<Model>(baseDir, modelName, material));
 
             glm::vec3 translate = glm::vec3(0.0f);
             glm::vec3 rotate    = glm::vec3(0.0f);
@@ -112,6 +99,24 @@ void Scene::initialize(const std::string& json) {
             auto [xyzi1, xyzi2] = m_models.back()->getBoundingBox();
             m_bounds.first      = glm::min(m_bounds.first, xyzi1);
             m_bounds.second     = glm::max(m_bounds.second, xyzi2);
+        }
+    }
+
+        // skybox(environment map)
+    if (doc.HasMember("skybox")) {
+        if (doc["skybox"].HasMember("cubemap")) {
+            std::vector<fs::path> imagePaths;
+            fs::path baseDir = doc["skybox"]["cubemap"]["base_dir"].GetString();
+            for (auto face : {"right", "left", "top", "bottom", "front", "back"}) { // face order must be: right, left, top, bottom, front, back.
+                std::string imageName = doc["skybox"]["cubemap"][face].GetString();
+                imagePaths.push_back(baseDir / imageName);
+            }
+            m_skyboxCubemap = manager.loadCubeTexture(imagePaths, glm::vec4(0.0f), GL_RGBA32F, 1);
+        }
+        if (doc["skybox"].HasMember("equirect")) {
+            fs::path baseDir      = doc["skybox"]["equirect"]["base_dir"].GetString();
+            fs::path equirectName = doc["skybox"]["equirect"]["name"].GetString();
+            m_skyboxEquirect      = manager.load2DTexture(baseDir / equirectName, glm::vec4(0.0f), GL_RGBA32F, 1);
         }
     }
 
@@ -142,48 +147,11 @@ void Scene::initialize(const std::string& json) {
         glm::vec3 eye       = target + 1.0f * (xyz2 - xyz1);
         glm::vec3 direction = glm::normalize(xyz2 - xyz1);
         glm::vec3 up        = {0.0f, 1.0f, 0.0f};
-        if (std::abs(glm::dot(direction, up)) > 0.99f) {
-            up = {0.0f, 0.0f, 1.0f};
-        }
+        if (std::abs(glm::dot(direction, up)) > 0.99f) { up = {0.0f, 0.0f, 1.0f}; }
         m_camera = std::make_shared<PerspectiveCamera>();
         m_camera->setEye(eye);
         m_camera->setTarget(target);
         m_camera->setUp(up);
-    }
-
-    // skybox(environment map)
-    if (doc.HasMember("skybox")) {
-        if (doc["skybox"].HasMember("cubemap")) {
-            std::vector<std::shared_ptr<Image>> images;
-            fs::path baseDir = doc["skybox"]["cubemap"]["base_dir"].GetString();
-            uint32_t width = 0, height = 0;
-            //! WARNING: Face order must be: right, left, top, bottom, front, back.
-            //! This sequence perfectly aligns with OpenGL DSA texture array layer mapping (0 to 5).
-            for (auto face : {"right", "left", "top", "bottom", "front", "back"}) {
-                std::string imageName = doc["skybox"]["cubemap"][face].GetString();
-                auto image            = Image::create(baseDir / imageName);
-                if (width == 0 && height == 0) {
-                    width  = image->getWidth();
-                    height = image->getHeight();
-                } else if (width != image->getWidth() || height != image->getHeight()) {
-                    throw std::runtime_error("Scene::initialize: Cubemap face " + std::string(face) + " has different size from other faces.");
-                }
-                images.push_back(image);
-            }
-
-            m_skyboxCubemap = std::make_shared<Texture>(width, height, GL_TEXTURE_CUBE_MAP, GL_RGBA32F, 1);
-            for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
-                GLint index = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-                m_skyboxCubemap->upload(images[index], index, 0);
-            }
-        }
-        if (doc["skybox"].HasMember("equirect")) {
-            fs::path baseDir      = doc["skybox"]["equirect"]["base_dir"].GetString();
-            fs::path equirectName = doc["skybox"]["equirect"]["name"].GetString();
-            auto image            = Image::create(baseDir / equirectName, 0, true);
-            m_skyboxEquirect      = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA32F, 1);
-            m_skyboxEquirect->upload(image);
-        }
     }
 }
 

@@ -180,9 +180,9 @@ std::shared_ptr<Material> ResourceManager::loadMaterial(const fs::path& baseDir,
 
     std::unordered_map<std::string, std::shared_ptr<Texture>> textures = {
         // TODO: fix mip level(when miplevel is more than 1, the render result is wrong, blocking artifacts appear)
-        {"albedo", loadTexture(baseDir / material.diffuse_texname, albedo)},   
-        {"normal", loadTexture(baseDir / material.normal_texname, normal)}, 
-        {"mrao", loadTexture({baseDir / material.metallic_texname, baseDir / material.roughness_texname, baseDir / material.ambient_texname}, mrao)}
+        {"albedo", load2DTexture(baseDir / material.diffuse_texname, albedo)},   
+        {"normal", load2DTexture(baseDir / material.normal_texname, normal)}, 
+        {"mrao", load2DTexture({baseDir / material.metallic_texname, baseDir / material.roughness_texname, baseDir / material.ambient_texname}, mrao)}
     };
     auto nmaterial = std::make_shared<Material>(material.name, textures);
     m_materials[material.name] = nmaterial;
@@ -190,49 +190,77 @@ std::shared_ptr<Material> ResourceManager::loadMaterial(const fs::path& baseDir,
     return nmaterial;
 }
 
-std::shared_ptr<Texture> ResourceManager::loadTexture(const fs::path& texPath, const glm::vec4& defaultValue, GLsizei mipLevels) {
-    std::shared_ptr<Texture> texture = nullptr;
-
+std::shared_ptr<Texture> ResourceManager::load2DTexture(const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+    std::shared_ptr<Texture> texture;
     if (fs::is_regular_file(texPath)) {
-        std::cout << "Loading texture from file [" << texPath << "]\n";
+        std::cout << "Loading texture(GL_TEXTURE_2D) from file [" << texPath << "]\n";
         std::shared_ptr<Image> image  = loadImage(texPath, 0, true);
-        texture = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, GL_RGBA8, mipLevels);
+        texture = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, internalFormat, mipLevels);
         texture->upload(image);
     } else {
-        std::cout << "Loading texture from color [" << defaultValue << "]\n";
-        texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, GL_RGBA8, mipLevels);
-        texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT);
+        std::cout << "Loading texture(GL_TEXTURE_2D) from value [" << defaultValue << "]\n";
+        texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, internalFormat, 1);
+        texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT); // GL_RGBA and GL_FLOAT indicate the format of defaultValue is RGBA float
     }
-
-    m_textures[texPath.string()] = texture;
+    // m_textures[texPath.string()] = texture;
     return texture;
 }
 
-std::shared_ptr<Texture> ResourceManager::loadTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLsizei mipLevels) {
-    bool exists = true;
-    for (auto& texPath : texPaths) {
-        exists = exists && fs::is_regular_file(texPath);
+bool is_all_regular_file(const std::vector<fs::path>& paths) {
+    for (auto& path : paths) {
+        if (!fs::is_regular_file(path)) {
+            return false;
+        }
     }
-    std::shared_ptr<Texture> texture = nullptr;
+    return true;
+}
 
-    if (exists) {
+std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+    std::shared_ptr<Texture> texture;
+    if (is_all_regular_file(texPaths)) {
         std::vector<std::shared_ptr<Image>> images;
-        std::cout << "Loading texture from file [";
+        std::cout << "Loading texture(GL_TEXTURE_2D) from file [";
         for (auto& texPath : texPaths) {
             std::cout << texPath << ", ";
             images.push_back(loadImage(texPath, 1, true));
         }
         std::cout << "]\n";
-
         auto mimage = Image::merge(images, 3);
         texture = std::make_shared<Texture>(mimage->getWidth(), mimage->getHeight(), GL_TEXTURE_2D, GL_RGBA8, mipLevels);
         texture->upload(mimage);
     } else {
-        std::cout << "Loading diffuse texture from color [" << defaultValue << "]\n";
-        texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, GL_RGBA8, mipLevels);
-        texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT);
+        std::cout << "Loading texture(GL_TEXTURE_2D) from value [" << defaultValue << "]\n";
+        texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, internalFormat, 1);
+        texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT); // GL_RGBA and GL_FLOAT indicate the format of defaultValue is RGBA float
+    }
+    return texture;
+}
+
+std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+    std::vector<std::shared_ptr<Image>> images;
+    GLsizei width = 1, height = 1;
+    if (is_all_regular_file(texPaths)) {
+        std::cout << "Loading texture(GL_TEXTURE_CUBE_MAP) from file [";
+        for (auto& texPath : texPaths) {
+            std::cout << texPath << ", ";
+            images.push_back(loadImage(texPath, 1, true));
+            width  = images.back()->getWidth();
+            height = images.back()->getHeight();
+        }
+        std::cout << "]\n";
+    } else {
+        std::cout << "Loading texture(GL_TEXTURE_CUBE_MAP) from value [" << defaultValue << "]\n";
     }
 
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>(width, height, GL_TEXTURE_CUBE_MAP, internalFormat, mipLevels);
+    for (auto face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
+        GLint index = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+        if (index < images.size() && width == images[index]->getWidth() && height == images[index]->getHeight()) {
+            texture->upload(images[index], index, 0);
+        } else {
+            texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT); // GL_RGBA and GL_FLOAT indicate the format of defaultValue is RGBA float
+        }
+    }
     return texture;
 }
 
@@ -240,6 +268,12 @@ std::shared_ptr<Image> ResourceManager::loadImage(const fs::path& imagePath, int
     auto image = Image::create(imagePath, desiredChannels, verticalFlip); // just use static constructor Image::create()
     m_images[imagePath.string()] = image;
     return image;
+}
+
+std::shared_ptr<Shader> ResourceManager::loadShader(const fs::path& vertexShaderPath, const fs::path& fragmentShaderPath) {
+    std::shared_ptr<Shader> shader = std::make_shared<Shader>(vertexShaderPath, fragmentShaderPath);
+    m_shaders[vertexShaderPath.string()] = shader;
+    return shader;
 }
 
 }; // namespace tinyglrenderer
