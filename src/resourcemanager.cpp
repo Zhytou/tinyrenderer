@@ -1,6 +1,8 @@
 #include "resourcemanager.hpp"
 
 #include <vector>
+#include <stdexcept>
+#include <format>
 
 #include "utils.hpp"
 
@@ -144,28 +146,91 @@ void ResourceManager::destroy() {
     m_images.clear();
 }
 
-std::shared_ptr<Model> ResourceManager::loadModel(const fs::path& baseDir, const fs::path& modelName) {
+const GLsizei& ResourceManager::getCount(const std::string& name) {
+    if (!m_counts.count(name)) { throw std::runtime_error("ResourceManager::getCount: Vertex count for " + name + " not found in ResourceManager"); }
+    return m_counts.at(name);
+}
+
+const std::shared_ptr<VertexLayout>& ResourceManager::getLayout(const std::string& name) {
+    if (!m_layouts.count(name)) { throw std::runtime_error("ResourceManager::getLayout: VertexLayout " + name + " not found in ResourceManager"); }
+    return m_layouts.at(name);
+}
+const std::unique_ptr<VertexBuffer>& ResourceManager::getBuffer(const std::string& name) {
+    if (!m_buffers.count(name)) { throw std::runtime_error("ResourceManager::getBuffer: VertexBuffer " + name + " not found in ResourceManager"); }
+    return m_buffers.at(name);
+}
+
+const glm::mat4& ResourceManager::getCaptureMatrix(GLint index) {
+    if (index < 0 || index >= 6) { throw std::runtime_error(std::format("ResourceManager::getCaptureMatrix: CaptureMatrix {} not found in ResourceManager", index)); }
+    return m_matrixs[index];
+}
+
+std::shared_ptr<Mesh> ResourceManager::getMesh(const std::string& name) const {
+    if (m_meshes.count(name) == 0) {
+        throw std::runtime_error(std::format("ResourceManager::getMesh: mesh {} does not exist!", name));
+    }
+    return m_meshes.at(name).lock();
+}
+
+std::shared_ptr<Texture> ResourceManager::getTexture(const std::string& name) const {
+    if (m_textures.count(name) == 0) {
+        throw std::runtime_error(std::format("ResourceManager::getShader: texture {} does not exist!", name));
+    }
+    return m_textures.at(name).lock();
+}
+
+std::shared_ptr<Shader> ResourceManager::getShader(const std::string& name) const {
+    if (m_shaders.count(name) == 0) {
+        throw std::runtime_error(std::format("ResourceManager::getShader: shader {} does not exist!", name));
+    }
+    return m_shaders.at(name).lock();
+}
+
+void ResourceManager::getAllMeshNames(std::vector<std::string>& names) const {
+    names.clear();
+    for (auto& [name, mesh] : m_meshes) {
+        if (mesh.expired()) continue;
+        names.push_back(name);
+    }
+}
+
+void ResourceManager::getAllTextureNames(std::vector<std::string>& names) const {
+    names.clear();
+    for (auto& [name, texture] : m_textures) {
+        if (texture.expired()) continue;
+        names.push_back(name);
+    }
+}
+void ResourceManager::getAllShaderNames(std::vector<std::string>& names) const {
+    names.clear();
+    for (auto& [name, shader] : m_shaders) {
+        if (shader.expired()) continue;
+        names.push_back(name);
+    }
+}
+
+std::shared_ptr<Model> ResourceManager::loadModel(const std::string& modelName, const fs::path& modelDir) {
     // 1. Load obj model with tinyobj loader
-    fs::path modelPath = baseDir / modelName;
+    fs::path modelPath = modelDir / modelName;
     tinyobj::attrib_t attributes;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string err;
-    if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &err, modelPath.c_str(), baseDir.c_str(), true)) {
+    if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &err, modelPath.c_str(), modelDir.c_str(), true)) {
         throw std::runtime_error("ResourceManager::loadModel: " + err);
     }
 
     // 2. Create mesh from tinyobj shapes
-    std::cout << "Loading mesh [" << baseDir / modelName << "]\n";
+    std::cout << "Loading mesh [" << modelPath << "]\n";
     std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(attributes, shapes, materials.size());
-    m_meshes[modelName.string()] = mesh; // add mesh to cache
+    m_meshes[modelName] = mesh; // add mesh to cache
 
     // 3. Convert tinyobj material into self-defined material
     std::cout << "Loading materials [";
     std::vector<std::shared_ptr<Material>> nmaterials;
     for (auto& material : materials) {
         std::cout << material.name << ", ";
-        nmaterials.push_back(loadMaterial(baseDir, material));
+        nmaterials.push_back(loadMaterial(material.name, modelDir, material));
     }
     std::cout << "]\n";
 
@@ -173,28 +238,32 @@ std::shared_ptr<Model> ResourceManager::loadModel(const fs::path& baseDir, const
 }
 
 
-std::shared_ptr<Material> ResourceManager::loadMaterial(const fs::path& baseDir, const tinyobj::material_t& material) {
+std::shared_ptr<Material> ResourceManager::loadMaterial(const std::string& matName, const fs::path& matDir, const tinyobj::material_t& material) {
     glm::vec4 albedo = glm::vec4(material.diffuse[0], material.diffuse[1], material.diffuse[2], 1.0f);
     glm::vec4 normal = glm::vec4(0.5f, 0.5f, 1.0f, 0.f);
     glm::vec4 mrao = glm::vec4(material.metallic, material.roughness, 0.f, 0.f);
 
     std::unordered_map<std::string, std::shared_ptr<Texture>> textures = {
         // TODO: fix mip level(when miplevel is more than 1, the render result is wrong, blocking artifacts appear)
-        {"albedo", load2DTexture(baseDir / material.diffuse_texname, albedo)},   
-        {"normal", load2DTexture(baseDir / material.normal_texname, normal)}, 
-        {"mrao", load2DTexture({baseDir / material.metallic_texname, baseDir / material.roughness_texname, baseDir / material.ambient_texname}, mrao)}
+        {"albedo", load2DTexture("albedo", matDir / material.diffuse_texname, albedo)},   
+        {"normal", load2DTexture("normal", matDir / material.normal_texname, normal)}, 
+        {"mrao", load2DTexture("mrao", {matDir / material.metallic_texname, matDir / material.roughness_texname, matDir / material.ambient_texname}, mrao)}
     };
-    auto nmaterial = std::make_shared<Material>(material.name, textures);
-    m_materials[material.name] = nmaterial;
+    auto nmaterial = std::make_shared<Material>(matName, textures);
+    m_materials[matName] = nmaterial;
 
     return nmaterial;
 }
 
-std::shared_ptr<Texture> ResourceManager::load2DTexture(const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texName, const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+    if (m_textures.count(texName)) {
+        return m_textures[texName].lock();
+    }
+    
     std::shared_ptr<Texture> texture;
     if (fs::is_regular_file(texPath)) {
         std::cout << "Loading texture(GL_TEXTURE_2D) from file [" << texPath << "]\n";
-        std::shared_ptr<Image> image  = loadImage(texPath, 0, true);
+        std::shared_ptr<Image> image = loadImage(texName, texPath, 0, true);
         texture = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, internalFormat, mipLevels);
         texture->upload(image);
     } else {
@@ -202,7 +271,8 @@ std::shared_ptr<Texture> ResourceManager::load2DTexture(const fs::path& texPath,
         texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, internalFormat, 1);
         texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT); // GL_RGBA and GL_FLOAT indicate the format of defaultValue is RGBA float
     }
-    // m_textures[texPath.string()] = texture;
+    m_textures[texName] = texture;
+
     return texture;
 }
 
@@ -215,14 +285,19 @@ bool is_all_regular_file(const std::vector<fs::path>& paths) {
     return true;
 }
 
-std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+    if (m_textures.count(texName)) {
+        return m_textures[texName].lock();
+    }
+    
     std::shared_ptr<Texture> texture;
     if (is_all_regular_file(texPaths)) {
         std::vector<std::shared_ptr<Image>> images;
         std::cout << "Loading texture(GL_TEXTURE_2D) from file [";
-        for (auto& texPath : texPaths) {
-            std::cout << texPath << ", ";
-            images.push_back(loadImage(texPath, 1, true));
+        for (int i = 0; i < texPaths.size(); i++) {
+            auto& texPath = texPaths[i];
+            std::cout << texPaths[i] << ", ";
+            images.push_back(loadImage(std::format("{}_{}", texName, i), texPath, 1, true));
         }
         std::cout << "]\n";
         auto mimage = Image::merge(images, 3);
@@ -233,17 +308,24 @@ std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::vector<fs::pa
         texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, internalFormat, 1);
         texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT); // GL_RGBA and GL_FLOAT indicate the format of defaultValue is RGBA float
     }
+    m_textures[texName] = texture;
+    
     return texture;
 }
 
-std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+    if (m_textures.count(texName)) {
+        return m_textures[texName].lock();
+    }
+
     std::vector<std::shared_ptr<Image>> images;
     GLsizei width = 1, height = 1;
     if (is_all_regular_file(texPaths)) {
         std::cout << "Loading texture(GL_TEXTURE_CUBE_MAP) from file [";
-        for (auto& texPath : texPaths) {
+        for (int i = 0; i < texPaths.size(); i++) {
+            auto& texPath = texPaths[i];
             std::cout << texPath << ", ";
-            images.push_back(loadImage(texPath, 1, true));
+            images.push_back(loadImage(std::format("{}_{}", texName, i), texPath, 1, true));
             width  = images.back()->getWidth();
             height = images.back()->getHeight();
         }
@@ -261,18 +343,30 @@ std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::vector<fs::
             texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT); // GL_RGBA and GL_FLOAT indicate the format of defaultValue is RGBA float
         }
     }
+    m_textures[texName] = texture;
+
     return texture;
 }
 
-std::shared_ptr<Image> ResourceManager::loadImage(const fs::path& imagePath, int desiredChannels, bool verticalFlip) {
+std::shared_ptr<Image> ResourceManager::loadImage(const std::string& imageName, const fs::path& imagePath, int desiredChannels, bool verticalFlip) {
+    if (m_images.count(imageName)) {
+        return m_images[imageName].lock();
+    }
+
     auto image = Image::create(imagePath, desiredChannels, verticalFlip); // just use static constructor Image::create()
-    m_images[imagePath.string()] = image;
+    m_images[imageName] = image;
+
     return image;
 }
 
-std::shared_ptr<Shader> ResourceManager::loadShader(const fs::path& vertexShaderPath, const fs::path& fragmentShaderPath) {
+std::shared_ptr<Shader> ResourceManager::loadShader(const std::string& shaderName, const fs::path& vertexShaderPath, const fs::path& fragmentShaderPath) {
+    if (m_shaders.count(shaderName)) {
+        return m_shaders[shaderName].lock();
+    }
+    
     std::shared_ptr<Shader> shader = std::make_shared<Shader>(vertexShaderPath, fragmentShaderPath);
-    m_shaders[vertexShaderPath.string()] = shader;
+    m_shaders[shaderName] = shader;
+
     return shader;
 }
 

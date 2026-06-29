@@ -34,33 +34,27 @@ class ResourceManager {
     ResourceManager(ResourceManager&&)                 = delete;
     ResourceManager& operator=(ResourceManager&&)      = delete;
 
-    static const GLsizei& getCount(const std::string& name) {
-        if (!m_counts.count(name)) { throw std::runtime_error("ResourceManager::getCount: Vertex count for " + name + " not found in ResourceManager"); }
-        return m_counts.at(name);
-    }
-    static const std::shared_ptr<VertexLayout>& getLayout(const std::string& name) {
-        if (!m_layouts.count(name)) { throw std::runtime_error("ResourceManager::getLayout: VertexLayout " + name + " not found in ResourceManager"); }
-        return m_layouts.at(name);
-    }
-    static const std::unique_ptr<VertexBuffer>& getBuffer(const std::string& name) {
-        if (!m_buffers.count(name)) { throw std::runtime_error("ResourceManager::getBuffer: VertexBuffer " + name + " not found in ResourceManager"); }
-        return m_buffers.at(name);
-    }
-    static glm::mat4 getCaptureMatrix(GLint index) {
-        if (index < 0 || index >= 6) { throw std::runtime_error(std::format("ResourceManager::getCaptureMatrix: CaptureMatrix {} not found in ResourceManager", index)); }
-        return m_matrixs[index];
-    }
+    static const GLsizei& getCount(const std::string& name);
+    static const std::shared_ptr<VertexLayout>& getLayout(const std::string& name);
+    static const std::unique_ptr<VertexBuffer>& getBuffer(const std::string& name);
+    static const glm::mat4& getCaptureMatrix(GLint index);
+    std::shared_ptr<Mesh> getMesh(const std::string& name) const;
+    std::shared_ptr<Texture> getTexture(const std::string& name) const;
+    std::shared_ptr<Shader> getShader(const std::string& name) const;
+    void getAllMeshNames(std::vector<std::string>& names) const;
+    void getAllTextureNames(std::vector<std::string>& names) const;
+    void getAllShaderNames(std::vector<std::string>& names) const;
 
     void initialize();
     void destroy();
 
-    std::shared_ptr<Model> loadModel(const fs::path& baseDir, const fs::path& modelName);
-    std::shared_ptr<Material> loadMaterial(const fs::path& baseDir, const tinyobj::material_t& material);
-    std::shared_ptr<Texture> load2DTexture(const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
-    std::shared_ptr<Texture> load2DTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
-    std::shared_ptr<Texture> loadCubeTexture(const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
-    std::shared_ptr<Image> loadImage(const fs::path& imagePath, int desiredChannels, bool verticalFlip);
-    std::shared_ptr<Shader> loadShader(const fs::path& vertexShaderPath, const fs::path& fragmentShaderPath);
+    std::shared_ptr<Model> loadModel(const std::string& modelName, const fs::path& modelDir);
+    std::shared_ptr<Material> loadMaterial(const std::string& matName, const fs::path& matDir, const tinyobj::material_t& material);
+    std::shared_ptr<Texture> load2DTexture(const std::string& texName, const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
+    std::shared_ptr<Texture> load2DTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
+    std::shared_ptr<Texture> loadCubeTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
+    std::shared_ptr<Image> loadImage(const std::string& imageName, const fs::path& imagePath, int desiredChannels, bool verticalFlip);
+    std::shared_ptr<Shader> loadShader(const std::string& shaderName, const fs::path& vertexShaderPath, const fs::path& fragmentShaderPath);
 
    private:
     static std::unordered_map<std::string, GLsizei> m_counts;
