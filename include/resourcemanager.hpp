@@ -51,10 +51,10 @@ class ResourceManager {
     std::shared_ptr<Model> loadModel(const std::string& modelName, const fs::path& modelDir);
     std::shared_ptr<Mesh> loadMesh(const std::string& meshName, const fs::path& meshPath, const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num);
     std::shared_ptr<Material> loadMaterial(const std::string& matName, const fs::path& matDir, const tinyobj::material_t& material);
-    std::shared_ptr<Texture> load2DTexture(const std::string& texName, const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
-    std::shared_ptr<Texture> load2DTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
-    std::shared_ptr<Texture> loadCubeTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1);
-    std::shared_ptr<Image> loadImage(const std::string& imageName, const fs::path& imagePath, int desiredChannels, bool verticalFlip);
+    std::shared_ptr<Texture> load2DTexture(const std::string& texName, const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1, int desiredChannels = 0, bool verticalFlip = true);
+    std::shared_ptr<Texture> load2DTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1, int desiredChannels = 0, bool verticalFlip = true);
+    std::shared_ptr<Texture> loadCubeTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1, int desiredChannels = 0, bool verticalFlip = true);
+    std::shared_ptr<Image> loadImage(const std::string& imageName, const fs::path& imagePath, int desiredChannels = 0, bool verticalFlip = true);
     std::shared_ptr<Shader> loadShader(const std::string& shaderName, const fs::path& vertexShaderPath, const fs::path& fragmentShaderPath);
 
    private:
@@ -68,6 +68,9 @@ class ResourceManager {
     std::unordered_map<std::string, std::weak_ptr<Texture>> m_textures;
     std::unordered_map<std::string, std::weak_ptr<Image>> m_images;
     std::unordered_map<std::string, std::weak_ptr<Shader>> m_shaders;
+
+    const GLsizei m_textureDefaultWidth = 256;
+    const GLsizei m_textureDefaultHeight = 256;
 };
 
 }; // namespace tinyglrenderer

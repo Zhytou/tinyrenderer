@@ -198,6 +198,7 @@ void ResourceManager::getAllTextureNames(std::vector<std::string>& names) const 
     names.clear();
     for (auto& [name, texture] : m_textures) {
         if (texture.expired()) continue;
+        if (name.starts_with("default_")) continue; // skip default texture generated from glm::vec4 value
         names.push_back(name);
     }
 }
@@ -253,14 +254,14 @@ std::shared_ptr<Material> ResourceManager::loadMaterial(const std::string& matNa
     }
 
     glm::vec4 albedo = glm::vec4(material.diffuse[0], material.diffuse[1], material.diffuse[2], 1.0f);
-    glm::vec4 normal = glm::vec4(0.5f, 0.5f, 1.0f, 0.f);
-    glm::vec4 mrao = glm::vec4(material.metallic, material.roughness, 0.f, 0.f);
+    glm::vec4 normal = glm::vec4(0.5f, 0.5f, 1.0f, 1.f);
+    glm::vec4 mrao = glm::vec4(material.metallic, material.roughness, 0.f, 1.f);
 
     std::unordered_map<std::string, std::shared_ptr<Texture>> textures = {
         // TODO: fix mip level(when miplevel is more than 1, the render result is wrong, blocking artifacts appear)
-        {"albedo", load2DTexture("albedo", matDir / material.diffuse_texname, albedo)},   
-        {"normal", load2DTexture("normal", matDir / material.normal_texname, normal)}, 
-        {"mrao", load2DTexture("mrao", {matDir / material.metallic_texname, matDir / material.roughness_texname, matDir / material.ambient_texname}, mrao)}
+        {"albedo", load2DTexture("albedo", matDir / material.diffuse_texname, albedo, GL_RGBA32F)},   
+        {"normal", load2DTexture("normal", matDir / material.normal_texname, normal, GL_RGBA32F)}, 
+        {"mrao", load2DTexture("mrao", {matDir / material.metallic_texname, matDir / material.roughness_texname, matDir / material.ambient_texname}, mrao, GL_RGBA32F, 1, 1)}
     };
     auto nmaterial = std::make_shared<Material>(matName, textures);
     m_materials[matName] = nmaterial;
@@ -268,7 +269,8 @@ std::shared_ptr<Material> ResourceManager::loadMaterial(const std::string& matNa
     return nmaterial;
 }
 
-std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texName, const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texName, const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels, int desiredChannels, bool verticalFlip) {
+    std::string texAlias = std::format("default_2d_tex_color({:.3f}, {:.3f}, {:.3f}, {:.3f})", defaultValue.x, defaultValue.y, defaultValue.z, defaultValue.w);
     if (m_textures.count(texName)) {
         return m_textures[texName].lock();
     }
@@ -276,13 +278,18 @@ std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texNa
     std::shared_ptr<Texture> texture;
     if (fs::is_regular_file(texPath)) {
         std::cout << "Loading texture(GL_TEXTURE_2D) from file [" << texPath << "]\n";
-        std::shared_ptr<Image> image = loadImage(texName, texPath, 0, true);
+        std::shared_ptr<Image> image = loadImage(texName, texPath, desiredChannels, verticalFlip);
         texture = std::make_shared<Texture>(image->getWidth(), image->getHeight(), GL_TEXTURE_2D, internalFormat, mipLevels);
         texture->upload(image);
     } else {
+        if (m_textures.count(texAlias)) {
+            return m_textures[texAlias].lock();
+        }
+
         std::cout << "Loading texture(GL_TEXTURE_2D) from value [" << defaultValue << "]\n";
-        texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, internalFormat, 1);
+        texture = std::make_shared<Texture>(m_textureDefaultWidth, m_textureDefaultHeight, GL_TEXTURE_2D, internalFormat, mipLevels);
         texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT); // GL_RGBA and GL_FLOAT indicate the format of defaultValue is RGBA float
+        m_textures[texAlias] = texture;
     }
     m_textures[texName] = texture;
 
@@ -298,7 +305,8 @@ bool is_all_regular_file(const std::vector<fs::path>& paths) {
     return true;
 }
 
-std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels, int desiredChannels, bool verticalFlip) {
+    std::string texAlias = std::format("default_2d_tex_color({:.3f}, {:.3f}, {:.3f}, {:.3f})", defaultValue.x, defaultValue.y, defaultValue.z, defaultValue.w);
     if (m_textures.count(texName)) {
         return m_textures[texName].lock();
     }
@@ -313,20 +321,26 @@ std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texNa
             images.push_back(loadImage(std::format("{}_{}", texName, i), texPath, 1, true));
         }
         std::cout << "]\n";
-        auto mimage = Image::merge(images, 3);
-        texture = std::make_shared<Texture>(mimage->getWidth(), mimage->getHeight(), GL_TEXTURE_2D, GL_RGBA8, mipLevels);
+        auto mimage = Image::merge(images, 4);
+        texture = std::make_shared<Texture>(mimage->getWidth(), mimage->getHeight(), GL_TEXTURE_2D, internalFormat, mipLevels);
         texture->upload(mimage);
     } else {
+        if (m_textures.count(texAlias)) {
+            return m_textures[texAlias].lock();
+        }
+        
         std::cout << "Loading texture(GL_TEXTURE_2D) from value [" << defaultValue << "]\n";
-        texture = std::make_shared<Texture>(1, 1, GL_TEXTURE_2D, internalFormat, 1);
+        texture = std::make_shared<Texture>(m_textureDefaultWidth, m_textureDefaultHeight, GL_TEXTURE_2D, internalFormat, mipLevels);
         texture->clear(glm::value_ptr(defaultValue), GL_RGBA, GL_FLOAT); // GL_RGBA and GL_FLOAT indicate the format of defaultValue is RGBA float
+        m_textures[texAlias] = texture;
     }
     m_textures[texName] = texture;
     
     return texture;
 }
 
-std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels) {
+std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::string& texName, const std::vector<fs::path>& texPaths, const glm::vec4& defaultValue, GLenum internalFormat, GLsizei mipLevels, int desiredChannels, bool verticalFlip) {
+    std::string texAlias = std::format("default_cube_tex_color({:.3f}, {:.3f}, {:.3f}, {:.3f})", defaultValue.x, defaultValue.y, defaultValue.z, defaultValue.w);
     if (m_textures.count(texName)) {
         return m_textures[texName].lock();
     }
@@ -338,12 +352,16 @@ std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::string& tex
         for (int i = 0; i < texPaths.size(); i++) {
             auto& texPath = texPaths[i];
             std::cout << texPath << ", ";
-            images.push_back(loadImage(std::format("{}_{}", texName, i), texPath, 1, true));
+            images.push_back(loadImage(std::format("{}_{}", texName, i), texPath, desiredChannels, verticalFlip));
             width  = images.back()->getWidth();
             height = images.back()->getHeight();
         }
         std::cout << "]\n";
     } else {
+        if (m_textures.count(texAlias)) {
+            return m_textures[texAlias].lock();
+        }
+
         std::cout << "Loading texture(GL_TEXTURE_CUBE_MAP) from value [" << defaultValue << "]\n";
     }
 
@@ -357,6 +375,9 @@ std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::string& tex
         }
     }
     m_textures[texName] = texture;
+    if (images.empty()) {
+        m_textures[texAlias] = texture;
+    }
 
     return texture;
 }
