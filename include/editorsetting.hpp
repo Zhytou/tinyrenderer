@@ -29,7 +29,8 @@ struct EditorSetting {
     EditorTheme currTheme      = EditorTheme::PURPLE_THEME;
 
     int currRPItemIndex = 0; // Current selected item index in the left list of resource panel
-
+    int currRPShaderIndex = 0;
+    
     float width      = 1280.0f;
     float height     = 720.0f;
     float padding    = 10.0f;
@@ -37,7 +38,7 @@ struct EditorSetting {
 
     const float titleBarHeight      = 38.0f;
     const float activityBarWidth    = 65.0f;
-    const float sideBarWidth        = 180.0f;
+    const float sideBarWidth        = 280.0f;
     const float resourcePanelHeight = 300.0f;
 
     const float smallFontSize = 14.0f;

@@ -324,10 +324,13 @@ void Editor::drawSideBar(Scene& scene) {
     if (ImGui::Begin(sideBarLabel, nullptr, sideBarFlags)) {
         switch (m_setting.currSBTab) {
             case SideBarTab::SB_TAB_RENDERER: {
+                ImGui::Checkbox("Deferred Rendering", &m_rendererSetting.deferred);
                 ImGui::Checkbox("Shadow Mapping", &m_rendererSetting.shadow);
                 ImGui::Checkbox("Environment IBL", &m_rendererSetting.ibl);
                 ImGui::Checkbox("Bloom Blur", &m_rendererSetting.bloom);
                 ImGui::Checkbox("Lensflare Effect", &m_rendererSetting.lensflare);
+                ImGui::Checkbox("Dirt Mask", &m_rendererSetting.dirtmask);
+                ImGui::Checkbox("Screen Space Ambient Occlussion", &m_rendererSetting.ssao);
             } break;
             case SideBarTab::SB_TAB_LIGHTS: {
                 auto& lights = scene.getLights();
@@ -446,12 +449,32 @@ void Editor::drawResourcePanel(Scene& scene, ResourceManager& manager) {
     if (!currRPItemNames.empty() && m_setting.currRPItemIndex < currRPItemNames.size()) {
         std::string name = currRPItemNames[m_setting.currRPItemIndex];
         switch(m_setting.currRPTab) {
-            case ResourcePanelTab::RP_TAB_MESHES: 
-            case ResourcePanelTab::RP_TAB_SHADERS: {
+            case ResourcePanelTab::RP_TAB_MESHES: {
+                const auto& mesh = manager.getMesh(name);
                 
+                ImGui::Text("OBJ File Preview");
+                ImGui::Separator();
+                const auto& textContent = mesh->getSource();
+                ImVec2 textRegionSize = ImGui::GetContentRegionAvail();
+                ImGui::InputTextMultiline("##TextShaderPreview", const_cast<char*>(textContent.c_str()), textContent.size(), textRegionSize, ImGuiInputTextFlags_ReadOnly);
+            } break;
+            case ResourcePanelTab::RP_TAB_SHADERS: {
+                const auto& shader = manager.getShader(name);
+
+                if (m_setting.currRPShaderIndex == 0) {
+                    if (ImGui::Button("GLSL File Preview(.vert)##ToggleBtn")) m_setting.currRPShaderIndex = 1; 
+                } else {
+                    if (ImGui::Button("GLSL File Preview(.frag)##ToggleBtn")) m_setting.currRPShaderIndex = 0; 
+                }
+                ImGui::Separator();
+                const auto& [vertShaderSource, fragShaderSource] = shader->getSource();
+                const auto& textContent = (m_setting.currRPShaderIndex == 0 ? vertShaderSource : fragShaderSource);
+                ImVec2 textRegionSize = ImGui::GetContentRegionAvail();
+                ImGui::InputTextMultiline("##TextShaderPreview", const_cast<char*>(textContent.c_str()), textContent.size(), textRegionSize, ImGuiInputTextFlags_ReadOnly);
             } break;
             default: { // ResourcePanelTab::RP_TAB_TEXTURES
                 const auto& texture = manager.getTexture(name);
+
                 GLuint glTexID = texture->getID(); 
                 ImTextureID imguiTexID = (ImTextureID)(intptr_t)glTexID;
 
@@ -504,10 +527,14 @@ void Editor::drawHUD(Scene& scene, const DisplayInfo& info) {
         glm::vec3 front    = glm::normalize(target - pos);
         ImGui::Text("Camera Position : (%.2f, %.2f, %.2f)", pos.x, pos.y, pos.z);
         ImGui::Text("Camera FrontVec : (%.2f, %.2f, %.2f)", front.x, front.y, front.z);
+        ImGui::Text("Deferred Rendering : %s", m_rendererSetting.deferred ? "On" : "Off");
         ImGui::Text("Shadow Mapping : %s", m_rendererSetting.shadow ? "On" : "Off");
         ImGui::Text("Environment IBL : %s", m_rendererSetting.ibl ? "On" : "Off");
         ImGui::Text("Bloom Blur : %s", m_rendererSetting.bloom ? "On" : "Off");
         ImGui::Text("Lensflare : %s", m_rendererSetting.lensflare ? "On" : "Off");
+        ImGui::Text("Dirt Mask : %s", m_rendererSetting.dirtmask ? "On" : "Off");
+        ImGui::Text("Screen Space Ambient Occlusion : %s", m_rendererSetting.ssao ? "On" : "Off");
+        ImGui::Text("Temporal Anti-Aliasing : %s", m_rendererSetting.taa ? "On" : "Off");
     }
     ImGui::End();
 
