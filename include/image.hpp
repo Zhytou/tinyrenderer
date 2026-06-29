@@ -15,7 +15,7 @@ namespace tinyglrenderer {
 class Image {
    private:
     Image() = default;
-    Image(const std::string& filename, void* data, GLenum type, int width, int height, int channels);
+    Image(const std::string& filepath, void* data, GLenum type, int width, int height, int channels);
 
    public:
     Image(const Image& other)            = delete;
@@ -24,7 +24,7 @@ class Image {
     Image& operator=(Image&& other);
     ~Image();
 
-    const std::string& getFilename() const { return m_filename; }
+    const std::string& getFilePath() const { return m_filepath; }
     void* getData() const { return m_data; }
     int getWidth() const { return m_width; }
     int getHeight() const { return m_height; }
@@ -60,7 +60,7 @@ class Image {
     static std::shared_ptr<Image> resize(const std::shared_ptr<Image>& image, int width, int height);
 
    private:
-    std::string m_filename;
+    std::string m_filepath;
     void* m_data   = nullptr;
     GLenum m_type  = GL_UNSIGNED_BYTE;  // GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT, or GL_FLOAT
     int m_width    = 0;

@@ -4,8 +4,10 @@
 
 namespace tinyglrenderer {
 
-Image::Image(const std::string& filename, void* data, GLenum type, int width, int height, int channels) {
-    m_filename = filename;
+namespace fs = std::filesystem;
+
+Image::Image(const std::string& filepath, void* data, GLenum type, int width, int height, int channels) {
+    m_filepath = filepath;
     m_data     = data;
     m_type     = type;
     m_width    = width;
@@ -17,7 +19,7 @@ Image::Image(Image&& other) {
     if (m_data) {
         stbi_image_free(m_data);
     }
-    m_filename       = std::move(other.m_filename);
+    m_filepath       = std::move(other.m_filepath);
     m_data           = other.m_data;
     m_type           = other.m_type;
     m_width          = other.m_width;
@@ -34,7 +36,7 @@ Image& Image::operator=(Image&& other) {
     if (m_data) {
         stbi_image_free(m_data);
     }
-    m_filename       = std::move(other.m_filename);
+    m_filepath       = std::move(other.m_filepath);
     m_data           = other.m_data;
     m_type           = other.m_type;
     m_width          = other.m_width;
@@ -54,8 +56,9 @@ Image::~Image() {
     }
 }
 
-std::shared_ptr<Image> Image::create(const std::filesystem::path& path, int desiredChannels, bool flip) {
+std::shared_ptr<Image> Image::create(const fs::path& path, int desiredChannels, bool flip) {
     stbi_set_flip_vertically_on_load(flip);
+    std::string filepath = fs::canonical(path).string();
     void* data  = nullptr;
     GLenum type = GL_UNSIGNED_BYTE;
     int width = 0, height = 0, channels = 0;
@@ -86,7 +89,7 @@ std::shared_ptr<Image> Image::create(const std::filesystem::path& path, int desi
     }
 
     // Convert to desired channels when desired channels is not 0. Otherwise, use image original channels.
-    return std::shared_ptr<Image>(new Image(path.string(), data, type, width, height, desiredChannels == 0 ? channels : desiredChannels));
+    return std::shared_ptr<Image>(new Image(filepath, data, type, width, height, desiredChannels == 0 ? channels : desiredChannels));
 }
 
 std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& images, int channels) {
@@ -94,7 +97,7 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
         throw std::runtime_error("Image::merge: Empty image list or null image");
     }
 
-    std::stringstream filename;
+    std::stringstream filepaths;
     std::vector<std::shared_ptr<Image>> resizedImages;
     int width = images[0]->getWidth(), height = images[0]->getHeight(), totChannels = 0;
     GLenum type = GL_UNSIGNED_BYTE;
@@ -102,7 +105,7 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
         if (image == nullptr) {
             throw std::runtime_error("Image::merge: Null image");
         }
-        filename << image->getFilename() << ", ";
+        filepaths << image->getFilePath() << ", ";
         if (width != image->getWidth() || height != image->getHeight()) {
             resizedImages.push_back(resize(image, width, height));
         } else {
@@ -176,7 +179,7 @@ std::shared_ptr<Image> Image::merge(const std::vector<std::shared_ptr<Image>>& i
             dstChannel += srcChannels;
         }
     }
-    return std::shared_ptr<Image>(new Image(filename.str(), data, type, width, height, channels));
+    return std::shared_ptr<Image>(new Image(filepaths.str(), data, type, width, height, channels));
 }
 
 std::shared_ptr<Image> Image::resize(const std::shared_ptr<Image>& image, int width, int height) {
@@ -184,7 +187,7 @@ std::shared_ptr<Image> Image::resize(const std::shared_ptr<Image>& image, int wi
         return nullptr;
     }
 
-    auto filename= image->getFilename();
+    auto filepath = image->getFilePath();
     int channels  = image->getChannels();
     GLenum type   = image->getDataType();
     GLenum format = image->getFormat();
@@ -218,7 +221,7 @@ std::shared_ptr<Image> Image::resize(const std::shared_ptr<Image>& image, int wi
         stbir_resize_uint8_linear(static_cast<uint8_t*>(src), srcW, srcH, 0, static_cast<uint8_t*>(dst), dstW, dstH, 0, layout);
     }
 
-    return std::shared_ptr<Image>(new Image(filename, data, type, width, height, channels));
+    return std::shared_ptr<Image>(new Image(filepath, data, type, width, height, channels));
 }
 
 }  // namespace tinyglrenderer
