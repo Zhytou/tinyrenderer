@@ -448,21 +448,21 @@ void Renderer::setup(ResourceManager& manager) {
 
     // 3. Compile and link shaders
     {
-        m_shaders["equirect_to_cubemap"]       = manager.loadShader("../asset/shader/equirect_to_cubemap.vert", "../asset/shader/equirect_to_cubemap.frag");
-        m_shaders["ibl_irradiance"]            = manager.loadShader("../asset/shader/ibl_irradiance.vert", "../asset/shader/ibl_irradiance.frag");
-        m_shaders["ibl_prefiltered"]           = manager.loadShader("../asset/shader/ibl_prefiltered.vert", "../asset/shader/ibl_prefiltered.frag");
-        m_shaders["ibl_brdf_lut"]              = manager.loadShader("../asset/shader/ibl_brdf_lut.vert", "../asset/shader/ibl_brdf_lut.frag");
-        m_shaders["shadow_mapping"]            = manager.loadShader("../asset/shader/shadow_mapping.vert", "../asset/shader/shadow_mapping.frag");
-        m_shaders["deferred_geometry"]         = manager.loadShader("../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
-        m_shaders["deferred_shading"]          = manager.loadShader("../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
-        m_shaders["forward_opaque"]            = manager.loadShader("../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
-        m_shaders["skybox"]                    = manager.loadShader("../asset/shader/skybox.vert", "../asset/shader/skybox.frag");
-        m_shaders["postprocess_highlight"]     = manager.loadShader("../asset/shader/postprocess_highlight.vert", "../asset/shader/postprocess_highlight.frag");
-        m_shaders["postprocess_kawase_down"]   = manager.loadShader("../asset/shader/postprocess_kawase_down.vert", "../asset/shader/postprocess_kawase_down.frag");
-        m_shaders["postprocess_kawase_up"]     = manager.loadShader("../asset/shader/postprocess_kawase_up.vert", "../asset/shader/postprocess_kawase_up.frag");    
-        m_shaders["postprocess_lensflare"]     = manager.loadShader("../asset/shader/postprocess_lensflare.vert", "../asset/shader/postprocess_lensflare.frag");
-        m_shaders["postprocess_gaussian_blur"] = manager.loadShader("../asset/shader/postprocess_gaussian_blur.vert", "../asset/shader/postprocess_gaussian_blur.frag");
-        m_shaders["postprocess_final"]         = manager.loadShader("../asset/shader/postprocess.vert", "../asset/shader/postprocess.frag");
+        m_shaders["equirect_to_cubemap"]       = manager.loadShader("equirect_to_cubemap", "../asset/shader/equirect_to_cubemap.vert", "../asset/shader/equirect_to_cubemap.frag");
+        m_shaders["ibl_irradiance"]            = manager.loadShader("ibl_irradiance", "../asset/shader/ibl_irradiance.vert", "../asset/shader/ibl_irradiance.frag");
+        m_shaders["ibl_prefiltered"]           = manager.loadShader("ibl_prefiltered", "../asset/shader/ibl_prefiltered.vert", "../asset/shader/ibl_prefiltered.frag");
+        m_shaders["ibl_brdf_lut"]              = manager.loadShader("ibl_brdf_lut", "../asset/shader/ibl_brdf_lut.vert", "../asset/shader/ibl_brdf_lut.frag");
+        m_shaders["shadow_mapping"]            = manager.loadShader("shadow_mapping", "../asset/shader/shadow_mapping.vert", "../asset/shader/shadow_mapping.frag");
+        m_shaders["deferred_geometry"]         = manager.loadShader("deferred_geometry", "../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
+        m_shaders["deferred_shading"]          = manager.loadShader("deferred_shading", "../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
+        m_shaders["forward_opaque"]            = manager.loadShader("forward_opaque", "../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
+        m_shaders["skybox"]                    = manager.loadShader("skybox", "../asset/shader/skybox.vert", "../asset/shader/skybox.frag");
+        m_shaders["postprocess_highlight"]     = manager.loadShader("postprocess_highlight", "../asset/shader/postprocess_highlight.vert", "../asset/shader/postprocess_highlight.frag");
+        m_shaders["postprocess_kawase_down"]   = manager.loadShader("postprocess_kawase_down", "../asset/shader/postprocess_kawase_down.vert", "../asset/shader/postprocess_kawase_down.frag");
+        m_shaders["postprocess_kawase_up"]     = manager.loadShader("postprocess_kawase_up", "../asset/shader/postprocess_kawase_up.vert", "../asset/shader/postprocess_kawase_up.frag");    
+        m_shaders["postprocess_lensflare"]     = manager.loadShader("postprocess_lensflare", "../asset/shader/postprocess_lensflare.vert", "../asset/shader/postprocess_lensflare.frag");
+        m_shaders["postprocess_gaussian_blur"] = manager.loadShader("postprocess_gaussian_blur", "../asset/shader/postprocess_gaussian_blur.vert", "../asset/shader/postprocess_gaussian_blur.frag");
+        m_shaders["postprocess_final"]         = manager.loadShader("postprocess_final", "../asset/shader/postprocess.vert", "../asset/shader/postprocess.frag");
     }
 
     // 4. Create framebuffers
@@ -506,7 +506,7 @@ void Renderer::setup(ResourceManager& manager) {
 
     {
         // static renderer resources
-        m_textures["dirtmask"] = manager.load2DTexture(m_setting.dirtmask ? "../asset/static/dirtmask.png" : "", glm::vec4(1.0f), GL_RGBA32F, 1);
+        m_textures["dirtmask"] = manager.load2DTexture("dirtmask", m_setting.dirtmask ? "../asset/static/dirtmask.png" : "", glm::vec4(1.0f), GL_RGBA32F, 1);
     }
 
     // 6. Create samplers for corresponding slots
@@ -832,9 +832,10 @@ void Renderer::render(const Scene& scene) {
             m_textures["blur_up"]->unclamp();
             m_passes["postprocess_kawase_up"].end();
         }
-
-        m_textures["bloom"] = m_textures["blur_up"];
+    } else {
+        m_textures["blur_up"]->clear(glm::value_ptr(glm::vec4(0.0f)), GL_RGBA, GL_FLOAT); // reset the bloom map
     }
+    m_textures["bloom"] = m_textures["blur_up"];
 
     if (m_setting.lensflare) {
         GLsizei count = ResourceManager::getCount("quad");
@@ -844,7 +845,7 @@ void Renderer::render(const Scene& scene) {
             m_states["postprocess_lensflare"].apply();
             m_shaders["postprocess_lensflare"]->use();
             m_passes["postprocess_lensflare"].begin(m_frames["lensflare"]);
-            draw(layout, {"bloom"}, count); // use blurred highlight(namely bloom) as input to generate raw lensflare(ghost/halo/distortion).
+            draw(layout, {"bloom"}, count); // use blurred highlight namely bloom as input to generate raw lensflare(ghost/halo/distortion).
             m_passes["postprocess_lensflare"].end();
         }
 
@@ -882,6 +883,9 @@ void Renderer::render(const Scene& scene) {
             m_frames["lensflare"]->attach(GL_COLOR_ATTACHMENT0, m_textures["lensflare"], 0);
             m_frames["lensflare"]->copy(*m_frames["blur_y"], GL_COLOR_BUFFER_BIT, GL_LINEAR); // replace the lensflare texture with the blurred one.
         }
+    } else {
+        if (!m_setting.bloom) { m_textures["blur_up"]->clear(glm::value_ptr(glm::vec4(0.0f)), GL_RGBA, GL_FLOAT); } // reset the bloom map
+        m_textures["lensflare"]->clear(glm::value_ptr(glm::vec4(0.0f)), GL_RGBA, GL_FLOAT); // reset the lensflare map
     }
 
     // TODO: screen space ambient occlusion

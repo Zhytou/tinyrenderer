@@ -28,13 +28,14 @@ namespace tinyglrenderer {
  */
 class Renderer {
    public:
-    Renderer(RendererSetting& setting) : m_setting(setting) {}
+    Renderer(RendererSetting& setting)
+        : m_setting(setting) {}
     ~Renderer() { shutdown(); }
 
     Renderer(const Renderer& renderer)            = delete;
     Renderer& operator=(const Renderer& renderer) = delete;
 
-    void setup();
+    void setup(ResourceManager& manager);
     void shutdown();
     // Convert .hdr skybox to cubemap and bake the IBL environment map
     void prepare(const Scene& scene);
@@ -43,7 +44,7 @@ class Renderer {
     // Render scene
     void render(const Scene& scene);
 
-    uint32_t getDrawCall() const { return m_drawCall; }
+    size_t getDrawCall() const { return m_drawCall; }
 
    private:
     // draw mesh
@@ -65,7 +66,7 @@ class Renderer {
 
     /// name mappings
     std::unordered_multimap<std::string, std::string> m_pass2FrameNames;
-    std::unordered_map<std::string, uint32_t> m_texture2SlotIndexs;
+    std::unordered_map<std::string, GLuint> m_texture2SlotIndexs;
 
     /// renderer settings
     RendererSetting& m_setting;
