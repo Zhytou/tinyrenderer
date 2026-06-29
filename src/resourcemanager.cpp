@@ -222,8 +222,7 @@ std::shared_ptr<Model> ResourceManager::loadModel(const std::string& modelName, 
 
     // 2. Create mesh from tinyobj shapes
     std::cout << "Loading mesh [" << modelPath << "]\n";
-    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(attributes, shapes, materials.size());
-    m_meshes[modelName] = mesh; // add mesh to cache
+    std::shared_ptr<Mesh> mesh = loadMesh(modelName, modelPath, attributes, shapes, materials.size());
 
     // 3. Convert tinyobj material into self-defined material
     std::cout << "Loading materials [";
@@ -237,8 +236,22 @@ std::shared_ptr<Model> ResourceManager::loadModel(const std::string& modelName, 
     return make_shared<Model>(mesh, nmaterials);
 }
 
+std::shared_ptr<Mesh> ResourceManager::loadMesh(const std::string& meshName, const fs::path& meshPath, const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num) {
+    if (m_meshes.count(meshName)) {
+        return m_meshes[meshName].lock();
+    }
+
+    std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>(meshPath, attributes, shapes, num);
+    m_meshes[meshName] = mesh;
+    
+    return mesh;
+}
 
 std::shared_ptr<Material> ResourceManager::loadMaterial(const std::string& matName, const fs::path& matDir, const tinyobj::material_t& material) {
+    if (m_materials.count(matName)) {
+        return m_materials[matName].lock();
+    }
+
     glm::vec4 albedo = glm::vec4(material.diffuse[0], material.diffuse[1], material.diffuse[2], 1.0f);
     glm::vec4 normal = glm::vec4(0.5f, 0.5f, 1.0f, 0.f);
     glm::vec4 mrao = glm::vec4(material.metallic, material.roughness, 0.f, 0.f);
