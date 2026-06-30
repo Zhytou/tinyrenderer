@@ -667,15 +667,27 @@ void Renderer::update(const Scene& scene, ResourceManager& manager) {
         // 1.2 Model uniform block
         std::vector<ModelBlock> modelBlocks;
         scene.getModelBlocks(modelBlocks);
-        if (m_buffers["model"] == nullptr) { m_buffers["model"] = std::make_shared<UniformBuffer>(std::max(sizeof(ModelBlock) * modelBlocks.size(), 1ul)); }
-        m_buffers["model"]->upload(0, std::max(sizeof(ModelBlock) * modelBlocks.size(), 1ul), modelBlocks.data());
+        size_t maxModelUBOSize = sizeof(ModelBlock) * scene.getMaxModelCount();
+        size_t currModelUBOSize = sizeof(ModelBlock) * scene.getVisibleModelCount();
+        if (m_buffers["model"] == nullptr) { m_buffers["model"] = std::make_shared<UniformBuffer>(maxModelUBOSize); }
+        if (currModelUBOSize > 0) { 
+            m_buffers["model"]->upload(0, currModelUBOSize, modelBlocks.data()); 
+        } else {
+            m_buffers["model"]->clear(0, maxModelUBOSize); // reset the model ubo if no model is rendered
+        }
         m_buffers["model"]->bind(1);
 
         // 1.3 Light shader storage array
         std::vector<LightBlock> lightBlocks;
         scene.getLightBlocks(lightBlocks);
-        if (m_buffers["light"] == nullptr) { m_buffers["light"] = std::make_shared<ShaderStorageBuffer>(std::max(sizeof(LightBlock) * lightBlocks.size(), 1ul)); }
-        m_buffers["light"]->upload(0, std::max(sizeof(LightBlock) * lightBlocks.size(), 1ul), lightBlocks.data());
+        size_t maxLightSSBOSize = sizeof(LightBlock) * scene.getMaxLightCount();
+        size_t currLightSSBOSize = sizeof(LightBlock) * scene.getVisibleLightCount();
+        if (m_buffers["light"] == nullptr) { m_buffers["light"] = std::make_shared<ShaderStorageBuffer>(maxLightSSBOSize); }
+        if (currLightSSBOSize > 0) { 
+            m_buffers["light"]->upload(0, currLightSSBOSize, lightBlocks.data()); 
+        } else {
+            m_buffers["light"]->clear(0, maxLightSSBOSize); // reset the light ssbo if no light is rendered
+        }
         m_buffers["light"]->bind(0);
     }
 
@@ -691,6 +703,7 @@ void Renderer::update(const Scene& scene, ResourceManager& manager) {
         m_states["shadow_mapping"].apply();
         m_shaders["shadow_mapping"]->use();
         m_passes["shadow_mapping"].begin(m_frames["shadow"]);
+        // TODO: fix shadow mapping for light visibility change(editor)
         for (int i = 0; i < lights.size(); i++) {
             m_states["shadow_mapping"].view(rects[i * 4], rects[i * 4 + 1], rects[i * 4 + 2], rects[i * 4 + 3]);
             m_shaders["shadow_mapping"]->setUniformValue("uLightViewProjMatrix", lights[i]->getViewProjMatrix());
@@ -757,7 +770,7 @@ void Renderer::render(const Scene& scene) {
 
             m_states["deferred_shading"].apply();
             m_shaders["deferred_shading"]->use();
-            m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getLights().size());
+            m_shaders["deferred_shading"]->setUniformValue("uLightCount", (int)scene.getVisibleLightCount());
             m_passes["deferred_shading"].begin(m_frames["hdr_screen"]);
             draw(layout, {"gbuffer.albedo", "gbuffer.normal", "gbuffer.mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut"}, count);
             m_passes["deferred_shading"].end();
@@ -765,7 +778,7 @@ void Renderer::render(const Scene& scene) {
     } else {
         m_states["forward_opaque"].apply();
         m_shaders["forward_opaque"]->use();
-        m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getLights().size());
+        m_shaders["forward_opaque"]->setUniformValue("uLightCount", (int)scene.getVisibleLightCount());
         m_passes["forward_opaque"].begin(m_frames["hdr_screen"]);
         for (const auto& item : items) {
             m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
