@@ -22,7 +22,12 @@
         ]            
     },
     "models": [
-
+        {
+            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/gun/",
+            "name": "gun.obj",
+            "transform": {
+            }
+        }
     ],
     "skybox":{
         "equirect": {

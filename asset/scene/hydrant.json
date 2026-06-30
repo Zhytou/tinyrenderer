@@ -1,11 +1,11 @@
 {
     "camera": {
-        "eye": [3, 0.5, 1],
-        "target": [0, 0.5, 0],
+        "eye": [20, 20, 20],
+        "target": [0, 0, 0],
         "up": [0, 1, 0],
         "fov": 45.0,
         "near": 0.1,
-        "far": 10,
+        "far": 50,
         "width": 800,
         "height": 800,
         "speed": 0.05
@@ -28,21 +28,10 @@
     },
     "models": [
         {
-            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/firehydrant/",
-            "name": "firehydrant.obj",
+            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/hydrant/",
+            "name": "hydrant.obj",
             "transform": {
-            }
-        },
-        {
-            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/",
-            "name": "floor.obj",
-            "default_mat": {
-                "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
-                "metallic": 0.2,
-                "roughness": 0.8
-            },
-            "transform": {
-                "scale": [1.7, 1, 1.7]
+                "scale": [0.05, 0.1, 0.05]
             }
         }
     ]

@@ -23,7 +23,7 @@
     },
     "models": [
         {
-            "base_dir": "/home/zhytou/tinyrenderer/asset/model/teapot/",
+            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/teapot/",
             "name": "teapot.obj",
             "transform": {
                 "rotate": [90, 0, -30]
@@ -31,7 +31,7 @@
         }
     ],
     "skybox": {
-        "base_dir": "/home/zhytou/tinyrenderer/asset/cubemap/indoor",
+        "base_dir": "/home/zhytou/tinyglrenderer/asset/cubemap/indoor",
         "left": "negx.jpg",
         "right": "posx.jpg",
         "bottom": "negy.jpg",

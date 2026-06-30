@@ -1,0 +1,7 @@
+newmtl wire_000000000
+d 1
+map_Kd ../../material/hydrant/albedo.jpg
+map_Ka ../../material/hydrant/ao.jpg
+map_Pm ../../material/hydrant/metallic.jpg
+map_Pr ../../material/hydrant/roughness.jpg
+norm ../../material/hydrant/normal.jpg
