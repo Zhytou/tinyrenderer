@@ -1,7 +1,7 @@
 {
     "camera": {
-        "eye": [0, 5, 3],
-        "target": [0, 0, 0],
+        "eye": [2, 7.5, 6],
+        "target": [2, 7.5, 0],
         "up": [0, 1, 0],
         "fov": 45.0,
         "near": 0.1,
@@ -29,11 +29,11 @@
             "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
             "default_mat": {
                 "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
-                "metallic": 0.0,
-                "roughness": 0.2
+                "metallic": 0.9,
+                "roughness": 0.1
             },
             "transform": {
-                "translate": [-3, 0, 0]
+                "translate": [-2, 10, 0]
             }
         },
         {
@@ -41,18 +41,102 @@
             "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
             "default_mat": {
                 "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
-                "metallic": 0.2,
-                "roughness": 0.8
+                "metallic": 0.9,
+                "roughness": 0.3
             },
             "transform": {
-                "translate": [3, 0, 0]
+                "translate": [2, 10, 0]
+            }
+        },
+        {
+            "name": "sphere02",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
+            "default_mat": {
+                "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
+                "metallic": 0.9,
+                "roughness": 0.5
+            },
+            "transform": {
+                "translate": [6, 10, 0]
+            }
+        },
+        {
+            "name": "sphere03",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
+            "default_mat": {
+                "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
+                "metallic": 0.5,
+                "roughness": 0.1
+            },
+            "transform": {
+                "translate": [-2, 7, 0]
+            }
+        },
+        {
+            "name": "sphere04",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
+            "default_mat": {
+                "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
+                "metallic": 0.5,
+                "roughness": 0.3
+            },
+            "transform": {
+                "translate": [2, 7, 0]
+            }
+        },
+        {
+            "name": "sphere05",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
+            "default_mat": {
+                "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
+                "metallic": 0.5,
+                "roughness": 0.5
+            },
+            "transform": {
+                "translate": [6, 7, 0]
+            }
+        },
+        {
+            "name": "sphere06",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
+            "default_mat": {
+                "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
+                "metallic": 0.1,
+                "roughness": 0.1
+            },
+            "transform": {
+                "translate": [-2, 4, 0]
+            }
+        },
+        {
+            "name": "sphere07",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
+            "default_mat": {
+                "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
+                "metallic": 0.1,
+                "roughness": 0.3
+            },
+            "transform": {
+                "translate": [2, 4, 0]
+            }
+        },
+        {
+            "name": "sphere08",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
+            "default_mat": {
+                "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
+                "metallic": 0.1,
+                "roughness": 0.5
+            },
+            "transform": {
+                "translate": [6, 4, 0]
             }
         }
     ],
     "skybox":{
         "equirect": {
-            "base_dir": "/home/zhytou/tinyglrenderer/asset/skybox/equirect/barcelona",
-            "name": "barcelona.hdr"
+            "base_dir": "/home/zhytou/tinyglrenderer/asset/skybox/equirect/street",
+            "name": "street.hdr"
         }
     }
 }
