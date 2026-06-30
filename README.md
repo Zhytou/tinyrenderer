@@ -2,7 +2,11 @@
 
 A lightweight, modern OpenGL 4.5 PBR renderer built with C++17, featuring dual forward/deferred pipelines, IBL, shadow mapping, and built-in Dear ImGui editor.
 
-![preview](./result/preview.gif)
+![ibl](./result/multi-sphere-9-ibl-direct.png)
+
+![lenslfare](./result/tokyo-lenslfare.png)
+
+![preview-gif](./result/preview.gif)
 
 ## Main Features
 
