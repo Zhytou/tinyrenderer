@@ -75,23 +75,23 @@ Mesh::Mesh(const fs::path& path, const tinyobj::attrib_t& attributes, const std:
             int id = shape.mesh.material_ids[i]; // id is material index
             for (int j = 0; j < 3; ++j) {
                 vertices.emplace_back(vertex[j], normal[j], tangent, uv[j]);
-                if (id >= -1 && id < num) { 
+                if (id >= -1 && id < static_cast<int>(num)) { 
                     // id == -1 means no material assigned, retain these vertices into the trailing
-                    submeshes[id == -1 ? num : id].push_back(static_cast<uint>(vertices.size() - 1));
+                    submeshes[(id == -1 ? num : id)].push_back(static_cast<uint>(vertices.size() - 1));
                 }
             }
         }
     }
 
     // 2. Group geometry into submeshes by material, and concatenate all index data into indices
-    for (int id = 0; id <= num; id++) { // id is material index
+    for (int id = 0; id <= static_cast<int>(num); id++) { // id is material index
         auto& submesh = submeshes[id];
         if (!submesh.empty()) {
-            m_submeshes.emplace_back(id == num ? -1 : id, static_cast<uint>(indices.size()), static_cast<uint>(submesh.size()));
+            m_submeshes.emplace_back(id == static_cast<int>(num) ? -1 : id, static_cast<uint>(indices.size()), static_cast<uint>(submesh.size()));
             indices.insert(indices.end(), submesh.begin(), submesh.end());
         }
     }
-
+    
     // 3.Create VAO/VBO/IBO and configure vertex attributes
     m_layout  = ResourceManager::getLayout("mesh");
     m_bufferv = std::make_unique<VertexBuffer>(vertices.size() * sizeof(Vertex), vertices.data());
