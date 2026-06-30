@@ -98,7 +98,7 @@ void Scene::initialize(const std::string& json, ResourceManager& manager) {
                 std::string imageName = doc["skybox"]["cubemap"][face].GetString();
                 imagePaths.push_back(skyboxDir / imageName);
             }
-            m_skyboxCubemap = manager.loadCubeTexture("skybox_cubemap", imagePaths, glm::vec4(0.0f), GL_RGBA32F, 1);
+            m_skyboxCubemap = manager.loadCubeTexture("skybox_cubemap", imagePaths, glm::vec4(0.0f), GL_RGBA32F, 1, 0, false); // flip must set to false
         }
         if (doc["skybox"].HasMember("equirect")) {
             fs::path skyboxDir    = doc["skybox"]["equirect"]["base_dir"].GetString();
