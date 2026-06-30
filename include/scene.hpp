@@ -24,11 +24,15 @@ class Scene {
     const std::shared_ptr<Texture>& getSkyboxEquirect() const { return m_skyboxEquirect; }
     const std::shared_ptr<Camera>& getCamera() const { return m_camera; }
     const std::vector<std::shared_ptr<Light>>& getLights() const { return m_lights; }
+    size_t getMaxLightCount() const { return m_lights.size(); }
+    size_t getVisibleLightCount() const;
     const std::vector<std::shared_ptr<Model>>& getModels() const { return m_models; }
+    size_t getMaxModelCount() const { return m_models.size(); }
+    size_t getVisibleModelCount() const;
     const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_bounds; }
     void getModelBlocks(std::vector<ModelBlock>& blocks) const;
     void getLightBlocks(std::vector<LightBlock>& blocks) const;
-    void getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const;
+    void getRenderQueue(std::vector<RenderItem>& queue, bool opaque, bool reset = true) const;
 
     void initialize(const std::string& json, ResourceManager& manager);
     void destroy();
