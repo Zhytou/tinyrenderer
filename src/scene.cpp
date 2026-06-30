@@ -1,7 +1,7 @@
 #include "scene.hpp"
 
 #include <rapidjson/document.h>
-
+#include <algorithm>
 #include <filesystem>
 
 #include "utils.hpp"
@@ -10,9 +10,17 @@ namespace tinyglrenderer {
 
 namespace fs = std::filesystem;
 
+size_t Scene::getVisibleLightCount() const {
+    return std::count_if(m_lights.begin(), m_lights.end(), [](const auto& light) { return light->isVisible(); });
+}
+
+size_t Scene::getVisibleModelCount() const {
+    return std::count_if(m_models.begin(), m_models.end(), [](const auto& model) { return model->isVisible(); });
+}
+
 void Scene::getLightBlocks(std::vector<LightBlock>& blocks) const {
     blocks.clear();
-    for (auto& light : m_lights) { blocks.emplace_back(light->getLightBlock()); }
+    for (auto& light : m_lights) { if (light->isVisible()) { blocks.emplace_back(light->getLightBlock()); } }
 }
 
 void Scene::getModelBlocks(std::vector<ModelBlock>& blocks) const {
@@ -20,18 +28,22 @@ void Scene::getModelBlocks(std::vector<ModelBlock>& blocks) const {
     for (auto& model : m_models) { blocks.emplace_back(model->getModelBlock()); }
 }
 
-void Scene::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
-    queue.clear();
+void Scene::getRenderQueue(std::vector<RenderItem>& queue, bool opaque, bool reset) const {
+    if (reset) { queue.clear(); } // reset draw command queue by default
+
+    int vi = 0;
     for (int i = 0; i < m_models.size(); i++) {
         std::vector<RenderItem> subQueue;
+        if (!m_models[i]->isVisible()) { continue; }
         m_models[i]->getRenderQueue(subQueue, opaque);
         auto xyz       = m_models[i]->getBoundingBox();
         float distance = m_camera->getDistance((xyz.first + xyz.second) / 2.f);
         for (auto& item : subQueue) {
             item.distance = distance;
-            item.uoffset  = i * sizeof(ModelBlock);
+            item.uoffset  = vi * sizeof(ModelBlock);
             queue.push_back(item);
         }
+        vi++; // visible model count
     }
 }
 
