@@ -1,4 +1,8 @@
-# Tiny Renderer
+# TinyGLRenderer
+
+A lightweight, modern OpenGL 4.5 PBR renderer built with C++17, featuring dual forward/deferred pipelines, IBL, shadow mapping, and built-in Dear ImGui editor.
+
+![preview](./result/preview.gif)
 
 ## Main Features
 
@@ -11,6 +15,7 @@
 
 - [x] **Heads-Up Display (HUD)**: On-screen real-time information overlay.
 - [x] **Side Bar**: Interactive settings and inspector panel.
+- [ ] **Resource Panel**: Display and manage loaded resources like models, materials, and textures.
 - [x] **Camera & Input Control**: Intuitive navigation via keyboard and mouse(e.g., WASD for movement, right-click drag for rotation).
 
 ### 🖼️ Core Render Pipeline
@@ -33,15 +38,9 @@
 - [ ] **Temporal Antialiasing (TAA)**: Reduces aliasing artifacts by combining multiple frames.
 - [x] **Gamma Correction**: Linear-to-sRGB color space conversion for accurate display output.
 
-## Render Example
+## Get Started
 
-![teapot](./result/teapot.png)
-
-![gun](./result/gun.png)
-
-![firehydrant](./result/firehydrant.png)
-
-**Build & Run**:
+### 🚀 Build & Run
 
 ```bash
 # install dependencies
@@ -56,3 +55,11 @@ make all
 # run
 ./main
 ```
+
+### 🏞️ More Examples
+
+![teapot](./result/teapot.png)
+
+![gun](./result/gun.png)
+
+![firehydrant](./result/firehydrant.png)
