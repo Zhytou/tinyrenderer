@@ -39,7 +39,7 @@ struct EditorSetting {
 
     const float titleBarHeight      = 38.0f;
     const float activityBarWidth    = 65.0f;
-    const float sideBarWidth        = 280.0f;
+    const float sideBarWidth        = 340.0f;
     const float resourcePanelHeight = 300.0f;
 
     const float smallFontSize = 14.0f;

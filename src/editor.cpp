@@ -265,7 +265,7 @@ void Editor::drawCustomTitleBar() {
     }
 
     ImGui::End();
-    ImGui::PopStyleVar(2); // 弹出 WindowPadding 和 WindowBorderSize
+    ImGui::PopStyleVar(2);
 }
 
 void Editor::drawActivityBar() {
@@ -381,9 +381,9 @@ void Editor::drawSideBar(Scene& scene) {
                                     dirLight->setDirection(direction);
                                     dirLight->setLightSpaceMatrix(scene.getBoundingBox());
                                 }
-                            } else {
-                                ImGui::Text("Type: Point/Other");
-                            }
+                            } 
+
+                            // TODO: Point/Spot light support
                         }
                         ImGui::Spacing();
                         ImGui::PopID();
@@ -410,7 +410,9 @@ void Editor::drawSideBar(Scene& scene) {
                         auto& model = models[m_setting.currSBModelIndex];
                         ImGui::Text("Inspector: %s", model->getName().c_str());                        
                         if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-                            static glm::vec3 t(0.f), r(0.f), s(1.f);
+                            glm::vec3 t = model->getTranslate();
+                            glm::vec3 r = model->getRotate();
+                            glm::vec3 s = model->getScale();
                             bool changed = false;
                             if (ImGui::DragFloat3("Position", glm::value_ptr(t), 0.05f)) { changed = true; }
                             if (ImGui::DragFloat3("Rotation", glm::value_ptr(r), 0.5f, -180.f, 180.f, "%.1f°")) { changed = true; }
@@ -508,8 +510,8 @@ void Editor::drawResourcePanel(Scene& scene, ResourceManager& manager) {
                 const auto& texture = manager.getTexture(name);
 
                 ImGui::Text("ref count: %ld", texture.use_count() - 1);
-                ImGui::Text("texture type: %s", glMacro2Str(texture->getTarget()).c_str());
-                ImGui::Text("internal format: %s", glMacro2Str(texture->getInternalFormat()).c_str());
+                ImGui::Text("texture type: %s", glMacro2Str(texture->getTarget()));
+                ImGui::Text("internal format: %s", glMacro2Str(texture->getInternalFormat()));
                 ImGui::Text("mip levels: %d", texture->getMipLevels());
                 ImGui::Text("width: %d", texture->getWidth(0));
                 ImGui::Text("height: %d", texture->getHeight(0));
@@ -561,21 +563,26 @@ void Editor::drawResourcePanel(Scene& scene, ResourceManager& manager) {
                 const auto& texture = manager.getTexture(name);
 
                 GLuint glTexID = texture->getID(); 
+                GLuint glTarget = texture->getTarget();
                 ImTextureID imguiTexID = (ImTextureID)(intptr_t)glTexID;
 
-                GLsizei width  = (float)texture->getWidth(0);
-                GLsizei height = (float)texture->getHeight(0);
-                ImVec2 availSize = ImGui::GetContentRegionAvail(); // maximum size for display
-                float scale = std::min(availSize.x / width, availSize.y / height);
-                ImVec2 displaySize = ImVec2(width * scale, height * scale);
+                if (glTarget != GL_TEXTURE_2D) {
+                    ImGui::Text("[ No Preview For %s ]", glMacro2Str(glTarget));
+                } else {
+                    GLsizei width  = (float)texture->getWidth(0);
+                    GLsizei height = (float)texture->getHeight(0);
+                    ImVec2 availSize = ImGui::GetContentRegionAvail(); // maximum size for display
+                    float scale = std::min(availSize.x / width, availSize.y / height);
+                    ImVec2 displaySize = ImVec2(width * scale, height * scale);
 
-                ImVec2 paddingPos = ImVec2((availSize.x - displaySize.x) * 0.5f, (availSize.y - displaySize.y) * 0.5f);
-                if (paddingPos.x > 0.0f || paddingPos.y > 0.0f) {
-                    ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + paddingPos.x, ImGui::GetCursorPosY() + paddingPos.y));
+                    ImVec2 paddingPos = ImVec2((availSize.x - displaySize.x) * 0.5f, (availSize.y - displaySize.y) * 0.5f);
+                    if (paddingPos.x > 0.0f || paddingPos.y > 0.0f) {
+                        ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + paddingPos.x, ImGui::GetCursorPosY() + paddingPos.y));
+                    }
+                    ImVec2 uv0 = ImVec2(0.0f, 1.0f); 
+                    ImVec2 uv1 = ImVec2(1.0f, 0.0f);
+                    ImGui::Image(imguiTexID, displaySize, uv0, uv1);
                 }
-                ImVec2 uv0 = ImVec2(0.0f, 1.0f); 
-                ImVec2 uv1 = ImVec2(1.0f, 0.0f);
-                ImGui::Image(imguiTexID, displaySize, uv0, uv1);
             }
         }
     } else {
