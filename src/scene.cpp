@@ -25,7 +25,7 @@ void Scene::getLightBlocks(std::vector<LightBlock>& blocks) const {
 
 void Scene::getModelBlocks(std::vector<ModelBlock>& blocks) const {
     blocks.clear();
-    for (auto& model : m_models) { blocks.emplace_back(model->getModelBlock()); }
+    for (auto& model : m_models) { if (model->isVisible()) { blocks.emplace_back(model->getModelBlock()); } }
 }
 
 void Scene::getRenderQueue(std::vector<RenderItem>& queue, bool opaque, bool reset) const {
