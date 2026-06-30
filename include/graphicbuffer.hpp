@@ -21,6 +21,11 @@ class GraphicBuffer {
     // @param data The data to upload.
     void upload(GLintptr offset, GLsizeiptr length, const void* data);
 
+    // Clear the sub range of graphic buffer to all zeros.
+    // @param offset The offset of the sub range to clear.
+    // @param length The length of the sub range to clear.
+    void clear(GLintptr offset, GLsizeiptr length);
+
    protected:
     GLuint m_id       = 0;
     GLenum m_target   = GL_ARRAY_BUFFER;  // could be vbo/ebo/ubo ...
