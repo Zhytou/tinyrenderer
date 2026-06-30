@@ -23,7 +23,7 @@ class Light {
     }
     virtual ~Light() = default;
 
-    bool isEnabled() const { return m_enabled; }
+    bool isVisible() const { return m_visible; }
     glm::vec3 getColor() const { return glm::vec3(m_lightBlock.colorIntensity); }
     float getIntensity() const { return m_lightBlock.colorIntensity.w; }
     const glm::mat4& getViewProjMatrix() const { return m_lightBlock.viewProjMatrix; }
@@ -39,12 +39,12 @@ class Light {
     void setUVOffsetScale(const glm::vec2& offset, const glm::vec2& scale) {
         m_lightBlock.uvOffsetScale = glm::vec4(offset, scale);
     }
-    void setEnabled(bool enabled) { m_enabled = enabled; }
+    void setVisible(bool visible) { m_visible = visible; }
     virtual void setLightSpaceMatrix(const std::pair<glm::vec3, glm::vec3>&) = 0;
 
    protected:
     LightBlock m_lightBlock;
-    bool m_enabled = true; // on/off
+    bool m_visible = true; // on/off
 };
 
 class DirectionalLight : public Light {

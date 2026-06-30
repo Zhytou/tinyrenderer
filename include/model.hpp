@@ -33,6 +33,7 @@ class Model {
     Model(Model&& other);
     Model& operator=(Model&& other);
 
+    bool isVisible() const { return m_visible; }
     const std::string& getName() const { return m_name; }
     const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_bounds; }
     const ModelBlock& getModelBlock() const { return m_modelBlock; }
@@ -40,6 +41,7 @@ class Model {
     const glm::vec3& getTranslate() const { return m_transforms.at("translate"); }
     const glm::vec3& getRotate() const { return m_transforms.at("rotate"); }
     const glm::vec3& getScale() const { return m_transforms.at("scale"); }
+    void setVisible(bool visible) { m_visible = visible; }
     void setDefaultMaterial(const std::shared_ptr<Material>& material) { m_material = material; }
     void setTransform(const glm::vec3& translate, const glm::vec3& rotate, const glm::vec3& scale);
 
@@ -49,6 +51,7 @@ class Model {
     std::shared_ptr<Material> m_material; // default material
     std::shared_ptr<Mesh> m_mesh;
 
+    bool m_visible = true; // different from material transparency/opacity
     std::pair<glm::vec3, glm::vec3> m_bounds = {
         glm::vec3(FLT_MAX),
         glm::vec3(-FLT_MAX),

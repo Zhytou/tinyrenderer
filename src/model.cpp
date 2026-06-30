@@ -41,7 +41,8 @@ Model& Model::operator=(Model&& other) {
 }
 
 void Model::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
-    queue.clear();
+    if (!m_visible) { return; }
+
     for (auto& sm : m_mesh->getSubMeshes()) {
         // all submeshes are opaque
         queue.emplace_back(
