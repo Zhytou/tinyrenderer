@@ -543,7 +543,7 @@ void Editor::drawResourcePanel(Scene& scene, ResourceManager& manager) {
                 ImGui::Separator();
                 const auto& textContent = mesh->getSource();
                 ImVec2 textRegionSize = ImGui::GetContentRegionAvail();
-                ImGui::InputTextMultiline("##TextShaderPreview", const_cast<char*>(textContent.c_str()), textContent.size(), textRegionSize, ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputTextMultiline("##TextShaderPreview", const_cast<char*>(textContent.c_str()), textContent.size() + 1, textRegionSize, ImGuiInputTextFlags_ReadOnly);
             } break;
             case ResourcePanelTab::RP_TAB_SHADERS: {
                 const auto& shader = manager.getShader(name);
@@ -557,7 +557,7 @@ void Editor::drawResourcePanel(Scene& scene, ResourceManager& manager) {
                 const auto& [vertShaderSource, fragShaderSource] = shader->getSource();
                 const auto& textContent = (m_setting.currRPShaderIndex == 0 ? vertShaderSource : fragShaderSource);
                 ImVec2 textRegionSize = ImGui::GetContentRegionAvail();
-                ImGui::InputTextMultiline("##TextShaderPreview", const_cast<char*>(textContent.c_str()), textContent.size(), textRegionSize, ImGuiInputTextFlags_ReadOnly);
+                ImGui::InputTextMultiline("##TextShaderPreview", const_cast<char*>(textContent.c_str()), textContent.size() + 1, textRegionSize, ImGuiInputTextFlags_ReadOnly);
             } break;
             default: { // ResourcePanelTab::RP_TAB_TEXTURES
                 const auto& texture = manager.getTexture(name);
