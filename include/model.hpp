@@ -37,7 +37,9 @@ class Model {
     const std::pair<glm::vec3, glm::vec3>& getBoundingBox() const { return m_bounds; }
     const ModelBlock& getModelBlock() const { return m_modelBlock; }
     void getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const;
-    const std::unordered_map<std::string, glm::vec3>& getTransforms() const { return m_transforms; }
+    const glm::vec3& getTranslate() const { return m_transforms.at("translate"); }
+    const glm::vec3& getRotate() const { return m_transforms.at("rotate"); }
+    const glm::vec3& getScale() const { return m_transforms.at("scale"); }
     void setDefaultMaterial(const std::shared_ptr<Material>& material) { m_material = material; }
     void setTransform(const glm::vec3& translate, const glm::vec3& rotate, const glm::vec3& scale);
 
