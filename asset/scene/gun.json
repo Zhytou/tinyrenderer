@@ -23,8 +23,8 @@
     },
     "models": [
         {
-            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/gun/",
-            "name": "gun.obj",
+            "name": "gun",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/gun.obj",
             "transform": {
             }
         }

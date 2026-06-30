@@ -24,8 +24,8 @@
     },
     "models": [
         {
-            "base_dir": "/home/zhytou/tinyrenderer/asset/model/statue/",
-            "name": "statue.obj",
+            "name": "statue",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/model/statue/statue.obj",
             "transform": {
                 "rotate": [0, 0, 0]
             }

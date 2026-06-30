@@ -25,8 +25,8 @@
     },
     "models": [
         {
-            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/",
-            "name": "sphere.obj",
+            "name": "sphere00",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
             "default_mat": {
                 "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
                 "metallic": 0.0,
@@ -37,8 +37,8 @@
             }
         },
         {
-            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/",
-            "name": "sphere.obj",
+            "name": "sphere01",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
             "default_mat": {
                 "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
                 "metallic": 0.2,

@@ -23,16 +23,21 @@
     },
     "models": [
         {
-            "name": "teapot",
-            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/teapot.obj",
+            "name": "sphere00",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/sphere.obj",
+            "default_mat": {
+                "albedo": [0.5, 0.5, 0.5],
+                "metallic": 1.0,
+                "roughness": 0.0
+            },
             "transform": {
-                "rotate": [90, 0, -30]
+                "translate": [0, 0, 0]
             }
         }
     ],
     "skybox": {
         "cubemap": {
-            "base_dir": "/home/zhytou/tinyglrenderer/asset/skybox/cubemap/indoor",
+            "base_dir": "/home/zhytou/tinyglrenderer/asset/skybox/cubemap/sky",
             "left": "negx.jpg",
             "right": "posx.jpg",
             "bottom": "negy.jpg",

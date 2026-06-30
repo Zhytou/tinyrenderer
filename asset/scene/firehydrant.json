@@ -28,14 +28,14 @@
     },
     "models": [
         {
-            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/firehydrant/",
-            "name": "firehydrant.obj",
+            "name": "firehydrant",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/firehydrant.obj",
             "transform": {
             }
         },
         {
-            "base_dir": "/home/zhytou/tinyglrenderer/asset/mesh/",
-            "name": "floor.obj",
+            "name": "floor",
+            "obj_path": "/home/zhytou/tinyglrenderer/asset/mesh/floor.obj",
             "default_mat": {
                 "albedo_map": "/home/zhytou/tinyglrenderer/asset/material/plastic/albedo.png",
                 "metallic": 0.2,
