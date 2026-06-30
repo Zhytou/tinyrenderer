@@ -13,10 +13,11 @@ namespace fs = std::filesystem;
 
 Model::Model() {}
 
-Model::Model(const std::shared_ptr<Mesh>& mesh, const std::vector<std::shared_ptr<Material>>& materials, const std::shared_ptr<Material>& defaultMaterial) {
+Model::Model(const std::string& name, const std::shared_ptr<Mesh>& mesh, const std::vector<std::shared_ptr<Material>>& materials, const std::shared_ptr<Material>& defaultMaterial) {
+    m_name      = name;
     m_mesh      = std::move(mesh);
     m_materials = materials;
-    m_material = defaultMaterial;
+    m_material  = defaultMaterial;
 }
 
 Model::~Model() {
