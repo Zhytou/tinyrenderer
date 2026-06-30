@@ -934,6 +934,7 @@ void Renderer::draw(const RenderItem& item, const std::vector<std::string>& text
 
     for (auto name : textures) {
         if (m_texture2SlotIndexs.count(name) == 0) { throw std::runtime_error("Renderer::draw: Texture slot index not found: " + name); }
+        if (item.material == nullptr) { throw std::runtime_error("Renderer::draw: Invalid render item material!"); }
         if (item.material->getTexture(name) == nullptr && (m_textures.count(name) == 0 || m_textures[name] == nullptr)) { throw std::runtime_error("Renderer::draw: Texture not found: " + name); }
         std::shared_ptr<Texture> texture = item.material->getTexture(name) != nullptr ? item.material->getTexture(name) : m_textures[name];
         texture->bind(m_texture2SlotIndexs[name]);
