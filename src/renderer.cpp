@@ -667,7 +667,7 @@ void Renderer::update(const Scene& scene, ResourceManager& manager) {
         // 1.2 Model uniform block
         std::vector<ModelBlock> modelBlocks;
         scene.getModelBlocks(modelBlocks);
-        size_t maxModelUBOSize = sizeof(ModelBlock) * scene.getMaxModelCount();
+        size_t maxModelUBOSize = std::max(sizeof(ModelBlock) * scene.getMaxModelCount(), 256ul);
         size_t currModelUBOSize = sizeof(ModelBlock) * scene.getVisibleModelCount();
         if (m_buffers["model"] == nullptr) { m_buffers["model"] = std::make_shared<UniformBuffer>(maxModelUBOSize); }
         if (currModelUBOSize > 0) { 
@@ -680,7 +680,7 @@ void Renderer::update(const Scene& scene, ResourceManager& manager) {
         // 1.3 Light shader storage array
         std::vector<LightBlock> lightBlocks;
         scene.getLightBlocks(lightBlocks);
-        size_t maxLightSSBOSize = sizeof(LightBlock) * scene.getMaxLightCount();
+        size_t maxLightSSBOSize = std::max(sizeof(LightBlock) * scene.getMaxLightCount(), 256ul);
         size_t currLightSSBOSize = sizeof(LightBlock) * scene.getVisibleLightCount();
         if (m_buffers["light"] == nullptr) { m_buffers["light"] = std::make_shared<ShaderStorageBuffer>(maxLightSSBOSize); }
         if (currLightSSBOSize > 0) { 

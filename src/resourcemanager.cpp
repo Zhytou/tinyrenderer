@@ -282,6 +282,7 @@ std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texNa
         texture->upload(image);
     } else {
         if (m_textures.count(texAlias) && !m_textures[texAlias].expired()) {
+            m_textures[texName] = m_textures[texAlias];
             return m_textures[texAlias].lock();
         }
 
@@ -325,6 +326,7 @@ std::shared_ptr<Texture> ResourceManager::load2DTexture(const std::string& texNa
         texture->upload(mimage);
     } else {
         if (m_textures.count(texAlias) && !m_textures[texAlias].expired()) {
+            m_textures[texName] = m_textures[texAlias];
             return m_textures[texAlias].lock();
         }
         
@@ -358,6 +360,7 @@ std::shared_ptr<Texture> ResourceManager::loadCubeTexture(const std::string& tex
         std::cout << "]\n";
     } else {
         if (m_textures.count(texAlias) && !m_textures[texAlias].expired()) {
+            m_textures[texName] = m_textures[texAlias];
             return m_textures[texAlias].lock();
         }
 
