@@ -359,10 +359,20 @@ void Editor::drawSideBar(Scene& scene) {
                 } else {
                     for (size_t i = 0; i < lights.size(); ++i) {
                         ImGui::PushID(static_cast<int>(i)); // otherwise will cause duplicate ID error
+                        
+                        auto light = lights[i];
+                        bool visible = light->isVisible();
+                        if (ImGui::Checkbox("##light_enable", &visible)) {
+                            if (visible != light->isVisible()) { light->setVisible(visible); }
+                        }
+                        ImGui::SameLine(); 
+
+                        if (!visible) { 
+                            ImGui::BeginDisabled();
+                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f,0.5f,0.5f,1.f)); 
+                        }
                         std::string headerName = "Light Source #" + std::to_string(i);
                         if (ImGui::CollapsingHeader(headerName.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
-                            auto& light = lights[i];
-
                             glm::vec3 color = light->getColor();
                             if (ImGui::ColorEdit3("Color", glm::value_ptr(color))) {
                                 light->setColor(color);
@@ -385,6 +395,11 @@ void Editor::drawSideBar(Scene& scene) {
 
                             // TODO: Point/Spot light support
                         }
+                        if (!visible) { 
+                            ImGui::EndDisabled();
+                            ImGui::PopStyleColor(1);
+                        }
+
                         ImGui::Spacing();
                         ImGui::PopID();
                     }
@@ -398,10 +413,28 @@ void Editor::drawSideBar(Scene& scene) {
                     ImGui::Text("Hierarchy Tree:");
                     ImGui::BeginChild("##HierarchyTree", ImVec2(0, 120), true);
                     for (int i = 0; i < models.size(); ++i) {
+                        ImGui::PushID(static_cast<int>(i)); // otherwise will cause duplicate ID error
+
+                        bool visible = models[i]->isVisible();
+                        if (ImGui::Checkbox("##model_enable", &visible)) {
+                            models[i]->setVisible(visible); 
+                        }
+                        ImGui::SameLine(); 
+
+                        if (!visible) { 
+                            ImGui::BeginDisabled();
+                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f,0.5f,0.5f,1.f)); 
+                        }
                         bool selected = (m_setting.currSBModelIndex == i);
                         if (ImGui::Selectable(models[i]->getName().c_str(), selected)) {
                             m_setting.currSBModelIndex = i;
                         }
+                        if (!visible) { 
+                            ImGui::EndDisabled();
+                            ImGui::PopStyleColor(1);
+                        }
+
+                        ImGui::PopID();
                     }
                     ImGui::EndChild();
                     ImGui::Separator();
@@ -419,7 +452,7 @@ void Editor::drawSideBar(Scene& scene) {
                             if (ImGui::DragFloat3("Scale",    glm::value_ptr(s), 0.02f, 0.001f, 10.f)) { changed = true; }
                             if (changed) { model->setTransform(t, r, s);}
                         }
-                        if (ImGui::CollapsingHeader("AABB Bound Info")) {
+                        if (ImGui::CollapsingHeader("AABB Bound Info", ImGuiTreeNodeFlags_DefaultOpen)) {
                             auto& bounds = model->getBoundingBox();
                             ImGui::Text("Min: (%.2f, %.2f, %.2f)", bounds.first.x, bounds.first.y, bounds.first.z);
                             ImGui::Text("Max: (%.2f, %.2f, %.2f)", bounds.second.x, bounds.second.y, bounds.second.z);
