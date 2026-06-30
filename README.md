@@ -19,7 +19,7 @@ A lightweight, modern OpenGL 4.5 PBR renderer built with C++17, featuring dual f
 
 - [x] **Heads-Up Display (HUD)**: On-screen real-time information overlay.
 - [x] **Side Bar**: Interactive settings and inspector panel.
-- [ ] **Resource Panel**: Display and manage loaded resources like models, materials, and textures.
+- [x] **Resource Panel**: Display and manage loaded resources like models, materials, and textures.
 - [x] **Camera & Input Control**: Intuitive navigation via keyboard and mouse(e.g., WASD for movement, right-click drag for rotation).
 
 ### 🖼️ Core Render Pipeline
@@ -36,11 +36,11 @@ A lightweight, modern OpenGL 4.5 PBR renderer built with C++17, featuring dual f
 
 ### 🎨 Post-Processing & Cinematic Effects
 
+- [x] **Gamma Correction**: Linear-to-sRGB color space conversion for accurate display output.
 - [x] **Bloom Blur**: High-quality light bleeding/glow effect for emissive surfaces.
 - [x] **Lens Flare (Ghost & Halo)**: Realistic camera lens artifact simulation, including multiple ghosts and anamorphic/circular halos.
 - [x] **Tone Mapping**: High-dynamic-range (HDR) to low-dynamic-range (LDR) color mapping using ACES algorithm.
 - [ ] **Temporal Antialiasing (TAA)**: Reduces aliasing artifacts by combining multiple frames.
-- [x] **Gamma Correction**: Linear-to-sRGB color space conversion for accurate display output.
 
 ## Get Started
 
