@@ -17,6 +17,6 @@ std::ostream& operator<<(std::ostream& stream, const glm::mat4& mat);
 
 void glDebug(const char* msg);
 
-std::string glMacro2Str(GLenum);
+const char* glMacro2Str(GLenum value);
 
 }  // namespace tinyglrenderer

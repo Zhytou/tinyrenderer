@@ -35,7 +35,7 @@ void glDebug(const char* msg) {
     }
 }
 
-std::string glMacro2Str(GLenum value) {
+const char* glMacro2Str(GLenum value) {
     switch (value) {
         // data type
         case GL_UNSIGNED_BYTE:          return "GL_UNSIGNED_BYTE";
