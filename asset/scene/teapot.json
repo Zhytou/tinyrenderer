@@ -31,12 +31,14 @@
         }
     ],
     "skybox": {
-        "base_dir": "/home/zhytou/tinyglrenderer/asset/cubemap/indoor",
-        "left": "negx.jpg",
-        "right": "posx.jpg",
-        "bottom": "negy.jpg",
-        "top": "posy.jpg",
-        "front": "negz.jpg",
-        "back": "posz.jpg"
+        "cubemap": {
+            "base_dir": "/home/zhytou/tinyglrenderer/asset/skybox/cubemap/indoor",
+            "left": "negx.jpg",
+            "right": "posx.jpg",
+            "bottom": "negy.jpg",
+            "top": "posy.jpg",
+            "front": "negz.jpg",
+            "back": "posz.jpg"
+        }
     }
 }
