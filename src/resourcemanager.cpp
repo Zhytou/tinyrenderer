@@ -259,9 +259,9 @@ std::shared_ptr<Material> ResourceManager::loadMaterial(const std::string& matNa
 
     std::unordered_map<std::string, std::shared_ptr<Texture>> textures = {
         // TODO: fix mip level(when miplevel is more than 1, the render result is wrong, blocking artifacts appear)
-        {"albedo", load2DTexture("albedo", matDir / material.diffuse_texname, albedo, GL_RGBA32F)},   
-        {"normal", load2DTexture("normal", matDir / material.normal_texname, normal, GL_RGBA32F)}, 
-        {"mrao", load2DTexture("mrao", {matDir / material.metallic_texname, matDir / material.roughness_texname, matDir / material.ambient_texname}, mrao, GL_RGBA32F, 1, 1)}
+        {"albedo", load2DTexture(std::format("{}_albedo", matName), matDir / material.diffuse_texname, albedo, GL_RGBA32F)},   
+        {"normal", load2DTexture(std::format("{}_normal", matName), matDir / material.normal_texname, normal, GL_RGBA32F)}, 
+        {"mrao", load2DTexture(std::format("{}_mrao", matName), {matDir / material.metallic_texname, matDir / material.roughness_texname, matDir / material.ambient_texname}, mrao, GL_RGBA32F, 1, 1)}
     };
     auto nmaterial = std::make_shared<Material>(matName, textures);
     m_materials[matName] = nmaterial;
