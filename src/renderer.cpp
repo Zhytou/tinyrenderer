@@ -571,9 +571,11 @@ void Renderer::prepare(const Scene& scene) {
     GLsizei quadCount = ResourceManager::getCount("quad");
 
     // 1. Convert equirect skybox into cube map skybox if needed
-    const auto& cubemap           = scene.getSkyboxCubeMap();
-    m_textures["skybox.equirect"] = scene.getSkyboxEquirect();
-    if (cubemap == nullptr && m_textures["skybox.equirect"] != nullptr) {
+    const auto& cubemap  = scene.getSkyboxCubeMap();
+    const auto& equirect = scene.getSkyboxEquirect();
+    if (cubemap == nullptr && equirect != nullptr) {
+        m_textures["skybox.equirect"] = equirect; // register equirect texture in m_textures, so that can bind it in draw()
+
         m_states["equirect_to_cubemap"].apply();
         m_shaders["equirect_to_cubemap"]->use();
         for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
@@ -586,11 +588,11 @@ void Renderer::prepare(const Scene& scene) {
             m_passes["equirect_to_cubemap"].end();
         }
     } else {
-        m_textures["skybox.cubemap"] = scene.getSkyboxCubeMap();
+        m_textures["skybox.cubemap"] = cubemap;
     }
 
     // 2. Precalculate environment map
-    {
+    if (cubemap != nullptr || equirect != nullptr) {
         // 2.1 Precalculate irradiance map
         {
             m_states["ibl_irradiance"].apply();
@@ -709,7 +711,8 @@ void Renderer::update(const Scene& scene, ResourceManager& manager) {
     }
 
     // 3. Load precalculated environment map or default white map depending on m_setting.ibl
-    if (m_setting.ibl) {
+    if (m_setting.ibl && m_textures["skybox.cubemap"] != nullptr) {
+        // only ibl is enabled and skybox is set
         m_textures["ibl_diffuse"] = m_textures["ibl_irradiance_map"];
         m_textures["ibl_specular"] = m_textures["ibl_prefiltered_map"];
         m_textures["ibl_brdf_lut"] = m_textures["ibl_brdf_map"];
