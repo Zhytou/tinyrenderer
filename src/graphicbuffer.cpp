@@ -5,6 +5,7 @@
 namespace tinyglrenderer {
 GraphicBuffer::GraphicBuffer(GLenum target, GLsizeiptr size, const void* data) : m_target(target), m_size(size) {
     if (size <= 0) {
+        // by the way, data can be nullptr when construting a new buffer, which means only allocating memory without initializing
         throw std::invalid_argument("GraphicBuffer::GraphicBuffer: size must be greater than 0");
     }
 
@@ -67,8 +68,10 @@ GraphicBuffer::~GraphicBuffer() {
 
 void GraphicBuffer::upload(GLintptr offset, GLsizeiptr length, const void* data) {
     if (offset < 0 || offset + length > m_size) {
-        // by the way, data cannot be nullptr, which reset the buffer to all zeros
         throw std::runtime_error("GraphicBuffer::upload: offset or length out of range!");
+    }
+    if (data == nullptr) {
+        throw std::invalid_argument("GraphicBuffer::upload: data cannot be nullptr");
     }
 
     // Upload data to the graphic buffer object at the specified offset and length
@@ -96,6 +99,22 @@ void GraphicBuffer::upload(GLintptr offset, GLsizeiptr length, const void* data)
     //
     // Note: Buffer must already have storage allocated (via glBufferData or glNamedBufferData)
     glNamedBufferSubData(m_id, offset, length, data);
+}
+
+void GraphicBuffer::clear(GLintptr offset, GLsizeiptr length) {
+    if (offset < 0 || offset + length > m_size) {
+        throw std::runtime_error("GraphicBuffer::clear: offset or length out of range!");
+    }
+
+    // Clear the sub range of graphic buffer to all zeros
+    GLuint zero = 0;
+    glClearNamedBufferSubData(
+        m_id, GL_R32UI,    // treat the buffer as a series of 32-bit unsigned integers
+        offset, length, 
+        GL_RED_INTEGER,    // indicate that zero is a single-channel integer value
+        GL_UNSIGNED_INT,   // indicate that zero is an unsigned int
+        &zero
+    );
 }
 
 } // namespace tinyglrenderer
