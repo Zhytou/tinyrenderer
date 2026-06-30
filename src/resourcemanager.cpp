@@ -210,27 +210,26 @@ void ResourceManager::getAllShaderNames(std::vector<std::string>& names) const {
     }
 }
 
-std::shared_ptr<Model> ResourceManager::loadModel(const std::string& modelName, const fs::path& modelDir) {
+std::shared_ptr<Model> ResourceManager::loadModel(const std::string& modelName, const fs::path& objPath, const fs::path& mtlDir) {
     // 1. Load obj model with tinyobj loader
-    fs::path modelPath = modelDir / modelName;
     tinyobj::attrib_t attributes;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string err;
-    if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &err, modelPath.c_str(), modelDir.c_str(), true)) {
+    if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &err, objPath.c_str(), mtlDir.c_str(), true)) {
         throw std::runtime_error("ResourceManager::loadModel: " + err);
     }
 
     // 2. Create mesh from tinyobj shapes
-    std::cout << "Loading mesh [" << modelPath << "]\n";
-    std::shared_ptr<Mesh> mesh = loadMesh(modelName, modelPath, attributes, shapes, materials.size());
+    std::cout << "Loading mesh [" << objPath << "]\n";
+    std::shared_ptr<Mesh> mesh = loadMesh(objPath.stem().string(), objPath, attributes, shapes, materials.size());
 
     // 3. Convert tinyobj material into self-defined material
     std::cout << "Loading materials [";
     std::vector<std::shared_ptr<Material>> nmaterials;
     for (auto& material : materials) {
         std::cout << material.name << ", ";
-        nmaterials.push_back(loadMaterial(material.name, modelDir, material));
+        nmaterials.push_back(loadMaterial(material.name, mtlDir, material));
     }
     std::cout << "]\n";
 

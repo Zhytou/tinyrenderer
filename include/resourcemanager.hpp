@@ -48,7 +48,7 @@ class ResourceManager {
     void initialize();
     void destroy();
 
-    std::shared_ptr<Model> loadModel(const std::string& modelName, const fs::path& modelDir);
+    std::shared_ptr<Model> loadModel(const std::string& modelName, const fs::path& objPath, const fs::path& mtlDir);
     std::shared_ptr<Mesh> loadMesh(const std::string& meshName, const fs::path& meshPath, const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num);
     std::shared_ptr<Material> loadMaterial(const std::string& matName, const fs::path& matDir, const tinyobj::material_t& material);
     std::shared_ptr<Texture> load2DTexture(const std::string& texName, const fs::path& texPath, const glm::vec4& defaultValue, GLenum internalFormat = GL_RGBA8, GLsizei mipLevels = 1, int desiredChannels = 0, bool verticalFlip = true);

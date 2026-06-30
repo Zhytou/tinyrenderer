@@ -49,9 +49,10 @@ void Scene::initialize(const std::string& json, ResourceManager& manager) {
         for (int i = 0; i < doc["models"].Size(); i++) {
             auto& modelDoc = doc["models"][i];
             // model base dir and name required
-            fs::path modelDir     = modelDoc["base_dir"].GetString();
-            std::string modelName = modelDoc["name"].GetString();
-            m_models.emplace_back(manager.loadModel(modelName, modelDir));
+            fs::path objPath      = modelDoc["obj_path"].GetString();
+            fs::path mtlDir       = modelDoc.HasMember("mtl_dir") ? modelDoc["mtl_dir"].GetString() : objPath.parent_path();
+            std::string modelName = modelDoc.HasMember("name") ? modelDoc["name"].GetString() : objPath.stem().string();
+            m_models.emplace_back(manager.loadModel(modelName, objPath, mtlDir));
 
             // default material optional
             if (modelDoc.HasMember("default_mat")) {
