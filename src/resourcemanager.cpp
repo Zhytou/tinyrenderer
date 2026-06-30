@@ -234,7 +234,7 @@ std::shared_ptr<Model> ResourceManager::loadModel(const std::string& modelName, 
     }
     std::cout << "]\n";
 
-    return make_shared<Model>(mesh, nmaterials);
+    return make_shared<Model>(modelName, mesh, nmaterials);
 }
 
 std::shared_ptr<Mesh> ResourceManager::loadMesh(const std::string& meshName, const fs::path& meshPath, const tinyobj::attrib_t& attributes, const std::vector<tinyobj::shape_t>& shapes, size_t num) {
