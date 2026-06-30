@@ -22,8 +22,8 @@ Mesh::Mesh(const fs::path& path, const tinyobj::attrib_t& attributes, const std:
 
     // 1. Traverse tinyobj loading data and initialize vertices
     std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-    std::vector<std::vector<uint32_t>> submeshes(num + 1); // num is material count
+    std::vector<uint> indices;
+    std::vector<std::vector<uint>> submeshes(num + 1); // num is material count
     for (auto& shape : shapes) {
         for (int i = 0; i < shape.mesh.material_ids.size(); i++) { // i is triangle index
             bool vn = true, vt = true;
@@ -50,11 +50,16 @@ Mesh::Mesh(const fs::path& path, const tinyobj::attrib_t& attributes, const std:
             }
 
             if (!vt) {
-                for (int j = 0; j < 3; ++j) { uv[j] = glm::vec2(0.0f, 0.0f);}
-                tangent = glm::vec3(0.0f, 1.0f, 0.0f);
-            }
-
-            if (vt) { // only calculate tangent if uv is available, otherwise set tangent to 0, 1, 0
+                // TODO: calculate uv coordinates
+                for (int j = 0; j < 3; ++j) { 
+                    glm::vec3 d = glm::normalize(vertex[j]); 
+                    float u = 0.5f + (std::atan2(d.z, d.x) / (2.0f * glm::pi<float>()));
+                    float v = 0.5f - (std::asin(d.y) / glm::pi<float>());
+                    uv[j] = glm::vec2(u, v);
+                }
+            } 
+            
+            { 
                 glm::vec3 edge1 = vertex[1] - vertex[0], edge2 = vertex[2] - vertex[1]; // different from face normal calculation, end to end
                 glm::vec2 deltaUV1 = uv[1] - uv[0], deltaUV2 = uv[2] - uv[1];
 
@@ -70,20 +75,19 @@ Mesh::Mesh(const fs::path& path, const tinyobj::attrib_t& attributes, const std:
             int id = shape.mesh.material_ids[i]; // id is material index
             for (int j = 0; j < 3; ++j) {
                 vertices.emplace_back(vertex[j], normal[j], tangent, uv[j]);
-                if (id >= 0 && id < num) { submeshes[id].push_back(static_cast<unsigned int>(vertices.size() - 1)); }
-                if (id == -1) {
+                if (id >= -1 && id < num) { 
                     // id == -1 means no material assigned, retain these vertices into the trailing
-                    submeshes[num].push_back(static_cast<unsigned int>(vertices.size() - 1));
+                    submeshes[id == -1 ? num : id].push_back(static_cast<uint>(vertices.size() - 1));
                 }
             }
         }
     }
 
-    // 2. Group geometry into submeshes by material, and concatenate all index data into m_indices
+    // 2. Group geometry into submeshes by material, and concatenate all index data into indices
     for (int id = 0; id <= num; id++) { // id is material index
         auto& submesh = submeshes[id];
         if (!submesh.empty()) {
-            m_submeshes.emplace_back(id < num ? id : -1, indices.size(), submesh.size());
+            m_submeshes.emplace_back(id == num ? -1 : id, static_cast<uint>(indices.size()), static_cast<uint>(submesh.size()));
             indices.insert(indices.end(), submesh.begin(), submesh.end());
         }
     }

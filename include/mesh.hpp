@@ -24,9 +24,9 @@ struct Vertex {
 };
 
 struct SubMesh {
-    int matid;      // material id(index in m_materials vector of model) -1 represents default material
-    uint offset = 0; // start index in indices vector
-    uint length = 0; // length of indices in submesh
+    int matid   = -1; // material id(index in m_materials vector of model) -1 represents default material
+    uint offset = 0;  // start index in indices vector
+    uint length = 0;  // length of indices in submesh
 };
 
 class Mesh {
