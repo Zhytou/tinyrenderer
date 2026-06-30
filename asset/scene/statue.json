@@ -38,8 +38,8 @@
             "right": "posx.jpg",
             "bottom": "negy.jpg",
             "top": "posy.jpg",
-            "front": "negz.jpg",
-            "back": "posz.jpg"
+            "front": "posz.jpg",
+            "back": "negz.jpg"
         }
     }
 }
