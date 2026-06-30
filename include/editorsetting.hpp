@@ -28,6 +28,7 @@ struct EditorSetting {
     ResourcePanelTab currRPTab = ResourcePanelTab::RP_TAB_MESHES;
     EditorTheme currTheme      = EditorTheme::PURPLE_THEME;
 
+    int currSBModelIndex = 0; // Current selected model index in the left list of side bar tab
     int currRPItemIndex = 0; // Current selected item index in the left list of resource panel
     int currRPShaderIndex = 0;
     

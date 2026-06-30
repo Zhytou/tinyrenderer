@@ -324,21 +324,106 @@ void Editor::drawSideBar(Scene& scene) {
     if (ImGui::Begin(sideBarLabel, nullptr, sideBarFlags)) {
         switch (m_setting.currSBTab) {
             case SideBarTab::SB_TAB_RENDERER: {
-                ImGui::Checkbox("Deferred Rendering", &m_rendererSetting.deferred);
-                ImGui::Checkbox("Shadow Mapping", &m_rendererSetting.shadow);
-                ImGui::Checkbox("Environment IBL", &m_rendererSetting.ibl);
-                ImGui::Checkbox("Bloom Blur", &m_rendererSetting.bloom);
-                ImGui::Checkbox("Lensflare Effect", &m_rendererSetting.lensflare);
-                ImGui::Checkbox("Dirt Mask", &m_rendererSetting.dirtmask);
-                ImGui::Checkbox("Screen Space Ambient Occlussion", &m_rendererSetting.ssao);
+                if (ImGui::CollapsingHeader("Pipeline Switches", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    ImGui::Checkbox("Deferred Rendering", &m_rendererSetting.deferred);
+                    ImGui::Checkbox("Shadow Mapping", &m_rendererSetting.shadow);
+                    ImGui::Checkbox("Environment IBL", &m_rendererSetting.ibl);
+                    ImGui::Checkbox("Bloom Blur", &m_rendererSetting.bloom);
+                    ImGui::Checkbox("Lensflare Effect", &m_rendererSetting.lensflare);
+                    ImGui::Checkbox("Dirt Mask", &m_rendererSetting.dirtmask);
+                    // ImGui::Checkbox("Screen Space Ambient Occlussion", &m_rendererSetting.ssao);
+                    // ImGui::Checkbox("Temporal Anti-Aliasing", &m_rendererSetting.taa);
+                }
+                ImGui::Separator();
+
+                auto camera = scene.getCamera();
+                if (camera && ImGui::CollapsingHeader("Active Camera Info", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    glm::vec3 eye    = camera->getEye();
+                    glm::vec3 target = camera->getTarget();
+                    float speed      = camera->getSpeed();
+
+                    ImGui::Text("Position: (%.2f, %.2f, %.2f)", eye.x, eye.y, eye.z);
+                    ImGui::Text("Target  : (%.2f, %.2f, %.2f)", target.x, target.y, target.z);
+                    if (ImGui::DragFloat("Camera Speed", &speed, 0.1f, 0.1f, 50.0f, "%.1f")) {
+                        camera->setSpeed(speed);
+                    }
+                    if (ImGui::Button("Reset Viewport Location")) {
+                        camera->reset();
+                    }
+                }
             } break;
             case SideBarTab::SB_TAB_LIGHTS: {
                 auto& lights = scene.getLights();
-                if (lights.empty()) { ImGui::TextDisabled("No ambient/direct lights.");} 
+                if (lights.empty()) { 
+                    ImGui::TextDisabled("No ambient/direct lights in scene.");
+                } else {
+                    for (size_t i = 0; i < lights.size(); ++i) {
+                        ImGui::PushID(static_cast<int>(i)); // otherwise will cause duplicate ID error
+                        std::string headerName = "Light Source #" + std::to_string(i);
+                        if (ImGui::CollapsingHeader(headerName.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+                            auto& light = lights[i];
+
+                            glm::vec3 color = light->getColor();
+                            if (ImGui::ColorEdit3("Color", glm::value_ptr(color))) {
+                                light->setColor(color);
+                            }
+                            float intensity = light->getIntensity();
+                            if (ImGui::DragFloat("Intensity", &intensity, 0.05f, 0.0f, 100.0f, "%.2f")) {
+                                light->setIntensity(intensity);
+                            }
+
+                            auto dirLight = dynamic_cast<DirectionalLight*>(light.get());
+                            if (dirLight) {
+                                ImGui::TextColored(ImVec4(1, 1, 0, 1), "Type: Directional");
+                                glm::vec3 direction = dirLight->getDirection();
+                                
+                                if (ImGui::DragFloat3("Direction", glm::value_ptr(direction), 0.02f, -1.0f, 1.0f, "%.2f")) {
+                                    dirLight->setDirection(direction);
+                                    dirLight->setLightSpaceMatrix(scene.getBoundingBox());
+                                }
+                            } else {
+                                ImGui::Text("Type: Point/Other");
+                            }
+                        }
+                        ImGui::Spacing();
+                        ImGui::PopID();
+                    }
+                }
             } break;
             case SideBarTab::SB_TAB_MODELS: {
                 auto& models = scene.getModels();
-                if (models.empty()) { ImGui::TextDisabled("Empty world hierarchy."); }
+                if (models.empty()) { 
+                    ImGui::TextDisabled("Empty world hierarchy."); 
+                } else {
+                    ImGui::Text("Hierarchy Tree:");
+                    ImGui::BeginChild("##HierarchyTree", ImVec2(0, 120), true);
+                    for (int i = 0; i < models.size(); ++i) {
+                        bool selected = (m_setting.currSBModelIndex == i);
+                        if (ImGui::Selectable(models[i]->getName().c_str(), selected)) {
+                            m_setting.currSBModelIndex = i;
+                        }
+                    }
+                    ImGui::EndChild();
+                    ImGui::Separator();
+
+                    if (m_setting.currSBModelIndex >= 0 && m_setting.currSBModelIndex < models.size()) {
+                        auto& model = models[m_setting.currSBModelIndex];
+                        ImGui::Text("Inspector: %s", model->getName().c_str());                        
+                        if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+                            static glm::vec3 t(0.f), r(0.f), s(1.f);
+                            bool changed = false;
+                            if (ImGui::DragFloat3("Position", glm::value_ptr(t), 0.05f)) { changed = true; }
+                            if (ImGui::DragFloat3("Rotation", glm::value_ptr(r), 0.5f, -180.f, 180.f, "%.1f°")) { changed = true; }
+                            if (ImGui::DragFloat3("Scale",    glm::value_ptr(s), 0.02f, 0.001f, 10.f)) { changed = true; }
+                            if (changed) { model->setTransform(t, r, s);}
+                        }
+                        if (ImGui::CollapsingHeader("AABB Bound Info")) {
+                            auto& bounds = model->getBoundingBox();
+                            ImGui::Text("Min: (%.2f, %.2f, %.2f)", bounds.first.x, bounds.first.y, bounds.first.z);
+                            ImGui::Text("Max: (%.2f, %.2f, %.2f)", bounds.second.x, bounds.second.y, bounds.second.z);
+                        }
+                    }
+                }
             } break;
         }
     }
