@@ -23,7 +23,7 @@ void Renderer::setup(ResourceManager& manager) {
     // 0. Define name mappings
     {
         m_pass2FrameNames = {
-            {"equirect_to_cubemap", "skybox"},
+            {"skybox_equirect2cubemap", "skybox"},
             {"ibl_irradiance", "ibl_diffuse"},
             {"ibl_prefiltered", "ibl_specular"},
             {"ibl_brdf_lut", "ibl_brdf_lut"},
@@ -31,7 +31,8 @@ void Renderer::setup(ResourceManager& manager) {
             {"deferred_geometry", "gbuffer"},
             {"deferred_shading", "hdr_screen"},
             {"forward_opaque", "hdr_screen"},
-            {"skybox", "hdr_screen"},
+            {"forward_transparent", "hdr_screen"},
+            {"skybox_mapping", "hdr_screen"},
             {"postprocess_highlight", "highlight"},
             {"postprocess_kawase_down", "blur_down"},
             {"postprocess_kawase_up", "blur_up"},
@@ -52,19 +53,22 @@ void Renderer::setup(ResourceManager& manager) {
             {"gbuffer.mrao", 10},
             {"gbuffer.depth", 11},
 
-            // 12~15: shadow textures
-            {"shadow", 12},
+            // 12~19: ibl textures and shadow textures
+            {"skybox.cubemap", 12},
+            {"skybox.equirect", 13}, // skybox.equirect is registered in m_textures by scene.m_skyboxEquirect when prepare(...) is called
+            {"ibl_diffuse", 14},
+            {"ibl_specular", 15},
+            {"ibl_brdf_lut", 16},
 
-            // 16~23: environment/ibl textures
-            {"skybox.cubemap", 16},
-            {"skybox.equirect", 17}, // skybox.equirect is registered in m_textures by scene.m_skyboxEquirect when prepare(...) is called
-            {"ibl_diffuse", 18},
-            {"ibl_specular", 19},
-            {"ibl_brdf_lut", 20},
+            {"shadow", 19},
 
+            // 20~23: screen space algorithms concerned textures
+            {"hdr_screen.color", 20},
+            {"hdr_screen.normal", 21},
+            {"hdr_screen.metallic_roughness", 22},
+            {"hdr_screen.depth", 23},
+            
             // 24~31: postprocess textures
-            {"hdr_screen.color", 24},
-            {"hdr_screen.depth", -1}, // only used as output, no need to bind
             {"highlight", 25},
             {"blur_down", 26},
             {"blur_up", 27},
@@ -78,7 +82,7 @@ void Renderer::setup(ResourceManager& manager) {
 
     // 1. Initialize renderpasses, namely define the input and output attachments of each pipeline
     {
-        m_passes["equirect_to_cubemap"] = RenderPass{
+        m_passes["skybox_equirect2cubemap"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
                     .name   = "cubemap",
@@ -196,6 +200,24 @@ void Renderer::setup(ResourceManager& manager) {
                     .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
                 },
                 AttachmentDesc{
+                    .name   = "normal",
+                    .target = GL_COLOR,
+                    .type   = GL_TEXTURE_2D,
+                    .format = GL_RGBA32F,
+                    .slot   = GL_COLOR_ATTACHMENT1,
+                    .loadOp = LoadOp::LOAD_OP_CLEAR,
+                    .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+                },
+                AttachmentDesc{
+                    .name   = "metallic_roughness",
+                    .target = GL_COLOR,
+                    .type   = GL_TEXTURE_2D,
+                    .format = GL_RGBA32F,
+                    .slot   = GL_COLOR_ATTACHMENT2,
+                    .loadOp = LoadOp::LOAD_OP_CLEAR,
+                    .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+                },
+                AttachmentDesc{
                     .name   = "depth",
                     .target = GL_DEPTH,
                     .type   = GL_TEXTURE_2D,
@@ -217,6 +239,24 @@ void Renderer::setup(ResourceManager& manager) {
                     .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
                 },
                 AttachmentDesc{
+                    .name   = "normal",
+                    .target = GL_COLOR,
+                    .type   = GL_TEXTURE_2D,
+                    .format = GL_RGBA32F,
+                    .slot   = GL_COLOR_ATTACHMENT1,
+                    .loadOp = LoadOp::LOAD_OP_CLEAR,
+                    .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+                },
+                AttachmentDesc{
+                    .name   = "metallic_roughness",
+                    .target = GL_COLOR,
+                    .type   = GL_TEXTURE_2D,
+                    .format = GL_RGBA32F,
+                    .slot   = GL_COLOR_ATTACHMENT2,
+                    .loadOp = LoadOp::LOAD_OP_CLEAR,
+                    .value  = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
+                },
+                AttachmentDesc{
                     .name   = "depth",
                     .target = GL_DEPTH,
                     .type   = GL_TEXTURE_2D,
@@ -227,7 +267,19 @@ void Renderer::setup(ResourceManager& manager) {
                 },
             },
         };
-        m_passes["skybox"] = RenderPass{
+        m_passes["forward_transparent"] = RenderPass{
+            .attachments = {
+                AttachmentDesc{
+                    .name   = "color",
+                    .target = GL_COLOR,
+                    .type   = GL_TEXTURE_2D,
+                    .format = GL_RGBA32F,
+                    .slot   = GL_COLOR_ATTACHMENT0,
+                    .loadOp = LoadOp::LOAD_OP_DONT_CARE, // never clear color for forward_transparent pass
+                },
+            }
+        };
+        m_passes["skybox_mapping"] = RenderPass{
             .attachments = {
                 AttachmentDesc{
                     .name   = "color",
@@ -332,7 +384,7 @@ void Renderer::setup(ResourceManager& manager) {
 
     // 2. Initialize pipeline states for each renderpass, namely configure the fixed-function stages including rasterization/blend/depth/stencil
     {
-        m_states["equirect_to_cubemap"] = PipelineState{
+        m_states["skybox_equirect2cubemap"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
             .viewW            = (GLsizei)m_setting.skyboxSize,
@@ -396,7 +448,16 @@ void Renderer::setup(ResourceManager& manager) {
             .depthWriteEnable = GL_TRUE,
             .depthFunc        = GL_LESS,
         };
-        m_states["skybox"] = PipelineState{
+        m_states["forward_transparent"] = PipelineState{
+            .viewX            = 0,
+            .viewY            = 0,
+            .viewW            = (GLsizei)m_setting.frameWidth,
+            .viewH            = (GLsizei)m_setting.frameHeight,
+            .depthTestEnable  = GL_TRUE,
+            .depthWriteEnable = GL_TRUE,
+            .depthFunc        = GL_LESS,
+        };
+        m_states["skybox_mapping"] = PipelineState{
             .viewX            = 0,
             .viewY            = 0,
             .viewW            = (GLsizei)m_setting.frameWidth,
@@ -448,7 +509,7 @@ void Renderer::setup(ResourceManager& manager) {
 
     // 3. Compile and link shaders
     {
-        m_shaders["equirect_to_cubemap"]       = manager.loadShader("equirect_to_cubemap", "../asset/shader/equirect_to_cubemap.vert", "../asset/shader/equirect_to_cubemap.frag");
+        m_shaders["skybox_equirect2cubemap"]       = manager.loadShader("skybox_equirect2cubemap", "../asset/shader/skybox_equirect2cubemap.vert", "../asset/shader/skybox_equirect2cubemap.frag");
         m_shaders["ibl_irradiance"]            = manager.loadShader("ibl_irradiance", "../asset/shader/ibl_irradiance.vert", "../asset/shader/ibl_irradiance.frag");
         m_shaders["ibl_prefiltered"]           = manager.loadShader("ibl_prefiltered", "../asset/shader/ibl_prefiltered.vert", "../asset/shader/ibl_prefiltered.frag");
         m_shaders["ibl_brdf_lut"]              = manager.loadShader("ibl_brdf_lut", "../asset/shader/ibl_brdf_lut.vert", "../asset/shader/ibl_brdf_lut.frag");
@@ -456,7 +517,8 @@ void Renderer::setup(ResourceManager& manager) {
         m_shaders["deferred_geometry"]         = manager.loadShader("deferred_geometry", "../asset/shader/deferred_geometry.vert", "../asset/shader/deferred_geometry.frag");
         m_shaders["deferred_shading"]          = manager.loadShader("deferred_shading", "../asset/shader/deferred_shading.vert", "../asset/shader/deferred_shading.frag");
         m_shaders["forward_opaque"]            = manager.loadShader("forward_opaque", "../asset/shader/forward_opaque.vert", "../asset/shader/forward_opaque.frag");
-        m_shaders["skybox"]                    = manager.loadShader("skybox", "../asset/shader/skybox.vert", "../asset/shader/skybox.frag");
+        m_shaders["forward_transparent"]       = manager.loadShader("forward_transparent", "../asset/shader/forward_transparent.vert", "../asset/shader/forward_transparent.frag");
+        m_shaders["skybox_mapping"]            = manager.loadShader("skybox", "../asset/shader/skybox.vert", "../asset/shader/skybox.frag");
         m_shaders["postprocess_highlight"]     = manager.loadShader("postprocess_highlight", "../asset/shader/postprocess_highlight.vert", "../asset/shader/postprocess_highlight.frag");
         m_shaders["postprocess_kawase_down"]   = manager.loadShader("postprocess_kawase_down", "../asset/shader/postprocess_kawase_down.vert", "../asset/shader/postprocess_kawase_down.frag");
         m_shaders["postprocess_kawase_up"]     = manager.loadShader("postprocess_kawase_up", "../asset/shader/postprocess_kawase_up.vert", "../asset/shader/postprocess_kawase_up.frag");    
@@ -521,24 +583,24 @@ void Renderer::setup(ResourceManager& manager) {
             .wrapS     = GL_CLAMP_TO_EDGE,
             .wrapT     = GL_CLAMP_TO_EDGE,
         });
-        samplers[0xF000]     = std::make_shared<Sampler>(SamplerDesc{
-            // slot 12~15 -> GL_TEXTURE12~GL_TEXTURE15 = shadow textures
-            .minFilter   = GL_NEAREST,
-            .magFilter   = GL_NEAREST,
-            .wrapS       = GL_CLAMP_TO_BORDER,
-            .wrapT       = GL_CLAMP_TO_BORDER,
-            .borderColor = {1.0f, 1.0f, 1.0f, 1.0f},
-        });
-        samplers[0xFF0000]   = std::make_shared<Sampler>(SamplerDesc{
-            // slot 16~23 -> GL_TEXTURE16~GL_TEXTURE23 = skybox/ibl textures
+        samplers[0x7F000]   = std::make_shared<Sampler>(SamplerDesc{
+            // slot 12~18 -> GL_TEXTURE12~GL_TEXTURE18 = skybox/ibl textures
             .minFilter = GL_LINEAR,
             .magFilter = GL_LINEAR,
             .wrapS     = GL_CLAMP_TO_EDGE,
             .wrapT     = GL_CLAMP_TO_EDGE,
             .wrapR     = GL_CLAMP_TO_EDGE,
         });
-        samplers[0xFF000000] = std::make_shared<Sampler>(SamplerDesc{
-            // slot 24~31 -> GL_TEXTURE24~GL_TEXTURE31 = postprocess textures
+        samplers[0x80000]     = std::make_shared<Sampler>(SamplerDesc{
+            // slot 19 -> GL_TEXTURE19 = shadow texture
+            .minFilter   = GL_NEAREST,
+            .magFilter   = GL_NEAREST,
+            .wrapS       = GL_CLAMP_TO_BORDER,
+            .wrapT       = GL_CLAMP_TO_BORDER,
+            .borderColor = {1.0f, 1.0f, 1.0f, 1.0f},
+        });
+        samplers[0xFFF00000] = std::make_shared<Sampler>(SamplerDesc{
+            // slot 20~31 -> GL_TEXTURE20~GL_TEXTURE31 = screen/postprocess textures
             .minFilter = GL_LINEAR,
             .magFilter = GL_LINEAR,
             .wrapS     = GL_CLAMP_TO_EDGE,
@@ -576,23 +638,24 @@ void Renderer::prepare(const Scene& scene) {
     if (cubemap == nullptr && equirect != nullptr) {
         m_textures["skybox.equirect"] = equirect; // register equirect texture in m_textures, so that can bind it in draw()
 
-        m_states["equirect_to_cubemap"].apply();
-        m_shaders["equirect_to_cubemap"]->use();
+        m_states["skybox_equirect2cubemap"].apply();
+        m_shaders["skybox_equirect2cubemap"]->use();
         for (GLenum face = GL_TEXTURE_CUBE_MAP_POSITIVE_X; face <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z; face++) {
             GLint index = face - GL_TEXTURE_CUBE_MAP_POSITIVE_X;
             auto matrix = ResourceManager::getCaptureMatrix(index);
-            m_shaders["equirect_to_cubemap"]->setUniformValue("uViewProjMatrix", matrix);
+            m_shaders["skybox_equirect2cubemap"]->setUniformValue("uViewProjMatrix", matrix);
             m_frames["skybox"]->attach(GL_COLOR_ATTACHMENT0, m_textures["skybox.cubemap"], 0, index);
-            m_passes["equirect_to_cubemap"].begin(m_frames["skybox"]);
+            m_passes["skybox_equirect2cubemap"].begin(m_frames["skybox"]);
             draw(cubeLayout, {"skybox.equirect"}, cubeCount);
-            m_passes["equirect_to_cubemap"].end();
+            m_passes["skybox_equirect2cubemap"].end();
         }
     } else {
         m_textures["skybox.cubemap"] = cubemap;
     }
 
     // 2. Precalculate environment map
-    if (cubemap != nullptr || equirect != nullptr) {
+    if (0) {
+    // if (cubemap != nullptr || equirect != nullptr) {
         // 2.1 Precalculate irradiance map
         {
             m_states["ibl_irradiance"].apply();
@@ -692,6 +755,7 @@ void Renderer::update(const Scene& scene, ResourceManager& manager) {
     }
 
     // 2. Render shadow map and update the light shader storage buffer if needed
+    // TODO: fix shadow for transparent object
     if (m_setting.shadow) {
         std::vector<std::shared_ptr<Light>> lights = scene.getLights();
         std::vector<int> rects;
@@ -747,7 +811,7 @@ void Renderer::update(const Scene& scene, ResourceManager& manager) {
 
 void Renderer::render(const Scene& scene) {
     std::vector<RenderItem> items;
-    scene.getRenderQueue(items, true);
+    scene.getRenderQueue(items, true); // get opaque objects
 
     if (m_setting.deferred) {
         {
@@ -791,12 +855,35 @@ void Renderer::render(const Scene& scene) {
         GLsizei count = ResourceManager::getCount("cube");
         auto& layout  = ResourceManager::getLayout("cube");
 
-        m_states["skybox"].apply();
-        m_shaders["skybox"]->use();
-        m_passes["skybox"].begin(m_frames["hdr_screen"]);
+        m_states["skybox_mapping"].apply();
+        m_shaders["skybox_mapping"]->use();
+        m_passes["skybox_mapping"].begin(m_frames["hdr_screen"]);
         draw(layout, {"skybox.cubemap"}, count);
-        m_passes["skybox"].end();
+        m_passes["skybox_mapping"].end();
     }
+
+    // TODO: screen space reflection
+    if (m_setting.ssr) {}
+
+    if (m_setting.ssrefr) {
+        scene.getRenderQueue(items, false); // get transparent objects
+
+        std::cout << "transparent objects count: " << items.size() << std::endl;
+
+        m_states["forward_transparent"].apply();
+        m_shaders["forward_transparent"]->use();
+        m_shaders["forward_transparent"]->setUniformValue("uLightCount", (int)scene.getVisibleLightCount());
+        m_passes["forward_transparent"].begin(m_frames["hdr_screen"]);
+        for (const auto& item : items) {            
+            m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
+            draw(item, {"albedo", "normal", "mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut", "hdr_screen.color", "hdr_screen.depth"});
+        }
+        m_passes["forward_transparent"].end();
+
+    }
+
+    // TODO: screen space ambient occlusion
+    if (m_setting.ssao) {}
 
     if (m_setting.bloom || m_setting.lensflare) {
         GLsizei count = ResourceManager::getCount("quad");
@@ -921,9 +1008,6 @@ void Renderer::render(const Scene& scene) {
         m_textures["lensflare"]->clear(glm::value_ptr(glm::vec4(0.0f)), GL_RGBA, GL_FLOAT); // reset the lensflare map
     }
 
-    // TODO: screen space ambient occlusion
-    if (m_setting.ssao) {}
-
     // TODO: temporal anti aliasing
     if (m_setting.taa) {}
 
@@ -948,7 +1032,7 @@ void Renderer::draw(const RenderItem& item, const std::vector<std::string>& text
     for (auto name : textures) {
         if (m_texture2SlotIndexs.count(name) == 0) { throw std::runtime_error("Renderer::draw: Texture slot index not found: " + name); }
         if (item.material == nullptr) { throw std::runtime_error("Renderer::draw: Invalid render item material!"); }
-        if (item.material->getTexture(name) == nullptr && (m_textures.count(name) == 0 || m_textures[name] == nullptr)) { throw std::runtime_error("Renderer::draw: Texture not found: " + name); }
+        if (item.material->getTexture(name) == nullptr && (m_textures.count(name) == 0 || m_textures.at(name) == nullptr)) { throw std::runtime_error("Renderer::draw: Texture not found: " + name); }
         std::shared_ptr<Texture> texture = item.material->getTexture(name) != nullptr ? item.material->getTexture(name) : m_textures[name];
         texture->bind(m_texture2SlotIndexs[name]);
     }
