@@ -10,8 +10,14 @@ layout(location = 3) in vec2 iVertUV;
 layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
-    mat4 uInvViewProjMatrix;
+    mat4 uInvViewMatrix;
+    mat4 uInvProjMatrix;
     vec3 uCameraPos;
+    float uCameraType;
+    float uFov;
+    float uNear;
+    float uFar;
+    float uAspect;
 };
 layout(std140, binding = 1) uniform ModelBlock {
     mat4 uModelMatrix;
@@ -23,8 +29,7 @@ layout(location = 1) out vec3 oFragNormal;
 layout(location = 2) out vec3 oFragTangent;
 layout(location = 3) out vec2 oFragUV;
 layout(location = 4) out vec3 oFragView; // view direction from vertex to camera
-layout(location = 5) out vec3 oFragViewNormal; // normal in view space
-layout(location = 6) out vec3 oFragScreenUVDepth; // screen space uv and depth
+layout(location = 5) out vec3 oFragScreenUVDepth; // screen space uv and depth
 
 void main() {
     gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * vec4(iVertPos, 1.0);
@@ -34,6 +39,5 @@ void main() {
     oFragTangent = (uModelMatrix * vec4(iVertTangent, 0.0)).xyz;
     oFragUV = iVertUV;
     oFragView = uCameraPos -iVertPos; 
-    oFragViewNormal = (uViewMatrix * uNormalMatrix * vec4(oFragNormal, 0.0)).xyz; 
     oFragScreenUVDepth = gl_Position.xyz / gl_Position.w;
 }

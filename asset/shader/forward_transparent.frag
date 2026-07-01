@@ -3,15 +3,29 @@
 #include "common_brdf.glsl"
 #include "common_normal.glsl"
 #include "common_shadow.glsl"
+#include "common_sampling.glsl"
+#include "common_raymarch.glsl"
 
 layout(location = 0) in vec3 iFragPos;
 layout(location = 1) in vec3 iFragNormal;
 layout(location = 2) in vec3 iFragTangent;
 layout(location = 3) in vec2 iFragUV;
 layout(location = 4) in vec3 iFragView; // view direction from vertex to camera
-layout(location = 5) in vec3 iFragViewNormal; // normal in view space
-layout(location = 6) in vec3 iFragScreenUVDepth; // screen space uv and depth
+layout(location = 5) in vec3 iFragScreenUVDepth; // screen space uv and depth
 
+// ubo block
+layout(std140, binding = 0) uniform CameraBlock {
+    mat4 uViewMatrix;
+    mat4 uProjMatrix;
+    mat4 uInvViewMatrix;
+    mat4 uInvProjMatrix;
+    vec3 uCameraPos;
+    float uCameraType;
+    float uFov;
+    float uNear;
+    float uFar;
+    float uAspect;
+};
 // ssbo array
 struct Light {
     mat4 viewProjMatrix; 
@@ -73,22 +87,22 @@ void main() {
     // ----------------------------------------------------------------
     vec3 indReflectionColor = vec3(0.0);
 
+
     // ----------------------------------------------------------------
     // Evaluate both direct and indirect light refraction color
     // ----------------------------------------------------------------
-    float refDepth = texture(tScreenDepthMap, iFragScreenUVDepth.xy).x;
-    float depth = iFragScreenUVDepth.z;
-
-    vec2 distortion = TN.xy * uDistortion * (1.0 - roughness) * max(0.0, refDepth - depth); // the distortion offset in screen space uv
-    vec2 distortedScreenUV = clamp(iFragScreenUVDepth.xy + distortion, 0.0, 1.0);
-
-    vec3 refColor = texture(tScreenColorMap, distortedScreenUV).rgb; // since the screen color already includes both direct and indirect light, the output is the full transmission color
-
-    float thickness = 1.0;
-    vec3 absorption = vec3(2.5, 0.1, 2.0);
-    vec3 refractionColor = refColor * exp(-thickness * absorption);
-
-    oFragColor = vec4(refractionColor, 1.0);
-    // oFragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    float eta = 1 / 1.5;
+    vec3 H = GGXSample(iFragUV, N, roughness);
+    vec3 R = refract(-V, normalize(H), eta);
+    vec4 hit = RayMarch(iFragPos, R, uViewMatrix, uProjMatrix, tScreenDepthMap, uNear, uFar, uCameraType);
+    vec3 absorption = vec3(0.1, 0.02, 0.15);
+    absorption = exp(-absorption * hit.z);
+    vec3 refractionColor = texture(tScreenColorMap, hit.xy).rgb * absorption.rgb * hit.w;
+    
+    // ----------------------------------------------------------------
+    // Evaluate final color
+    // ----------------------------------------------------------------
+    vec3 F = F_Schlick(NdotV, F0);
+    oFragColor = vec4( mix(refractionColor, dReflectionColor + indReflectionColor, F), 1.0);
 }
 
