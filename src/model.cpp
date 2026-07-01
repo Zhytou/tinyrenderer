@@ -44,11 +44,13 @@ void Model::getRenderQueue(std::vector<RenderItem>& queue, bool opaque) const {
     if (!m_visible) { return; }
 
     for (auto& sm : m_mesh->getSubMeshes()) {
-        // all submeshes are opaque
+        auto material = sm.matid != -1 ? m_materials[sm.matid] : m_material;
+        if (material == nullptr) { throw std::runtime_error("Model::getRenderQueue}: Invalid material for submesh!"); }
+        if (material->isOpaque() != opaque) { continue; }
         queue.emplace_back(
             RenderItem{
                 .mesh     = m_mesh,
-                .material = sm.matid != -1 ? m_materials[sm.matid] : m_material,
+                .material = material,
                 .ioffset  = sm.offset,
                 .length   = sm.length,
             }
