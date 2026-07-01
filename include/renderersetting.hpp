@@ -12,6 +12,8 @@ struct RendererSetting {
     bool lensflare = false;  // lensflare enabled or not
     bool dirtmask  = false;  // dirtmask enabled or not
     bool ssao      = false; // screen space ambient occlusion enabled or not
+    bool ssr       = false; // screen space reflection enabled or not
+    bool ssrefr    = false; // screen space refraction enabled or not
     bool taa       = false; // temporal anti aliasing enabled or not
 
     int x                  = 0;
