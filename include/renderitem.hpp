@@ -16,8 +16,8 @@ namespace tinyglrenderer {
  * for a single primitive draw call. Collected dynamically into sorting queues for rendering.
  */
 struct RenderItem {
-    const std::shared_ptr<Mesh>& mesh;
-    const std::shared_ptr<Material>& material;
+    const std::shared_ptr<Mesh> mesh;
+    const std::shared_ptr<Material> material;
 
     uint ioffset = 0;   // vertex input data offset of vbo/ibo in vertex count
     uint length  = 0;   // vertex input data length of vbo/ibo in vertex count
