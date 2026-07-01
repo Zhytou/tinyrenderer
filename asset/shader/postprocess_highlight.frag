@@ -4,13 +4,13 @@ layout(location = 0) in vec2 iFragUV;
 
 uniform float uHighlightBrightness = 1.0;
 
-layout(binding = 20) uniform sampler2D tScreenMap;
+layout(binding = 20) uniform sampler2D tScreenColorMap;
 
 out vec4 oFragColor;
 
 void main() {
     const vec3 luminance = vec3(0.2126, 0.7152, 0.0722); // human eye luminance weight
-    vec3 color = texture(tScreenMap, iFragUV).rgb;
+    vec3 color = texture(tScreenColorMap, iFragUV).rgb;
     float brightness = dot(color, luminance);
     
     // if brightness is high, keep the color, otherwise set to black

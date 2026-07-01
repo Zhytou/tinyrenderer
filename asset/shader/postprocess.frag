@@ -5,7 +5,7 @@ layout(location = 0) in vec2 iFragUV;
 uniform float uBloomIntensity = 1.0;
 uniform float uFlareIntensity = 0.5;
 
-layout(binding = 20) uniform sampler2D tScreenMap;
+layout(binding = 20) uniform sampler2D tScreenColorMap;
 layout(binding = 25) uniform sampler2D tHighlightMap; // debug check highlight distribution
 layout(binding = 26) uniform sampler2D tBloomblurDownMap; // debug check downsampling result
 layout(binding = 27) uniform sampler2D tBloomblurMap;
@@ -44,7 +44,7 @@ vec3 ACESFilm_Advanced(vec3 color) {
 }
 
 void main() {
-    vec3 hdrColor = texture(tScreenMap, iFragUV).rgb;
+    vec3 hdrColor = texture(tScreenColorMap, iFragUV).rgb;
     
     // Bloom blur
     vec3 bloomColor = texture(tBloomblurMap, iFragUV).rgb;
