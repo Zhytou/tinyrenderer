@@ -4,7 +4,7 @@ layout(location = 0) in vec2 iFragUV;
 
 uniform float uHighlightBrightness = 1.0;
 
-layout(binding = 24) uniform sampler2D tScreenMap;
+layout(binding = 20) uniform sampler2D tScreenMap;
 
 out vec4 oFragColor;
 

@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec3 iFragDir;
 
-layout(binding = 17) uniform sampler2D tSkyboxEquirectMap;
+layout(binding = 13) uniform sampler2D tSkyboxEquirectMap;
 
 out vec4 oFragColor;
 

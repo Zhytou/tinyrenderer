@@ -32,12 +32,14 @@ uniform int uLightCount;
 layout(binding = 0) uniform sampler2D tAlbedoMap;
 layout(binding = 1) uniform sampler2D tNormalMap;
 layout(binding = 2) uniform sampler2D tMRAOMap;
-layout(binding = 12) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value;
-layout(binding = 18) uniform samplerCube tIBLDiffuseMap;
-layout(binding = 19) uniform samplerCube tIBLSpecularMap;
-layout(binding = 20) uniform sampler2D tIBLBRDFLUTMap;
+layout(binding = 14) uniform samplerCube tIBLDiffuseMap;
+layout(binding = 15) uniform samplerCube tIBLSpecularMap;
+layout(binding = 16) uniform sampler2D tIBLBRDFLUTMap;
+layout(binding = 19) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value;
 
-out vec4 oFragColor;
+layout(location = 0) out vec4 oFragColor;
+// layout(location = 1) out vec3 oFragNormal;
+// layout(location = 2) out vec3 oFragMetallicRoughness;
 
 void main() {
     vec3 albedo = texture(tAlbedoMap, iFragUV).rgb;

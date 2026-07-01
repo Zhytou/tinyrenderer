@@ -5,7 +5,7 @@ layout(location = 0) in vec2 iFragUV;
 uniform float uBloomIntensity = 1.0;
 uniform float uFlareIntensity = 0.5;
 
-layout(binding = 24) uniform sampler2D tScreenMap;
+layout(binding = 20) uniform sampler2D tScreenMap;
 layout(binding = 25) uniform sampler2D tHighlightMap; // debug check highlight distribution
 layout(binding = 26) uniform sampler2D tBloomblurDownMap; // debug check downsampling result
 layout(binding = 27) uniform sampler2D tBloomblurMap;

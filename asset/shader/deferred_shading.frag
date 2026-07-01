@@ -30,12 +30,14 @@ layout(binding = 8) uniform sampler2D tAlbedoMap;
 layout(binding = 9) uniform sampler2D tNormalMap;
 layout(binding = 10) uniform sampler2D tMRAOMap;
 layout(binding = 11) uniform sampler2D tDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
-layout(binding = 12) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
-layout(binding = 18) uniform samplerCube tIBLDiffuseMap;
-layout(binding = 19) uniform samplerCube tIBLSpecularMap;
-layout(binding = 20) uniform samplerCube tIBLBRDFLUTMap;
+layout(binding = 14) uniform samplerCube tIBLDiffuseMap;
+layout(binding = 15) uniform samplerCube tIBLSpecularMap;
+layout(binding = 26) uniform samplerCube tIBLBRDFLUTMap;
+layout(binding = 19) uniform sampler2D tShadowDepthMap; // GL_DEPTH_COMPONENT24, .x is the depth value
 
-out vec4 oFragColor;
+layout(location = 0) out vec4 oFragColor;
+// layout(location = 1) out vec3 oFragNormal;
+// layout(location = 2) out vec3 oFragMetallicRoughness; 
 
 vec3 Pos_toWord(vec3 pos) {
     vec4 worldPos = uInvViewProjMatrix * vec4(pos, 1.0);
