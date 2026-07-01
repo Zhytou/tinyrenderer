@@ -331,8 +331,10 @@ void Editor::drawSideBar(Scene& scene) {
                     ImGui::Checkbox("Bloom Blur", &m_rendererSetting.bloom);
                     ImGui::Checkbox("Lensflare Effect", &m_rendererSetting.lensflare);
                     ImGui::Checkbox("Dirt Mask", &m_rendererSetting.dirtmask);
-                    // ImGui::Checkbox("Screen Space Ambient Occlussion", &m_rendererSetting.ssao);
-                    // ImGui::Checkbox("Temporal Anti-Aliasing", &m_rendererSetting.taa);
+                    ImGui::Checkbox("Screen Space Reflection", &m_rendererSetting.ssr);
+                    ImGui::Checkbox("Screen Space Refraction", &m_rendererSetting.ssrefr);
+                    ImGui::Checkbox("Screen Space Ambient Occlussion", &m_rendererSetting.ssao);
+                    ImGui::Checkbox("Temporal Anti-Aliasing", &m_rendererSetting.taa);
                 }
                 ImGui::Separator();
 
@@ -658,6 +660,8 @@ void Editor::drawHUD(Scene& scene, const DisplayInfo& info) {
         ImGui::Text("Bloom Blur : %s", m_rendererSetting.bloom ? "On" : "Off");
         ImGui::Text("Lensflare : %s", m_rendererSetting.lensflare ? "On" : "Off");
         ImGui::Text("Dirt Mask : %s", m_rendererSetting.dirtmask ? "On" : "Off");
+        ImGui::Text("Screen Space Reflection : %s", m_rendererSetting.ssr ? "On" : "Off");
+        ImGui::Text("Screen Space Refraction : %s", m_rendererSetting.ssrefr ? "On" : "Off");
         ImGui::Text("Screen Space Ambient Occlusion : %s", m_rendererSetting.ssao ? "On" : "Off");
         ImGui::Text("Temporal Anti-Aliasing : %s", m_rendererSetting.taa ? "On" : "Off");
     }
