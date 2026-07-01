@@ -4,6 +4,8 @@ A lightweight, modern OpenGL 4.5 PBR renderer built with C++17, featuring dual f
 
 ![ibl](./result/multi-sphere-9-ibl-direct.png)
 
+![transparent-sphere](./result/transparent-sphere.png)
+
 ![lenslfare-dirtmask](./result/tokyo-lensflare.png)
 
 ![lenslfare](./result/catwalk-lensflare.png)
@@ -34,6 +36,8 @@ A lightweight, modern OpenGL 4.5 PBR renderer built with C++17, featuring dual f
 ### 👤 Shadows & Ambient Occlusion
 
 - [x] **Atlas Shadow Mapping**: Efficient shadow rendering utilizing a centralized shadow atlas texture.
+- [ ] **Screen-Space Refraction**:
+- [ ] **Screen-Space Reflection**:
 - [ ] **Screen-Space Ambient Occlusion (SSAO)**: High-quality contact shadows and ambient shadowing based on screen-space depth.
 
 ### 🎨 Post-Processing & Cinematic Effects
