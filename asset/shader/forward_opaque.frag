@@ -8,7 +8,7 @@ layout(location = 0) in vec3 iFragPos;
 layout(location = 1) in vec3 iFragNormal;
 layout(location = 2) in vec3 iFragTangent;
 layout(location = 3) in vec2 iFragUV;
-layout(location = 4) in vec3 oFragViewDir;
+layout(location = 4) in vec3 iFragView;
 
 // ssbo array
 struct Light {
@@ -42,7 +42,7 @@ void main() {
     float ao        = mrao.b;
 
     vec3 F0 =  mix(vec3(0.04), albedo, metallic);
-    vec3 V = normalize(oFragViewDir); // frag -> camera
+    vec3 V = normalize(iFragView); // frag -> camera
     vec3 N = normalize(iFragNormal);
     vec3 T = normalize(iFragTangent);
     vec3 TN = N_decode(texture(tNormalMap, iFragUV).xyz);
