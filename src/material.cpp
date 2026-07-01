@@ -8,8 +8,9 @@ namespace tinyglrenderer {
 
 namespace fs = std::filesystem;
 
-Material::Material(const std::string& name, const std::unordered_map<std::string, std::shared_ptr<Texture>>& textures) {
+Material::Material(const std::string& name, float opacity, const std::unordered_map<std::string, std::shared_ptr<Texture>>& textures) {
     m_name = name;
+    m_opacity = opacity;
     m_textures = textures;
 }
 

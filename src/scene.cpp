@@ -71,6 +71,7 @@ void Scene::initialize(const std::string& json, ResourceManager& manager) {
                 auto& matDoc = modelDoc["default_mat"];
                 tinyobj::material_t material;
                 material.name = matDoc.HasMember("name") ? matDoc["name"].GetString() : modelName + "_default";
+                material.dissolve = matDoc.HasMember("opacity") ? matDoc["opacity"].GetFloat() : 1.0f;
                 material.diffuse[0] = matDoc.HasMember("albedo") ? matDoc["albedo"][0].GetFloat() : 0.5f;
                 material.diffuse[1] = matDoc.HasMember("albedo") ? matDoc["albedo"][1].GetFloat() : 0.5f;
                 material.diffuse[2] = matDoc.HasMember("albedo") ? matDoc["albedo"][2].GetFloat() : 0.5f;

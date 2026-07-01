@@ -262,7 +262,7 @@ std::shared_ptr<Material> ResourceManager::loadMaterial(const std::string& matNa
         {"normal", load2DTexture(std::format("{}_normal", matName), matDir / material.normal_texname, normal, GL_RGBA32F)}, 
         {"mrao", load2DTexture(std::format("{}_mrao", matName), {matDir / material.metallic_texname, matDir / material.roughness_texname, matDir / material.ambient_texname}, mrao, GL_RGBA32F, 1, 1)}
     };
-    auto nmaterial = std::make_shared<Material>(matName, textures);
+    auto nmaterial = std::make_shared<Material>(matName, material.dissolve, textures);
     m_materials[matName] = nmaterial;
 
     return nmaterial;
