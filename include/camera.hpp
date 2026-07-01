@@ -8,8 +8,14 @@ namespace tinyglrenderer {
 struct alignas(16) CameraBlock {
     glm::mat4 viewMatrix;
     glm::mat4 projMatrix;
-    glm::mat4 invViewProjMatrix;
-    glm::vec3 cameraPosition;
+    glm::mat4 invViewMatrix;
+    glm::mat4 invProjMatrix;
+    glm::vec3 position;
+    float type; // 0: perspective, 1: orthographic
+    float fov;
+    float near;
+    float far;
+    float aspect;
 };
 
 enum class CameraMovement {
@@ -124,8 +130,14 @@ class PerspectiveCamera : public Camera {
     void update() override {
         m_cameraBlock.viewMatrix        = glm::lookAt(m_eye, m_target, m_up);
         m_cameraBlock.projMatrix        = glm::perspective(glm::radians(m_fov), m_aspect, m_near, m_far);
-        m_cameraBlock.invViewProjMatrix = glm::inverse(m_cameraBlock.projMatrix * m_cameraBlock.viewMatrix);
-        m_cameraBlock.cameraPosition    = m_eye;
+        m_cameraBlock.invViewMatrix     = glm::inverse(m_cameraBlock.viewMatrix);
+        m_cameraBlock.invProjMatrix     = glm::inverse(m_cameraBlock.projMatrix);
+        m_cameraBlock.position          = m_eye;
+        m_cameraBlock.type              = 0.0f;
+        m_cameraBlock.fov               = m_fov;
+        m_cameraBlock.near              = m_near;
+        m_cameraBlock.far               = m_far;
+        m_cameraBlock.aspect            = m_aspect;
     }
 };
 
@@ -138,8 +150,14 @@ class OrthographicCamera : public Camera {
     void update() override {
         m_cameraBlock.viewMatrix        = glm::lookAt(m_eye, m_target, m_up);
         m_cameraBlock.projMatrix        = glm::ortho(-m_width / 2.0f, m_width / 2.0f, -m_height / 2.0f, m_height / 2.0f, m_near, m_far);
-        m_cameraBlock.invViewProjMatrix = glm::inverse(m_cameraBlock.projMatrix * m_cameraBlock.viewMatrix);
-        m_cameraBlock.cameraPosition    = m_eye;
+        m_cameraBlock.invViewMatrix     = glm::inverse(m_cameraBlock.viewMatrix);
+        m_cameraBlock.invProjMatrix     = glm::inverse(m_cameraBlock.projMatrix);
+        m_cameraBlock.type              = 1.0f;
+        m_cameraBlock.position          = m_eye;
+        m_cameraBlock.fov               = m_fov;
+        m_cameraBlock.near              = m_near;
+        m_cameraBlock.far               = m_far;
+        m_cameraBlock.aspect            = m_aspect;
     }
 };
 

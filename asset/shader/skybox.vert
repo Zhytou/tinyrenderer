@@ -5,8 +5,14 @@ layout(location = 0) in vec3 iVertPos;
 layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
-    mat4 uInvViewProjMatrix;
+    mat4 uInvViewMatrix;
+    mat4 uInvProjMatrix;
     vec3 uCameraPos;
+    float uCameraType;
+    float uFov;
+    float uNear;
+    float uFar;
+    float uAspect;
 };
 
 layout(location = 0) out vec3 oFragDir; // for cube map sampling

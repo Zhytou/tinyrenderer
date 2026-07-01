@@ -10,8 +10,14 @@ layout(location = 0) in vec2 iFragUV;
 layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
-    mat4 uInvViewProjMatrix;
+    mat4 uInvViewMatrix;
+    mat4 uInvProjMatrix;
     vec3 uCameraPos;
+    float uCameraType;
+    float uFov;
+    float uNear;
+    float uFar;
+    float uAspect;
 };
 
 // ssbo array
@@ -40,7 +46,7 @@ layout(location = 0) out vec4 oFragColor;
 // layout(location = 2) out vec3 oFragMetallicRoughness; 
 
 vec3 Pos_toWord(vec3 pos) {
-    vec4 worldPos = uInvViewProjMatrix * vec4(pos, 1.0);
+    vec4 worldPos = uInvViewMatrix * uInvProjMatrix * vec4(pos, 1.0);
     return worldPos.xyz / worldPos.w;
 };
 

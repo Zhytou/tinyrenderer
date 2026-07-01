@@ -10,8 +10,14 @@ layout(location = 3) in vec2 iVertUV;
 layout(std140, binding = 0) uniform CameraBlock {
     mat4 uViewMatrix;
     mat4 uProjMatrix;
-    mat4 uInvViewProjMatrix;
+    mat4 uInvViewMatrix;
+    mat4 uInvProjMatrix;
     vec3 uCameraPos;
+    float uCameraType;
+    float uFov;
+    float uNear;
+    float uFar;
+    float uAspect;
 };
 layout(std140, binding = 1) uniform ModelBlock {
     mat4 uModelMatrix;
