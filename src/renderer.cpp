@@ -31,7 +31,7 @@ void Renderer::setup(ResourceManager& manager) {
             {"deferred_geometry", "gbuffer"},
             {"deferred_shading", "hdr_screen"},
             {"forward_opaque", "hdr_screen"},
-            {"forward_transparent", "hdr_screen"},
+            {"forward_transparent", "hdr_screen_ss"},
             {"skybox_mapping", "hdr_screen"},
             {"postprocess_highlight", "highlight"},
             {"postprocess_kawase_down", "blur_down"},
@@ -67,6 +67,8 @@ void Renderer::setup(ResourceManager& manager) {
             {"hdr_screen.normal", 21},
             {"hdr_screen.metallic_roughness", 22},
             {"hdr_screen.depth", 23},
+            {"hdr_screen_ss.color", -1},
+            {"hdr_screen_ss.depth", -1},
             
             // 24~31: postprocess textures
             {"highlight", 25},
@@ -276,6 +278,14 @@ void Renderer::setup(ResourceManager& manager) {
                     .format = GL_RGBA32F,
                     .slot   = GL_COLOR_ATTACHMENT0,
                     .loadOp = LoadOp::LOAD_OP_DONT_CARE, // never clear color for forward_transparent pass
+                },
+                AttachmentDesc{
+                    .name   = "depth",
+                    .target = GL_DEPTH,
+                    .type   = GL_TEXTURE_2D,
+                    .format = GL_DEPTH_COMPONENT24,
+                    .slot   = GL_DEPTH_ATTACHMENT,
+                    .loadOp = LoadOp::LOAD_OP_DONT_CARE, // never clear depth for forward_transparent pass
                 },
             }
         };
@@ -536,6 +546,7 @@ void Renderer::setup(ResourceManager& manager) {
         m_frames["gbuffer"]      = std::make_shared<FrameBuffer>(false, m_setting.frameWidth, m_setting.frameHeight);
         m_frames["skybox"]       = std::make_shared<FrameBuffer>(false, m_setting.skyboxSize, m_setting.skyboxSize);
         m_frames["hdr_screen"]   = std::make_shared<FrameBuffer>(false, m_setting.frameWidth, m_setting.frameHeight); // hdr_screen is the temporary frame buffer for shading pass, so that later can use it for postprocess(convert hdr into sdr/ldr)
+        m_frames["hdr_screen_ss"]   = std::make_shared<FrameBuffer>(false, m_setting.frameWidth, m_setting.frameHeight); 
         m_frames["highlight"]    = std::make_shared<FrameBuffer>(false, m_setting.highlightMapSize, m_setting.highlightMapSize);
         m_frames["blur_down"]    = std::make_shared<FrameBuffer>(false, m_setting.bloomMapSize, m_setting.bloomMapSize);
         m_frames["blur_up"]      = std::make_shared<FrameBuffer>(false, m_setting.bloomMapSize, m_setting.bloomMapSize);
@@ -868,18 +879,25 @@ void Renderer::render(const Scene& scene) {
     if (m_setting.ssrefr) {
         scene.getRenderQueue(items, false); // get transparent objects
 
-        std::cout << "transparent objects count: " << items.size() << std::endl;
-
+        {
+            m_frames["hdr_screen_ss"]->copy(*m_frames["hdr_screen"], GL_COLOR_BUFFER_BIT); // copy hdr_screen.color
+            m_frames["hdr_screen_ss"]->copy(*m_frames["hdr_screen"], GL_DEPTH_BUFFER_BIT);
+        }
+        
         m_states["forward_transparent"].apply();
         m_shaders["forward_transparent"]->use();
         m_shaders["forward_transparent"]->setUniformValue("uLightCount", (int)scene.getVisibleLightCount());
-        m_passes["forward_transparent"].begin(m_frames["hdr_screen"]);
+        m_passes["forward_transparent"].begin(m_frames["hdr_screen_ss"]);
         for (const auto& item : items) {            
             m_buffers["model"]->bind(1, item.uoffset, sizeof(ModelBlock));
             draw(item, {"albedo", "normal", "mrao", "shadow", "ibl_diffuse", "ibl_specular", "ibl_brdf_lut", "hdr_screen.color", "hdr_screen.depth"});
         }
         m_passes["forward_transparent"].end();
 
+        {
+            m_frames["hdr_screen"]->copy(*m_frames["hdr_screen_ss"], GL_COLOR_BUFFER_BIT); // copy hdr_screen_ss.color
+            m_frames["hdr_screen"]->copy(*m_frames["hdr_screen_ss"], GL_DEPTH_BUFFER_BIT);
+        }
     }
 
     // TODO: screen space ambient occlusion
